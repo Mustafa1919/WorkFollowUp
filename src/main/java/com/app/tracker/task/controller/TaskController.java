@@ -1,11 +1,13 @@
 package com.app.tracker.task.controller;
 
+import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.web.PageResponse;
 import com.app.tracker.task.dto.CreateTaskRequest;
 import com.app.tracker.task.dto.TaskResponse;
 import com.app.tracker.task.dto.UpdateTaskStatusRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -33,7 +35,14 @@ public class TaskController {
   }
 
   @PostMapping("/api/v1/projects/{projectId}/tasks")
-  @PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('WORKSPACE_ADMIN', 'MANAGER', 'DEVELOPER')")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
   public ResponseEntity<TaskResponse> create(
       @PathVariable UUID projectId, @Valid @RequestBody CreateTaskRequest request) {
     Task task = taskService.createTask(projectId, request.title());
@@ -52,10 +61,17 @@ public class TaskController {
   }
 
   @PatchMapping("/api/v1/tasks/{taskId}")
-  @PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('WORKSPACE_ADMIN', 'MANAGER', 'DEVELOPER')")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
   public ResponseEntity<TaskResponse> updateStatus(
       @PathVariable UUID taskId, @Valid @RequestBody UpdateTaskStatusRequest request) {
-    Task task = taskService.updateStatus(taskId, request.status());
+    Task task = taskService.updateStatus(taskId, request.status(), CurrentUser.id());
     return ResponseEntity.ok(TaskResponse.from(task));
   }
 }

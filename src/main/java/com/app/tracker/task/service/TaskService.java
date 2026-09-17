@@ -1,13 +1,16 @@
 package com.app.tracker.task.service;
 
 import com.app.tracker.core.exception.BusinessRuleException;
+import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.web.PageResponse;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.repository.ProjectRepository;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskCounterRepository;
+import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,17 +26,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TaskService {
 
+  /**
+   * Kanban durum makinesi (PHASE_1_DETAILED_DESIGN Bolum 4 ornegi) — sonraki fazlarda proje bazli
+   * ozel durum akislarina genisletilebilir.
+   */
+  private static final Set<String> VALID_STATUSES =
+      Set.of("To Do", "In Progress", "Review", "Done");
+
   private final ProjectRepository projectRepository;
   private final TaskRepository taskRepository;
   private final TaskCounterRepository taskCounterRepository;
+  private final TaskEventRepository taskEventRepository;
 
   public TaskService(
       ProjectRepository projectRepository,
       TaskRepository taskRepository,
-      TaskCounterRepository taskCounterRepository) {
+      TaskCounterRepository taskCounterRepository,
+      TaskEventRepository taskEventRepository) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskCounterRepository = taskCounterRepository;
+    this.taskEventRepository = taskEventRepository;
   }
 
   @Transactional
@@ -66,13 +79,19 @@ public class TaskService {
   }
 
   @Transactional
-  public Task updateStatus(UUID taskId, String newStatus) {
+  public Task updateStatus(UUID taskId, String newStatus, UUID actorId) {
+    if (!VALID_STATUSES.contains(newStatus)) {
+      throw new BusinessRuleException("Gecersiz durum: " + newStatus);
+    }
     Task task =
         taskRepository
             .findById(taskId)
-            .orElseThrow(() -> new BusinessRuleException("Gorev bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+    String oldStatus = task.getStatus();
     task.updateStatus(newStatus);
-    return taskRepository.save(task);
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordStatusChange(taskId, actorId, oldStatus, newStatus);
+    return saved;
   }
 
   private List<Task> queryFromCursor(UUID projectId, String cursor, Pageable pageable) {
@@ -83,6 +102,6 @@ public class TaskService {
   private Project requireProject(UUID projectId) {
     return projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new BusinessRuleException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
   }
 }

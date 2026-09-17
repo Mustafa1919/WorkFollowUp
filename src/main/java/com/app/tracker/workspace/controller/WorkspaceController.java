@@ -4,6 +4,7 @@ import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.workspace.dto.CreateWorkspaceRequest;
 import com.app.tracker.workspace.dto.WorkspaceResponse;
 import com.app.tracker.workspace.model.Workspace;
+import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
 import jakarta.validation.Valid;
@@ -34,7 +35,7 @@ public class WorkspaceController {
       @Valid @RequestBody CreateWorkspaceRequest request) {
     Workspace workspace = workspaceService.createWorkspace(UUID.randomUUID(), request.name());
     // Workspace'i yaratan kullanici otomatik olarak WORKSPACE_ADMIN olur.
-    membershipService.addMember(workspace.getId(), CurrentUser.id(), "WORKSPACE_ADMIN");
+    membershipService.addMember(workspace.getId(), CurrentUser.id(), WorkspaceRole.ADMIN);
     return ResponseEntity.status(HttpStatus.CREATED).body(WorkspaceResponse.from(workspace));
   }
 }

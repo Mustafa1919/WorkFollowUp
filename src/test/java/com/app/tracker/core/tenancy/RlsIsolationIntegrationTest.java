@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.app.tracker.core.AbstractIntegrationTest;
-import com.app.tracker.core.exception.BusinessRuleException;
+import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.web.PageResponse;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
@@ -49,7 +49,7 @@ class RlsIsolationIntegrationTest extends AbstractIntegrationTest {
     // tablosu da RLS'e tabi oldugundan projectB'nin KENDISI bile A icin gorunmez — TaskService
     // bunu "proje bulunamadi" olarak yorumlar (veri sizdirmak yerine fail-closed 404 esdegeri).
     assertThrows(
-        BusinessRuleException.class,
+        ResourceNotFoundException.class,
         () ->
             tenantExecutor.runAs(
                 workspaceA, () -> taskService.listTasks(projectB.getId(), 20, null)));
@@ -71,7 +71,7 @@ class RlsIsolationIntegrationTest extends AbstractIntegrationTest {
     // Context set edilmemisse projectRepository.findById de RLS'ten gecer ve BOS doner; TaskService
     // bunu "proje bulunamadi" olarak yorumlar — veri sizdirmak yerine fail-closed 404 esdegeri.
     assertThrows(
-        BusinessRuleException.class,
+        ResourceNotFoundException.class,
         () -> tenantExecutor.runAs(null, () -> taskService.listTasks(projectA.getId(), 20, null)));
   }
 }

@@ -4,6 +4,7 @@ import com.app.tracker.project.dto.CreateProjectRequest;
 import com.app.tracker.project.dto.ProjectResponse;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
+import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -27,7 +28,12 @@ public class ProjectController {
   }
 
   @PostMapping
-  @PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('WORKSPACE_ADMIN', 'MANAGER')")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "')")
   public ResponseEntity<ProjectResponse> create(@Valid @RequestBody CreateProjectRequest request) {
     Project project = projectService.createProject(request.key(), request.name());
     return ResponseEntity.status(HttpStatus.CREATED).body(ProjectResponse.from(project));

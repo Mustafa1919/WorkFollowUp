@@ -44,7 +44,7 @@ class JwtServiceTest {
   void tamperedSignatureIsRejected() {
     String token = jwtService.issueAccessToken(UUID.randomUUID(), List.of("USER"), "jti-2");
     String[] parts = token.split("\\.");
-    String tampered = parts[0] + "." + parts[1] + "." + flipLastChar(parts[2]);
+    String tampered = parts[0] + "." + parts[1] + "." + flipInteriorChar(parts[2]);
 
     assertThrows(JwtValidationException.class, () -> jwtService.verify(tampered));
   }
@@ -54,9 +54,17 @@ class JwtServiceTest {
     assertThrows(JwtValidationException.class, () -> jwtService.verify("not-a-jwt"));
   }
 
-  private static String flipLastChar(String value) {
-    char last = value.charAt(value.length() - 1);
-    char replacement = last == 'A' ? 'B' : 'A';
-    return value.substring(0, value.length() - 1) + replacement;
+  /**
+   * Bilerek son karakteri DEGIL, ortadaki bir karakteri degistirir: base64url'de son karakter (imza
+   * baytlarinin uzunlugu 3'e bolunmuyorsa) decoder'in yok saydigi padding bitlerine denk gelebilir
+   * — bu durumda "A"<->"B" gibi bir degisiklik decode edilen baytlarda HICBIR FARK yaratmaz
+   * (yaklasik %25 ihtimalle flaky test). Ortadaki bir karakter her zaman tam bir 4'lu grubun icinde
+   * oldugundan degisikligi garanti eder.
+   */
+  private static String flipInteriorChar(String value) {
+    int index = value.length() / 2;
+    char current = value.charAt(index);
+    char replacement = current == 'A' ? 'B' : 'A';
+    return value.substring(0, index) + replacement + value.substring(index + 1);
   }
 }
