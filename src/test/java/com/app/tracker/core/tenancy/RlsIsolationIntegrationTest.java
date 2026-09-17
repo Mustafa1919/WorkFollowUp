@@ -44,14 +44,10 @@ class RlsIsolationIntegrationTest extends AbstractIntegrationTest {
 
     tenantExecutor.runAs(
         workspaceA,
-        () ->
-            taskTenancyDemoService.createTask(
-                UUID.randomUUID(), workspaceA, projectA, 1, "A-task"));
+        () -> taskTenancyDemoService.createTask(UUID.randomUUID(), workspaceA, projectA, "A-task"));
     tenantExecutor.runAs(
         workspaceB,
-        () ->
-            taskTenancyDemoService.createTask(
-                UUID.randomUUID(), workspaceB, projectB, 1, "B-task"));
+        () -> taskTenancyDemoService.createTask(UUID.randomUUID(), workspaceB, projectB, "B-task"));
 
     List<Task> visibleFromA =
         tenantExecutor.runAs(workspaceA, taskTenancyDemoService::findAllVisibleTasks);
@@ -71,9 +67,7 @@ class RlsIsolationIntegrationTest extends AbstractIntegrationTest {
         () -> taskTenancyDemoService.createProject(projectA, workspaceA, "ENG", "Engineering"));
     tenantExecutor.runAs(
         workspaceA,
-        () ->
-            taskTenancyDemoService.createTask(
-                UUID.randomUUID(), workspaceA, projectA, 1, "A-task"));
+        () -> taskTenancyDemoService.createTask(UUID.randomUUID(), workspaceA, projectA, "A-task"));
 
     List<Task> visibleWithoutContext =
         tenantExecutor.runAs(null, taskTenancyDemoService::findAllVisibleTasks);

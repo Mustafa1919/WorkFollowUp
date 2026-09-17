@@ -3,6 +3,7 @@ package com.app.tracker.task.service;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.repository.ProjectRepository;
 import com.app.tracker.task.model.Task;
+import com.app.tracker.task.repository.TaskCounterRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import java.util.List;
 import java.util.UUID;
@@ -20,20 +21,27 @@ public class TaskTenancyDemoService {
 
   private final ProjectRepository projectRepository;
   private final TaskRepository taskRepository;
+  private final TaskCounterRepository taskCounterRepository;
 
   public TaskTenancyDemoService(
-      ProjectRepository projectRepository, TaskRepository taskRepository) {
+      ProjectRepository projectRepository,
+      TaskRepository taskRepository,
+      TaskCounterRepository taskCounterRepository) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
+    this.taskCounterRepository = taskCounterRepository;
   }
 
   @Transactional
   public Project createProject(UUID id, UUID workspaceId, String key, String name) {
-    return projectRepository.save(Project.of(id, workspaceId, key, name));
+    Project project = projectRepository.save(Project.of(id, workspaceId, key, name));
+    taskCounterRepository.initialize(id);
+    return project;
   }
 
   @Transactional
-  public Task createTask(UUID id, UUID workspaceId, UUID projectId, int taskNumber, String title) {
+  public Task createTask(UUID id, UUID workspaceId, UUID projectId, String title) {
+    int taskNumber = taskCounterRepository.nextNumber(projectId);
     return taskRepository.save(Task.of(id, workspaceId, projectId, taskNumber, title));
   }
 
