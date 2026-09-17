@@ -1,6 +1,7 @@
 package com.app.tracker.core.security;
 
 import com.app.tracker.core.tenancy.WorkspaceContextFilter;
+import com.app.tracker.core.web.IdempotencyFilter;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -29,14 +30,17 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final WorkspaceContextFilter workspaceContextFilter;
+  private final IdempotencyFilter idempotencyFilter;
   private final CorsProperties corsProperties;
 
   public SecurityConfig(
       JwtAuthenticationFilter jwtAuthenticationFilter,
       WorkspaceContextFilter workspaceContextFilter,
+      IdempotencyFilter idempotencyFilter,
       CorsProperties corsProperties) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.workspaceContextFilter = workspaceContextFilter;
+    this.idempotencyFilter = idempotencyFilter;
     this.corsProperties = corsProperties;
   }
 
@@ -52,7 +56,8 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(workspaceContextFilter, JwtAuthenticationFilter.class);
+        .addFilterAfter(workspaceContextFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(idempotencyFilter, WorkspaceContextFilter.class);
     return http.build();
   }
 

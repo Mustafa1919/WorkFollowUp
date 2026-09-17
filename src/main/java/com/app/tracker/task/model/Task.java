@@ -3,23 +3,21 @@ package com.app.tracker.task.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
  * DATABASE_SCHEMA.md 2.7 — RLS'e tabidir (bkz. V2__add_rls_policies.sql). Faz 1'in bu diliminde
- * yalnizca izolasyon testini gecerli kilacak minimum alanlar mapleniyor; sprint_id/parent_task_id/
- * assignee_id/custom_fields nullable oldugundan DB-seviyesi bir kisitlama olusturmuyor —
- * task_number'in atomik sayac (task_counters) uzerinden uretimi ve kalan alanlarin eklenmesi REST
- * API calismasinin parcasi olarak sonraki adimda gelecek.
+ * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; sprint_id/parent_task_id/assignee_id/
+ * custom_fields nullable oldugundan DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda
+ * eklenecek.
  */
 @Entity
 @Table(name = "tasks")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
 public class Task {
 
   @Id private UUID id;
@@ -34,8 +32,22 @@ public class Task {
 
   private String status;
 
+  private Instant createdAt;
+
   public static Task of(
       UUID id, UUID workspaceId, UUID projectId, Integer taskNumber, String title) {
-    return new Task(id, workspaceId, projectId, taskNumber, title, "To Do");
+    Task task = new Task();
+    task.id = id;
+    task.workspaceId = workspaceId;
+    task.projectId = projectId;
+    task.taskNumber = taskNumber;
+    task.title = title;
+    task.status = "To Do";
+    task.createdAt = Instant.now();
+    return task;
+  }
+
+  public void updateStatus(String newStatus) {
+    this.status = newStatus;
   }
 }

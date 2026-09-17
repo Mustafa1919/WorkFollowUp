@@ -1,5 +1,6 @@
 package com.app.tracker.core.security;
 
+import com.app.tracker.core.tenancy.TenantContext;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import java.util.Arrays;
 import java.util.UUID;
@@ -32,5 +33,14 @@ public class SecurityGuard {
         .findRole(userId, workspaceId)
         .map(role -> Arrays.asList(roles).contains(role))
         .orElse(false);
+  }
+
+  /** WorkspaceContextFilter zaten dogruladigi icin, aktif TenantContext'e karsi rol kontrolu. */
+  public boolean hasCurrentWorkspaceRole(String... roles) {
+    UUID workspaceId = TenantContext.getWorkspaceId();
+    if (workspaceId == null) {
+      return false;
+    }
+    return hasWorkspaceRole(workspaceId, roles);
   }
 }
