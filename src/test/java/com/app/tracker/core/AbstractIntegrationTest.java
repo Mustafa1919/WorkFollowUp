@@ -1,5 +1,9 @@
 package com.app.tracker.core;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import org.flywaydb.core.Flyway;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
@@ -11,6 +15,14 @@ import org.testcontainers.utility.DockerImageName;
  * Faz1+'daki tum entegrasyon testleri bu sinifi extend eder. Postgres ve Kafka container'lari test
  * JVM'i boyunca tek sefer ayaga kalkar ve paylasilir (bkz. PHASE_0, Bolum 3, madde 3 — CI'da
  * Testcontainers ile gercek altyapi).
+ *
+ * <p>Container'in POSTGRES_USER'i ({@code app_migrator}) tablo sahibidir ve RLS'ten muaftir
+ * (PHASE_1_DETAILED_DESIGN Bolum 3.1, Kural 2) — bu yuzden Spring'in gercek DataSource'u {@code
+ * app_runtime} rolune baglanmalidir, aksi halde RLS testleri her zaman "gecer" gorunur. Bu sinif
+ * container ayaga kalktiginda: (1) prod'daki docker-init script'ini birebir tekrarlayarak {@code
+ * app_runtime} rolunu ve yetkilerini kurar, (2) Flyway migration'lari {@code app_migrator} ile
+ * calistirir — TUMU Spring context olusmadan ONCE, boylece Spring'in DataSource'u dogrudan {@code
+ * app_runtime} olarak acilabilir.
  */
 @Testcontainers
 public abstract class AbstractIntegrationTest {
@@ -22,18 +34,45 @@ public abstract class AbstractIntegrationTest {
           .withPassword("app_migrator");
 
   static final KafkaContainer KAFKA =
-      new KafkaContainer(DockerImageName.parse("apache/kafka:3.8.0"));
+      new KafkaContainer(
+          DockerImageName.parse("apache/kafka:3.8.0")
+              .asCompatibleSubstituteFor("confluentinc/cp-kafka"));
 
   static {
     POSTGRES.start();
     KAFKA.start();
+    provisionAppRuntimeRole();
+    runMigrations();
+  }
+
+  private static void provisionAppRuntimeRole() {
+    try (Connection connection =
+            DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        Statement statement = connection.createStatement()) {
+      statement.execute("CREATE ROLE app_runtime WITH LOGIN PASSWORD 'app_runtime'");
+      statement.execute("GRANT USAGE, CREATE ON SCHEMA public TO app_runtime");
+      statement.execute(
+          "ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA public "
+              + "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_runtime");
+    } catch (Exception e) {
+      throw new IllegalStateException("app_runtime rolu kurulamadi", e);
+    }
+  }
+
+  private static void runMigrations() {
+    Flyway.configure()
+        .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+        .locations("classpath:db/migration")
+        .load()
+        .migrate();
   }
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-    registry.add("spring.datasource.username", POSTGRES::getUsername);
-    registry.add("spring.datasource.password", POSTGRES::getPassword);
+    registry.add("spring.datasource.username", () -> "app_runtime");
+    registry.add("spring.datasource.password", () -> "app_runtime");
     registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
   }
 }

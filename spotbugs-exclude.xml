@@ -7,4 +7,11 @@
         <Class name="com.app.tracker.core.config.MigrationRunner"/>
         <Bug pattern="DM_EXIT"/>
     </Match>
+    <!-- TenancyGuardAspect'e enjekte edilen EntityManager, Spring'in yonettigi bir
+         shared-persistence-context proxy'sidir (Spring container disinda mutasyona
+         acik bir nesne degildir); savunmaci kopyalama anlamsizdir. -->
+    <Match>
+        <Class name="com.app.tracker.core.tenancy.TenancyGuardAspect"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>
