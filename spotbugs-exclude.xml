@@ -7,11 +7,38 @@
         <Class name="com.app.tracker.core.config.MigrationRunner"/>
         <Bug pattern="DM_EXIT"/>
     </Match>
-    <!-- TenancyGuardAspect'e enjekte edilen EntityManager, Spring'in yonettigi bir
-         shared-persistence-context proxy'sidir (Spring container disinda mutasyona
-         acik bir nesne degildir); savunmaci kopyalama anlamsizdir. -->
+    <!-- Proje genelinde constructor injection ile enjekte edilen tum collaborator'lar
+         (repository/service/filter/Spring-managed bean) Spring container'in yonettigi
+         singleton'lardir, uygulama kodunun harici mutasyona actigi nesneler degildir;
+         savunmaci kopyalama (defensive copy) anlamsizdir. Gercek deger tasiyan (DTO/record)
+         siniflarda bu kural KAPATILMAZ — bkz. DecodedJwt, CorsProperties (bilerek List.copyOf
+         ile immutable yapildi, exclude edilmedi). -->
     <Match>
-        <Class name="com.app.tracker.core.tenancy.TenancyGuardAspect"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- JwtKeyProvider: finalize() override edilmiyor, Finalizer-attack senaryosu gecerli degil;
+         PEM anahtarlari yuklenemezse uygulamanin baslangicta patlamasi (fail-fast) zaten istenen
+         davranistir. -->
+    <Match>
+        <Class name="com.app.tracker.core.security.JwtKeyProvider"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+    <!-- SpotBugs, List.copyOf(...) ile dondurulen degismez kopyayi guvenli bir "defensive copy"
+         olarak tanimiyor (yalnizca Collections.unmodifiableXxx gibi bilinen kaliplari taniyor);
+         her iki alan da GERCEKTEN immutable kopya donduruyor (bkz. ilgili siniflarin kodu). -->
+    <Match>
+        <Class name="com.app.tracker.core.security.CorsProperties"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Class name="com.app.tracker.core.security.DecodedJwt"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <!-- TokenHasher.generateRawToken PARTAGED bir static SecureRandom kullanir (SECURE_RANDOM
+         alani) — SpotBugs'in DMI_RANDOM_USED_ONLY_ONCE tespiti, paylasilan orneğin metot basina
+         tek cagrilmasini "her cagrida yeni Random olusturuluyor" ile ayirt edemiyor. -->
+    <Match>
+        <Class name="com.app.tracker.core.security.TokenHasher"/>
+        <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
     </Match>
 </FindBugsFilter>

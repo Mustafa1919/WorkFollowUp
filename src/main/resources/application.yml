@@ -18,6 +18,20 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  jwt:
+    # DEV-ONLY anahtarlar (bkz. JwtKeyProvider) — staging/prod bu iki degiskeni gercek
+    # anahtarlarina (K8s secret dosya yolu) isaret edecek sekilde override eder.
+    private-key-location: ${JWT_PRIVATE_KEY_LOCATION:classpath:keys/dev-jwt-private.pem}
+    public-key-location: ${JWT_PUBLIC_KEY_LOCATION:classpath:keys/dev-jwt-public.pem}
+    access-token-ttl: PT15M
+    refresh-token-ttl: P7D
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
 server:
   shutdown: graceful
