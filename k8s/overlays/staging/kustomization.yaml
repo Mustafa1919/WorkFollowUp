@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tracker-staging
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+# Staging, prod ile ayni topolojide calisir (PHASE_0, Bolum 1) — pod
+# sayisi orani prod ile ayni tutulur.
+replicas:
+  - name: core-api
+    count: 2
+
+configMapGenerator:
+  - name: core-api-config
+    literals:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=tracker_staging
+      - REDIS_HOST=host.docker.internal
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
+      - SPRING_PROFILES_ACTIVE=staging
+
+secretGenerator:
+  - name: core-api-secret
+    envs:
+      - .env.secret
+  - name: core-api-migrator-secret
+    envs:
+      - .env.migrator.secret
+
+images:
+  - name: tracker
+    newTag: staging

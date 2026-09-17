@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: core-api-migrate
+  labels:
+    app: core-api-migrate
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: core-api-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: tracker:local
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: migrate
+          envFrom:
+            - configMapRef:
+                name: core-api-config
+            - secretRef:
+                name: core-api-migrator-secret

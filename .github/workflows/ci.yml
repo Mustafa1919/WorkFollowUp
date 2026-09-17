@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Trunk-based development: main her zaman deploy edilebilir olmali (PHASE_0, Bolum 3).
+# Ayni ref icin eski bir calisma varsa iptal edilir (gereksiz kaynak tuketimini onler).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  verify:
+    name: Build, Test & Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Format check (Spotless)
+        run: ./mvnw -B spotless:check
+
+      # Birim + entegrasyon testleri. Testcontainers, runner'in Docker daemon'ini
+      # kullanarak gercek Postgres + Kafka ayaga kaldirir (PHASE_0, Bolum 3, madde 3).
+      - name: Test (unit + Testcontainers integration)
+        run: ./mvnw -B verify
+
+      - name: Static analysis (SpotBugs)
+        run: ./mvnw -B spotbugs:check
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: surefire-failsafe-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+          retention-days: 7
+
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # NVD_API_KEY zorunlu: anahtar olmadan NVD API agir rate-limit uygular, ilk
+      # calisma saatler surebilir. Ucretsiz anahtar: https://nvd.nist.gov/developers/request-an-api-key
+      - name: Dependency vulnerability scan
+        run: ./mvnw -B dependency-check:check -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.html
+          retention-days: 30
+
+  migration-check:
+    name: Flyway Migration Doğrulaması
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: tracker_ci
+          POSTGRES_USER: app_migrator
+          POSTGRES_PASSWORD: app_migrator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_migrator -d tracker_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # "Temiz kurulum": tum migration'lar bos bir semaya karsi uygulanir.
+      # NOT: Faz1 henuz migration dosyasi eklemedi; bu adim su an sifir
+      # migration'la trivially gecer. Faz1'de migration'lar eklendikce
+      # gercek anlamda calismaya baslayacak (PHASE_0, Bolum 3, madde 5).
+      - name: Clean install migration check
+        run: ./mvnw -B flyway:migrate
+
+  docker-build-scan:
+    name: Docker Image Build & Scan
+    runs-on: ubuntu-latest
+    needs: [verify, secret-scan]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t tracker:${{ github.sha }} .
+
+      # Trivy: bilinen imaj zafiyetlerini tarar (PHASE_0, Bolum 3, madde 4).
+      - name: Scan image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: tracker:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      # Sadece main'e merge sonrasi, commit SHA etiketiyle GHCR'a pushlanir.
+      # `latest` etiketi hicbir zaman kullanilmaz (PHASE_0, Bolum 2).
+      - name: Push to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag tracker:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/tracker:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/tracker:${{ github.sha }}

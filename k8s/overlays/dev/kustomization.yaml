@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tracker-dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+replicas:
+  - name: core-api
+    count: 1
+
+configMapGenerator:
+  - name: core-api-config
+    literals:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=tracker_dev
+      - REDIS_HOST=host.docker.internal
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
+      - SPRING_PROFILES_ACTIVE=dev
+
+# Secret degerleri git'e girmez. .env.secret ve .env.migrator.secret
+# dosyalarini .env.secret.example / .env.migrator.secret.example'dan
+# kopyalayip kendi degerlerinle doldur (bkz. k8s/overlays/dev/*.example).
+secretGenerator:
+  - name: core-api-secret
+    envs:
+      - .env.secret
+  - name: core-api-migrator-secret
+    envs:
+      - .env.migrator.secret
+
+images:
+  - name: tracker
+    newTag: dev

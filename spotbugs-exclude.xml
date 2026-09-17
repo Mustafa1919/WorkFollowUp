@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- MigrationRunner, migrate profiliyle calisan bir K8s Job'in giris noktasi;
+         System.exit() burada kasitli (bkz. PHASE_0, Bolum 4.2 ve Spring Boot'un
+         non-web uygulamalar icin resmi onerisi: SpringApplication.exit(...)). -->
+    <Match>
+        <Class name="com.app.tracker.core.config.MigrationRunner"/>
+        <Bug pattern="DM_EXIT"/>
+    </Match>
+</FindBugsFilter>
