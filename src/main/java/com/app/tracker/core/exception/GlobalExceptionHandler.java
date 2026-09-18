@@ -5,12 +5,16 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -50,8 +54,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return problem;
   }
 
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+  @Override
+  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
     List<Map<String, String>> invalidParams =
         ex.getBindingResult().getFieldErrors().stream()
             .map(
@@ -67,7 +75,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problem.setType(URI.create("https://api.app.com/errors/validation-failed"));
     problem.setTitle("Dogrulama Hatasi");
     problem.setProperty("invalid_params", invalidParams);
-    return problem;
+    return ResponseEntity.status(problem.getStatus()).body(problem);
   }
 
   @ExceptionHandler(Exception.class)

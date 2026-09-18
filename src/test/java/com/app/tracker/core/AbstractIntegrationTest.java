@@ -6,9 +6,9 @@ import java.sql.Statement;
 import org.flywaydb.core.Flyway;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -34,9 +34,7 @@ public abstract class AbstractIntegrationTest {
           .withPassword("app_migrator");
 
   static final KafkaContainer KAFKA =
-      new KafkaContainer(
-          DockerImageName.parse("apache/kafka:3.8.0")
-              .asCompatibleSubstituteFor("confluentinc/cp-kafka"));
+      new KafkaContainer(DockerImageName.parse("apache/kafka:3.8.0"));
 
   static {
     POSTGRES.start();

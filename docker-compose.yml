@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: tracker
-      POSTGRES_USER: app_runtime
-      POSTGRES_PASSWORD: app_runtime
+      POSTGRES_USER: app_migrator
+      POSTGRES_PASSWORD: app_migrator
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_runtime -d tracker"]
+      test: ["CMD-SHELL", "pg_isready -U app_migrator -d tracker"]
       interval: 5s
       timeout: 5s
       retries: 10
