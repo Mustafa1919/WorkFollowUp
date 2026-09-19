@@ -10,9 +10,11 @@ import lombok.NoArgsConstructor;
 
 /**
  * DATABASE_SCHEMA.md 2.7 — RLS'e tabidir (bkz. V2__add_rls_policies.sql). Faz 1'in bu diliminde
- * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; sprint_id/parent_task_id/assignee_id/
- * custom_fields nullable oldugundan DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda
- * eklenecek.
+ * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; parent_task_id/assignee_id nullable
+ * oldugundan DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda eklenecek. sprint_id Faz 3
+ * Dilim 3.0'da eklendi. custom_fields (story_point) bilerek entity'ye MAPLENMEDI: JSONB type
+ * mapping'i yerine {@code TaskCustomFieldRepository} native SQL ile yonetir (TaskEventRepository
+ * ile ayni desen).
  */
 @Entity
 @Table(name = "tasks")
@@ -25,6 +27,8 @@ public class Task {
   private UUID workspaceId;
 
   private UUID projectId;
+
+  private UUID sprintId;
 
   private Integer taskNumber;
 
@@ -49,5 +53,9 @@ public class Task {
 
   public void updateStatus(String newStatus) {
     this.status = newStatus;
+  }
+
+  public void changeSprint(UUID newSprintId) {
+    this.sprintId = newSprintId;
   }
 }

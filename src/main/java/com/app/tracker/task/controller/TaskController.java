@@ -2,8 +2,10 @@ package com.app.tracker.task.controller;
 
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.web.PageResponse;
+import com.app.tracker.task.dto.AssignSprintRequest;
 import com.app.tracker.task.dto.CreateTaskRequest;
 import com.app.tracker.task.dto.TaskResponse;
+import com.app.tracker.task.dto.UpdateStoryPointRequest;
 import com.app.tracker.task.dto.UpdateTaskStatusRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -72,6 +75,37 @@ public class TaskController {
   public ResponseEntity<TaskResponse> updateStatus(
       @PathVariable UUID taskId, @Valid @RequestBody UpdateTaskStatusRequest request) {
     Task task = taskService.updateStatus(taskId, request.status(), CurrentUser.id());
+    return ResponseEntity.ok(TaskResponse.from(task));
+  }
+
+  /** {@code sprintId: null} gorevi sprint'ten cikarir. */
+  @PutMapping("/api/v1/tasks/{taskId}/sprint")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
+  public ResponseEntity<TaskResponse> assignSprint(
+      @PathVariable UUID taskId, @RequestBody AssignSprintRequest request) {
+    Task task = taskService.assignSprint(taskId, request.sprintId(), CurrentUser.id());
+    return ResponseEntity.ok(TaskResponse.from(task));
+  }
+
+  @PutMapping("/api/v1/tasks/{taskId}/story-point")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
+  public ResponseEntity<TaskResponse> updateStoryPoint(
+      @PathVariable UUID taskId, @Valid @RequestBody UpdateStoryPointRequest request) {
+    Task task = taskService.updateStoryPoint(taskId, request.storyPoint(), CurrentUser.id());
     return ResponseEntity.ok(TaskResponse.from(task));
   }
 }
