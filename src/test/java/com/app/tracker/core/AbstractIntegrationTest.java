@@ -6,15 +6,18 @@ import java.sql.Statement;
 import org.flywaydb.core.Flyway;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Faz1+'daki tum entegrasyon testleri bu sinifi extend eder. Postgres ve Kafka container'lari test
- * JVM'i boyunca tek sefer ayaga kalkar ve paylasilir (bkz. PHASE_0, Bolum 3, madde 3 — CI'da
- * Testcontainers ile gercek altyapi).
+ * Faz1+'daki tum entegrasyon testleri bu sinifi extend eder. Postgres, Kafka ve Redis
+ * container'lari test JVM'i boyunca tek sefer ayaga kalkar ve paylasilir (bkz. PHASE_0, Bolum 3,
+ * madde 3 — CI'da Testcontainers ile gercek altyapi). Redis, Faz2'ye kadar hicbir testte
+ * gerekmemisti (BruteForceGuard/IdempotencyFilter'i gercekten calistiran ilk test SystemAdmin*Test
+ * oldu) — bu yuzden GenericContainer olarak burada eklendi.
  *
  * <p>Container'in POSTGRES_USER'i ({@code app_migrator}) tablo sahibidir ve RLS'ten muaftir
  * (PHASE_1_DETAILED_DESIGN Bolum 3.1, Kural 2) — bu yuzden Spring'in gercek DataSource'u {@code
@@ -36,9 +39,13 @@ public abstract class AbstractIntegrationTest {
   static final KafkaContainer KAFKA =
       new KafkaContainer(DockerImageName.parse("apache/kafka:3.8.0"));
 
+  static final GenericContainer<?> REDIS =
+      new GenericContainer<>(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379);
+
   static {
     POSTGRES.start();
     KAFKA.start();
+    REDIS.start();
     provisionAppRuntimeRole();
     runMigrations();
   }
@@ -72,5 +79,7 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.datasource.username", () -> "app_runtime");
     registry.add("spring.datasource.password", () -> "app_runtime");
     registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
+    registry.add("spring.data.redis.host", REDIS::getHost);
+    registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
   }
 }

@@ -28,7 +28,12 @@ public class TaskEventRepository {
     entityManager
         .createNativeQuery(
             "INSERT INTO task_events (id, task_id, actor_id, event_type, old_value, new_value, created_at) "
-                + "VALUES (?1, ?2, ?3, 'status_changed', ?4::jsonb, ?5::jsonb, NOW())")
+                // "?4 ::jsonb" (araya BOSLUK) — bkz. OutboxEventRepository.write javadoc'u: bitisik
+                // "?N::" Hibernate 7'de "Ordinal parameter label was not an integer" ile patliyor.
+                // Bu metot Faz2'den ONCE hicbir entegrasyon testinde gercek Postgres'e karsi
+                // calismamisti (updateStatus'u cagiran bir test yoktu) — bu yuzden simdiye kadar
+                // fark edilmemis, gercek bir latent bug'du.
+                + "VALUES (?1, ?2, ?3, 'status_changed', ?4 ::jsonb, ?5 ::jsonb, NOW())")
         .setParameter(1, UUID.randomUUID())
         .setParameter(2, taskId)
         .setParameter(3, actorId)

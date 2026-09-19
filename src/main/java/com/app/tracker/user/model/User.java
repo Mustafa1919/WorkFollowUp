@@ -24,6 +24,8 @@ public class User {
 
   private boolean emailVerified;
 
+  private boolean systemAdmin;
+
   public static User newUser(UUID id, String email, String passwordHash, String fullName) {
     User user = new User();
     user.id = id;
@@ -31,11 +33,21 @@ public class User {
     user.passwordHash = passwordHash;
     user.fullName = fullName;
     user.emailVerified = false;
+    user.systemAdmin = false;
     return user;
   }
 
   public void markEmailVerified() {
     this.emailVerified = true;
+  }
+
+  /**
+   * SECURITY_AND_EXCEPTIONS_DESIGN.md Bolum 1.2 — bkz. SystemAdminProperties javadoc'u. {@code
+   * isSystemAdmin()} getter'i sinifin {@code @Getter}'inden (Lombok, boolean alan icin "is" onekini
+   * otomatik uretir) gelir, burada tekrar tanimlanmaz.
+   */
+  public void grantSystemAdmin() {
+    this.systemAdmin = true;
   }
 
   public void changePasswordHash(String newPasswordHash) {

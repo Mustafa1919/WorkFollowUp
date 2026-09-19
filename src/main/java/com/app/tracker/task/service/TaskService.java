@@ -2,6 +2,7 @@ package com.app.tracker.task.service;
 
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
+import com.app.tracker.core.outbox.OutboxEventRepository;
 import com.app.tracker.core.web.PageResponse;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.repository.ProjectRepository;
@@ -9,13 +10,16 @@ import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskCounterRepository;
 import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * PHASE_1_DETAILED_DESIGN.md Bolum 4/4.1/6 — task CRUD + keyset pagination + atomik task_number
@@ -33,20 +37,28 @@ public class TaskService {
   private static final Set<String> VALID_STATUSES =
       Set.of("To Do", "In Progress", "Review", "Done");
 
+  private static final String TASK_EVENTS_TOPIC = "task.events";
+
   private final ProjectRepository projectRepository;
   private final TaskRepository taskRepository;
   private final TaskCounterRepository taskCounterRepository;
   private final TaskEventRepository taskEventRepository;
+  private final OutboxEventRepository outboxEventRepository;
+  private final ObjectMapper objectMapper;
 
   public TaskService(
       ProjectRepository projectRepository,
       TaskRepository taskRepository,
       TaskCounterRepository taskCounterRepository,
-      TaskEventRepository taskEventRepository) {
+      TaskEventRepository taskEventRepository,
+      OutboxEventRepository outboxEventRepository,
+      ObjectMapper objectMapper) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskCounterRepository = taskCounterRepository;
     this.taskEventRepository = taskEventRepository;
+    this.outboxEventRepository = outboxEventRepository;
+    this.objectMapper = objectMapper;
   }
 
   @Transactional
@@ -55,7 +67,20 @@ public class TaskService {
     int taskNumber = taskCounterRepository.nextNumber(project.getId());
     Task task =
         Task.of(UUID.randomUUID(), project.getWorkspaceId(), project.getId(), taskNumber, title);
-    return taskRepository.save(task);
+    Task saved = taskRepository.save(task);
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("taskId", saved.getId().toString());
+    payload.put("projectId", saved.getProjectId().toString());
+    payload.put("taskNumber", saved.getTaskNumber());
+    payload.put("title", saved.getTitle());
+    payload.put("status", saved.getStatus());
+    outboxEventRepository.write(
+        TASK_EVENTS_TOPIC,
+        "TASK_CREATED",
+        saved.getId(),
+        saved.getWorkspaceId(),
+        objectMapper.writeValueAsString(payload));
+    return saved;
   }
 
   @Transactional(readOnly = true)
@@ -91,6 +116,17 @@ public class TaskService {
     task.updateStatus(newStatus);
     Task saved = taskRepository.save(task);
     taskEventRepository.recordStatusChange(taskId, actorId, oldStatus, newStatus);
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("taskId", saved.getId().toString());
+    payload.put("projectId", saved.getProjectId().toString());
+    payload.put("oldStatus", oldStatus);
+    payload.put("newStatus", newStatus);
+    outboxEventRepository.write(
+        TASK_EVENTS_TOPIC,
+        "TASK_STATUS_UPDATED",
+        saved.getId(),
+        saved.getWorkspaceId(),
+        objectMapper.writeValueAsString(payload));
     return saved;
   }
 

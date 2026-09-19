@@ -40,6 +40,7 @@ public class AuthService {
   private final BruteForceGuard bruteForceGuard;
   private final EmailNotificationPublisher emailNotificationPublisher;
   private final StringRedisTemplate redisTemplate;
+  private final SystemAdminProperties systemAdminProperties;
   private final String dummyHash;
 
   public AuthService(
@@ -51,7 +52,8 @@ public class AuthService {
       JwtProperties jwtProperties,
       BruteForceGuard bruteForceGuard,
       EmailNotificationPublisher emailNotificationPublisher,
-      StringRedisTemplate redisTemplate) {
+      StringRedisTemplate redisTemplate,
+      SystemAdminProperties systemAdminProperties) {
     this.userRepository = userRepository;
     this.refreshTokenRepository = refreshTokenRepository;
     this.verificationTokenRepository = verificationTokenRepository;
@@ -61,6 +63,7 @@ public class AuthService {
     this.bruteForceGuard = bruteForceGuard;
     this.emailNotificationPublisher = emailNotificationPublisher;
     this.redisTemplate = redisTemplate;
+    this.systemAdminProperties = systemAdminProperties;
     // Bolum 1.4.1 Timing Attack korumasi: kayitli olmayan e-posta icin de bcrypt bir hash'e
     // karsi calissin diye sabit bir "dummy" hash onceden hesaplaniyor.
     this.dummyHash = passwordEncoder.encode("dummy-password-for-timing-protection");
@@ -175,8 +178,10 @@ public class AuthService {
   }
 
   private LoginResult issueTokenPair(User user, UUID familyId) {
+    syncSystemAdminFlag(user);
     String jti = UUID.randomUUID().toString();
-    String accessToken = jwtService.issueAccessToken(user.getId(), List.of("USER"), jti);
+    List<String> roles = user.isSystemAdmin() ? List.of("USER", "SYSTEM_ADMIN") : List.of("USER");
+    String accessToken = jwtService.issueAccessToken(user.getId(), roles, jti);
 
     String rawRefresh = TokenHasher.generateRawToken();
     RefreshToken refreshToken =
@@ -226,6 +231,18 @@ public class AuthService {
       t.revoke();
     }
     refreshTokenRepository.saveAll(tokens);
+  }
+
+  /**
+   * SystemAdminProperties javadoc'u — env listesindeki e-postalar ilk girişte kalici olarak
+   * isaretlenir.
+   */
+  private void syncSystemAdminFlag(User user) {
+    if (!user.isSystemAdmin()
+        && systemAdminProperties.getSystemAdminEmails().contains(user.getEmail())) {
+      user.grantSystemAdmin();
+      userRepository.save(user);
+    }
   }
 
   private void blacklistAccessToken(String jti, Duration ttl) {
