@@ -1,0 +1,13 @@
+title = "WorkFollowUp gitleaks config"
+
+# Varsayilan kurallar aynen acik kalir; yalniz asagidaki TEK dosya allowlist'tedir.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Bilerek commit edilmis, gercek sir OLMAYAN gelistirme JWT anahtari"
+# Bu anahtar public repoda durur ve yalniz local/dev/test icindir (bkz. JwtKeyProvider javadoc).
+# staging/prod'da bu anahtarla acilis reddedilir (JwtKeyProviderTest); gercek anahtarlar K8s
+# secret'i ile gelir ve asla repoya girmez. Allowlist path bazlidir: baska bir PEM/anahtar
+# dosyasi hala yakalanir.
+paths = ['''src/main/resources/keys/dev-jwt-private\.pem''']
