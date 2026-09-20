@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP Dependency-Check bastirmalari. Her kayit GEREKCE tasir; gerekcesiz bastirma review'da
+  reddedilir. Kapsam bilerek dardir: tek CVE + tek paket (genel kural asla kapatilmaz).
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <suppress>
+    <notes><![CDATA[
+      YANLIS POZITIF: CVE-2025-7962 (CVSS 7.5) Jakarta Mail / Eclipse Angus MAIL kutuphanesindeki
+      SMTP injection acigidir (NVD CPE: eclipse:jakarta_mail < 2.0.2, eclipse:angus_mail < 2.0.4).
+      angus-activation ise AYRI bir artifact'tir (Jakarta Activation implementasyonu, MIME tipi
+      eslemesi); mail gondermez ve bu acigi icermez. Dependency-Check yalnizca "angus" adina bakarak
+      eslestiriyor.
+      Projede hicbir mail kutuphanesi yok (mvn dependency:tree'de jakarta.mail / angus-mail yok);
+      angus-activation, Hibernate/JPA yiginindan gecisli olarak geliyor.
+      Dogrulama: 2026-09-20, NVD kaydi + bagimlilik agaci. Bir mail kutuphanesi eklenirse bu kayit
+      yeniden degerlendirilmeli (o zaman gercek kutuphane ayrica taranir, bu kayit onu KAPSAMAZ).
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.angus/angus\-activation@.*$</packageUrl>
+    <cve>CVE-2025-7962</cve>
+  </suppress>
+</suppressions>

@@ -198,12 +198,19 @@
 				<!-- CI'da `dependency-check:check` ile bilinen zafiyetli bagimliliklar PR'i kirar (bkz. PHASE_0, Bolum 3). -->
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
-				<version>10.0.4</version>
+				<!-- 10.0.4, yeni NVD verisini veritabanina yazamiyordu ("Value too long for column URL":
+				     CVE-2026-6785/6786 icerik aktarilamadi), yani tarama eksik veriyle calisiyordu. -->
+				<version>12.2.2</version>
 				<configuration>
 					<failBuildOnCVSS>7</failBuildOnCVSS>
 					<formats>
 						<format>HTML</format>
 					</formats>
+					<suppressionFiles>
+						<suppressionFile>dependency-check-suppressions.xml</suppressionFile>
+					</suppressionFiles>
+					<!-- OSS Index artik kimlik bilgisi istiyor; yokken kendini kapatip log'u kirletiyor. -->
+					<ossIndexAnalyzerEnabled>false</ossIndexAnalyzerEnabled>
 				</configuration>
 			</plugin>
 			<plugin>
