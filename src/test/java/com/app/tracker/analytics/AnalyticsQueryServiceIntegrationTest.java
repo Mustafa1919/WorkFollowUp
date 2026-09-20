@@ -136,7 +136,12 @@ class AnalyticsQueryServiceIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void cycleTimeReportsDistributionOfDefinedCycleTimesInWindow() {
-    Instant now = Instant.now();
+    // Milisaniyeye kesilir: gercek zaman damgalari DB NOW()'undan (mikrosaniye) gelir.
+    // Instant.now()
+    // alt-mikrosaniye basamak tasirsa, veritabanindan okunan (yuvarlanmis) In Progress zamani ile
+    // olaydaki (yuvarlanmamis) Done zamani arasindaki fark 99,9999995 sn olur ve getSeconds() 99
+    // verip testi ~yariya yakin ihtimalle kirar (700 ns ile deterministik olarak dogrulandi).
+    Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
     for (long seconds : new long[] {100, 200, 300, 400}) {
       UUID task = UUID.randomUUID();
       status(task, TaskStatus.IN_PROGRESS, now.minusSeconds(3600 + seconds));
