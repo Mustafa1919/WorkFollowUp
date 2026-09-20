@@ -34,5 +34,6 @@ build/
 ### Kubernetes secrets (bkz. PHASE_0, Bolum 5 — asla kod deposunda tutulmaz) ###
 k8s/overlays/*/.env.secret
 k8s/overlays/*/.env.migrator.secret
+k8s/overlays/*/.jwt-*.pem
 
 CLAUDE.md

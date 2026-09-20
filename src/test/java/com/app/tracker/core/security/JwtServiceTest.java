@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.DefaultResourceLoader;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -23,7 +24,8 @@ class JwtServiceTest {
     JwtProperties properties = new JwtProperties();
     properties.setPrivateKeyLocation("classpath:keys/dev-jwt-private.pem");
     properties.setPublicKeyLocation("classpath:keys/dev-jwt-public.pem");
-    JwtKeyProvider keyProvider = new JwtKeyProvider(properties, new DefaultResourceLoader());
+    JwtKeyProvider keyProvider =
+        new JwtKeyProvider(properties, new DefaultResourceLoader(), new StandardEnvironment());
     ObjectMapper objectMapper = JsonMapper.builder().build();
     return new JwtService(keyProvider, properties, objectMapper);
   }

@@ -29,6 +29,47 @@ secretGenerator:
   - name: core-api-migrator-secret
     envs:
       - .env.migrator.secret
+  # RS256 anahtar cifti — DOSYALAR GITIGNORE'DA, repoya asla girmez. Uretim (PKCS8 ozel + X509
+  # genel anahtar, JwtKeyProvider'in bekledigi format) her ortam icin AYRI bir cift:
+  #   openssl genrsa -out .jwt-raw.pem 3072
+  #   openssl pkcs8 -topk8 -nocrypt -in .jwt-raw.pem -out .jwt-private.pem
+  #   openssl rsa -in .jwt-raw.pem -pubout -out .jwt-public.pem && rm .jwt-raw.pem
+  - name: core-api-jwt-keys
+    files:
+      - private.pem=.jwt-private.pem
+      - public.pem=.jwt-public.pem
+
+patches:
+  - target:
+      kind: Deployment
+      name: core-api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/volumes
+        value:
+          - name: jwt-keys
+            secret:
+              secretName: core-api-jwt-keys
+              # 0444 (=292): container "app" kullanicisiyla (non-root) calisir ve Dockerfile'da
+              # sayisal gid sabit degil, bu yuzden fsGroup + 0440 kullanilamiyor. Secret volume
+              # pod'a ozel tmpfs'tir ve icinde yalniz uygulama calisir.
+              defaultMode: 292
+      # JWT_* bilerek ortak ConfigMap'te DEGIL, yalniz Deployment'ta: migration Job'i ayni
+      # ConfigMap'i envFrom ile alir ama anahtar mount'u yoktur; dosya yolu orada bulunamayip
+      # JwtKeyProvider'i patlatirdi. Repodaki DEV anahtarlariyla core-api acilisi reddedilir.
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: JWT_PRIVATE_KEY_LOCATION
+            value: file:/etc/tracker/jwt/private.pem
+          - name: JWT_PUBLIC_KEY_LOCATION
+            value: file:/etc/tracker/jwt/public.pem
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts
+        value:
+          - name: jwt-keys
+            mountPath: /etc/tracker/jwt
+            readOnly: true
 
 images:
   - name: tracker
