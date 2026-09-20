@@ -129,7 +129,9 @@ jobs:
 
       # Trivy: bilinen imaj zafiyetlerini tarar (PHASE_0, Bolum 3, madde 4).
       - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        # Commit SHA'ya sabit (v0.36.0): etiket tasinabilir, SHA tasinamaz. Eski "0.28.0" etiketi
+        # yoktu (dogrusu "v0.28.0") ve job "Set up job" adiminda dusuyordu.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: tracker:${{ github.sha }}
           severity: CRITICAL,HIGH
