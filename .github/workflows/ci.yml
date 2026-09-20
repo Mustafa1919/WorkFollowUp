@@ -74,7 +74,16 @@ jobs:
       # NVD_API_KEY zorunlu: anahtar olmadan NVD API agir rate-limit uygular, ilk
       # calisma saatler surebilir. Ucretsiz anahtar: https://nvd.nist.gov/developers/request-an-api-key
       - name: Dependency vulnerability scan
-        run: ./mvnw -B dependency-check:check -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          # Anahtar bossa (secret tanimli degil / fork PR'i) NVD verisini saatlerce yavas indirip
+          # takili kalmak yerine hemen ve acik bir mesajla dus.
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::error::NVD_API_KEY secret'i bos. Repo Settings > Secrets and variables > Actions altina ekleyin."
+            exit 1
+          fi
+          ./mvnw -B dependency-check:check -DnvdApiKey="$NVD_API_KEY"
 
       - uses: actions/upload-artifact@v4
         if: always()
