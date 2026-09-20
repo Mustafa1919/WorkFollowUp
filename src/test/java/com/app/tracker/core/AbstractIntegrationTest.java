@@ -30,6 +30,8 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 public abstract class AbstractIntegrationTest {
 
+  public static final String READ_POOL_APPLICATION_NAME = "tracker-read-pool";
+
   static final PostgreSQLContainer<?> POSTGRES =
       new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
           .withDatabaseName("tracker_test")
@@ -78,6 +80,15 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
     registry.add("spring.datasource.username", () -> "app_runtime");
     registry.add("spring.datasource.password", () -> "app_runtime");
+    // Read havuzu AYNI veritabanina ama ayrilabilir bir application_name ile baglanir:
+    // ReadReplicaRoutingIntegrationTest yonlendirmenin gercekten calistigini bununla kanitlar.
+    registry.add(
+        "app.datasource.read.url",
+        () ->
+            POSTGRES.getJdbcUrl()
+                + (POSTGRES.getJdbcUrl().contains("?") ? "&" : "?")
+                + "ApplicationName="
+                + READ_POOL_APPLICATION_NAME);
     registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
     registry.add("spring.data.redis.host", REDIS::getHost);
     registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));

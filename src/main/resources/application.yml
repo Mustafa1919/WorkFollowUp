@@ -32,6 +32,13 @@ spring:
         spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
 
 app:
+  datasource:
+    # Analitik okumalar icin (@ReadReplica) ayri havuz. Bos url = ayri havuz YOK, okuma da yazma
+    # havuzunu kullanir (bkz. ReadReplicaProperties). Gercek replica Faz4/5'te baglanacak.
+    read:
+      url: ${DB_READ_URL:}
+      username: ${DB_READ_USER:}
+      password: ${DB_READ_PASSWORD:}
   jwt:
     # DEV-ONLY anahtarlar (bkz. JwtKeyProvider) — staging/prod bu iki degiskeni gercek
     # anahtarlarina (K8s secret dosya yolu) isaret edecek sekilde override eder.
