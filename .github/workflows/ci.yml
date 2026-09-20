@@ -141,7 +141,16 @@ jobs:
       # `latest` etiketi hicbir zaman kullanilmaz (PHASE_0, Bolum 2).
       - name: Push to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # Docker imaj adlari KUCUK harf olmak zorunda; repository_owner "Mustafa1919" gibi buyuk harf
+        # icerebilir ("repository name must be lowercase"), bu yuzden ${OWNER,,} ile kucultulur.
+        # Degerler script'e dogrudan gomulmez, env ile verilir (script injection'a karsi).
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ github.sha }}
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker tag tracker:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/tracker:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/tracker:${{ github.sha }}
+          IMAGE="ghcr.io/${OWNER,,}/tracker:${SHA}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          docker tag "tracker:${SHA}" "$IMAGE"
+          docker push "$IMAGE"
