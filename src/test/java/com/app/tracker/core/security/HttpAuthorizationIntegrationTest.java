@@ -1,0 +1,325 @@
+package com.app.tracker.core.security;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
+import com.app.tracker.core.AbstractIntegrationTest;
+import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.project.model.Project;
+import com.app.tracker.project.service.ProjectService;
+import com.app.tracker.workspace.model.WorkspaceRole;
+import com.app.tracker.workspace.service.WorkspaceMembershipService;
+import com.app.tracker.workspace.service.WorkspaceService;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+/**
+ * HTTP katmaninda yetkilendirme: {@code @PreAuthorize} annotation'lari, {@code SecurityFilterChain}
+ * ve {@code WorkspaceContextFilter} birlikte, gercek filtre zinciriyle sinanir. Servis katmani
+ * testleri method-security proxy'sini hic devreye sokmadigi icin bir annotation silinse bile
+ * gecerdi; bu test o boslugu kapatir.
+ *
+ * <p>Endpoint matrisi (endpoint x rol) bilerek KODDAN turetilmez, burada elle yazilir: annotation
+ * degisirse test kirilmali ve degisiklik bilincli olarak burada da yapilmali. "Izinli" durum icin
+ * gercek is sonucu (404/201/...) degil, "401/403 DEGIL" dogrulanir — kaynaklar rastgele UUID'dir,
+ * amac yetkilendirme katmanini gecmektir, is mantigini sinamak degil.
+ *
+ * <p>Gecerli govde ZORUNLUDUR: {@code @Valid} argument cozumlemesi method-security'den ONCE
+ * calisir, gecersiz govde 403 yerine 422 dondurup reddi maskelerdi.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
+
+  private static final String PASSWORD = "correct-horse-battery";
+  private static final String SYSTEM_ADMIN_EMAIL = "http-authz-owner@tracker.local";
+
+  private static final Set<String> ALL_ROLES =
+      Set.of(
+          WorkspaceRole.ADMIN,
+          WorkspaceRole.MANAGER,
+          WorkspaceRole.DEVELOPER,
+          WorkspaceRole.VIEWER);
+  private static final Set<String> MANAGE = Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER);
+  private static final Set<String> WRITE =
+      Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER, WorkspaceRole.DEVELOPER);
+
+  private static final String SPRINT_JSON =
+      "{\"name\":\"S\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-14\"}";
+
+  /** {@code {id}} her istekte rastgele bir UUID ile degistirilir. */
+  private record Endpoint(
+      HttpMethod method, String path, Supplier<String> body, Set<String> allowedRoles) {
+
+    static Endpoint of(HttpMethod method, String path, String body, Set<String> allowedRoles) {
+      return new Endpoint(method, path, () -> body, allowedRoles);
+    }
+
+    MockHttpServletRequestBuilder build() {
+      MockHttpServletRequestBuilder builder =
+          request(method, path.replace("{id}", UUID.randomUUID().toString()));
+      String json = body.get();
+      return json == null ? builder : builder.contentType(MediaType.APPLICATION_JSON).content(json);
+    }
+
+    boolean roleProtected() {
+      return !allowedRoles.equals(ALL_ROLES);
+    }
+
+    @Override
+    public String toString() {
+      return method + " " + path;
+    }
+  }
+
+  static Stream<Endpoint> endpoints() {
+    return Stream.of(
+        // Proje: olusturma yalniz ADMIN/MANAGER; anahtar her cagrida essiz (10 karakter siniri).
+        new Endpoint(
+            HttpMethod.POST,
+            "/api/v1/projects",
+            () ->
+                "{\"key\":\"K"
+                    + UUID.randomUUID().toString().substring(0, 8)
+                    + "\",\"name\":\"Proje\"}",
+            MANAGE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects", null, ALL_ROLES),
+        // Sprint yasam dongusu: yalniz ADMIN/MANAGER.
+        Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/sprints", SPRINT_JSON, MANAGE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/sprints", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/sprints/{id}/start", null, MANAGE),
+        Endpoint.of(HttpMethod.POST, "/api/v1/sprints/{id}/complete", null, MANAGE),
+        // Gorev: yazma ADMIN/MANAGER/DEVELOPER, VIEWER yalniz okur.
+        Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/tasks", "{\"title\":\"T\"}", WRITE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.PATCH, "/api/v1/tasks/{id}", "{\"status\":\"Done\"}", WRITE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/sprint", "{\"sprintId\":null}", WRITE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/story-point", "{\"storyPoint\":3}", WRITE),
+        // Analitik okuma: rol siniri yok, workspace uyeligi yeterli (AnalyticsController javadoc).
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/velocity", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/throughput", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/cycle-time", null, ALL_ROLES));
+  }
+
+  static Stream<Arguments> endpointsByRole() {
+    return endpoints()
+        .flatMap(endpoint -> ALL_ROLES.stream().sorted().map(role -> Arguments.of(endpoint, role)));
+  }
+
+  static Stream<Endpoint> roleProtectedEndpoints() {
+    return endpoints().filter(Endpoint::roleProtected);
+  }
+
+  @DynamicPropertySource
+  static void registerAdminEmail(DynamicPropertyRegistry registry) {
+    registry.add("app.security.system-admin-emails", () -> SYSTEM_ADMIN_EMAIL);
+  }
+
+  @Autowired private MockMvc mockMvc;
+  @Autowired private AuthService authService;
+  @Autowired private WorkspaceService workspaceService;
+  @Autowired private WorkspaceMembershipService membershipService;
+  @Autowired private ProjectService projectService;
+  @Autowired private TenantExecutor tenantExecutor;
+
+  private UUID workspaceId;
+  private Map<String, String> tokenByRole;
+  private String outsiderToken;
+
+  @BeforeEach
+  void setUp() {
+    workspaceId = UUID.randomUUID();
+    tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Authz WS"));
+    tokenByRole =
+        Map.of(
+            WorkspaceRole.ADMIN, memberToken(WorkspaceRole.ADMIN),
+            WorkspaceRole.MANAGER, memberToken(WorkspaceRole.MANAGER),
+            WorkspaceRole.DEVELOPER, memberToken(WorkspaceRole.DEVELOPER),
+            WorkspaceRole.VIEWER, memberToken(WorkspaceRole.VIEWER));
+    outsiderToken = newUserToken("outsider-" + UUID.randomUUID() + "@tracker.local");
+  }
+
+  private String memberToken(String role) {
+    String email = role.toLowerCase() + "-" + UUID.randomUUID() + "@tracker.local";
+    UUID userId = authService.register(email, PASSWORD, "Authz User").getId();
+    membershipService.addMember(workspaceId, userId, role);
+    return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
+  }
+
+  private String newUserToken(String email) {
+    authService.register(email, PASSWORD, "Authz User");
+    return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
+  }
+
+  private int status(MockHttpServletRequestBuilder request) throws Exception {
+    return mockMvc.perform(request).andReturn().getResponse().getStatus();
+  }
+
+  private int statusAs(Endpoint endpoint, String token, boolean withWorkspace) throws Exception {
+    MockHttpServletRequestBuilder request = endpoint.build();
+    if (token != null) {
+      request.header("Authorization", "Bearer " + token);
+    }
+    if (withWorkspace) {
+      request.header("X-Workspace-Id", workspaceId.toString());
+    }
+    return status(request);
+  }
+
+  @ParameterizedTest(name = "{0} as {1}")
+  @MethodSource("endpointsByRole")
+  void memberIsAllowedOnlyWhenRoleIsDeclaredOnEndpoint(Endpoint endpoint, String role)
+      throws Exception {
+    int status = statusAs(endpoint, tokenByRole.get(role), true);
+
+    if (endpoint.allowedRoles().contains(role)) {
+      assertTrue(
+          status != 401 && status != 403,
+          role + " icin yetkilendirme gecmeliydi ama status=" + status);
+    } else {
+      assertEquals(403, status, role + " reddedilmeliydi");
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("endpoints")
+  void nonMemberOfWorkspaceIsForbiddenEverywhere(Endpoint endpoint) throws Exception {
+    assertEquals(403, statusAs(endpoint, outsiderToken, true));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("endpoints")
+  void anonymousRequestIsRejected(Endpoint endpoint) throws Exception {
+    int status = statusAs(endpoint, null, true);
+
+    assertTrue(status == 401 || status == 403, "anonim istek gecti, status=" + status);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("endpoints")
+  void invalidTokenIsRejected(Endpoint endpoint) throws Exception {
+    int status = statusAs(endpoint, "not-a-real-jwt", true);
+
+    assertTrue(status == 401 || status == 403, "gecersiz token gecti, status=" + status);
+  }
+
+  /**
+   * Workspace header'i yoksa TenantContext bos kalir; rol kontrolu fail-closed olmali (ADMIN bile
+   * gecmemeli). Yalniz rol-korumali endpoint'ler: okuma endpoint'leri icin bu durum RLS'e kalir.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("roleProtectedEndpoints")
+  void missingWorkspaceHeaderFailsClosedEvenForAdmin(Endpoint endpoint) throws Exception {
+    assertEquals(403, statusAs(endpoint, tokenByRole.get(WorkspaceRole.ADMIN), false));
+  }
+
+  @Test
+  void viewerCanReadRealProjectDataAndAnalyticsParamsAreClamped() throws Exception {
+    Project project =
+        tenantExecutor.runAs(
+            workspaceId, () -> projectService.createProject("VW", "Viewer Project"));
+    String viewer = tokenByRole.get(WorkspaceRole.VIEWER);
+    String base = "/api/v1/projects/" + project.getId();
+
+    List<String> paths =
+        List.of(
+            "/api/v1/projects",
+            base + "/sprints",
+            base + "/tasks",
+            base + "/analytics/velocity",
+            base + "/analytics/throughput",
+            base + "/analytics/cycle-time",
+            // Sinir disi parametreler 400 degil, kirpilarak 200 doner
+            // (AnalyticsController.bounded).
+            base + "/analytics/velocity?sprints=0",
+            base + "/analytics/velocity?sprints=9999",
+            base + "/analytics/throughput?weeks=-5",
+            base + "/analytics/cycle-time?days=100000");
+    for (String path : paths) {
+      int status =
+          status(
+              get(path)
+                  .header("Authorization", "Bearer " + viewer)
+                  .header("X-Workspace-Id", workspaceId.toString()));
+      assertEquals(200, status, path);
+    }
+  }
+
+  @Test
+  void authenticatedUserCanCreateWorkspaceWithoutWorkspaceHeader() throws Exception {
+    int status =
+        status(
+            post("/api/v1/workspaces")
+                .header("Authorization", "Bearer " + outsiderToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Yeni WS\"}"));
+
+    assertEquals(201, status);
+  }
+
+  // ---- SYSTEM_ADMIN (workspace rolu DEGIL, global authority) ----------------------------------
+
+  /** Topic '-dlt' ile bitmedigi icin servis 400 verir: yetki gecti, Kafka'ya hic dokunulmaz. */
+  private static final String REPLAY_JSON =
+      "{\"dltTopic\":\"plain-topic\",\"partition\":0,\"fromOffset\":0,\"toOffset\":0}";
+
+  @Test
+  void kafkaReplayIsForbiddenForWorkspaceAdminWithoutSystemAdminAuthority() throws Exception {
+    // WORKSPACE_ADMIN olmak SYSTEM_ADMIN olmak DEGILDIR.
+    int status =
+        status(
+            post("/api/v1/admin/kafka/replay")
+                .header("Authorization", "Bearer " + tokenByRole.get(WorkspaceRole.ADMIN))
+                .header("X-Workspace-Id", workspaceId.toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REPLAY_JSON));
+
+    assertEquals(403, status);
+  }
+
+  @Test
+  void kafkaReplayPassesAuthorizationForSystemAdmin() throws Exception {
+    String token = newUserToken(SYSTEM_ADMIN_EMAIL);
+
+    int status =
+        status(
+            post("/api/v1/admin/kafka/replay")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REPLAY_JSON));
+
+    assertEquals(400, status);
+  }
+
+  @Test
+  void kafkaReplayRejectsAnonymousRequest() throws Exception {
+    int status =
+        status(
+            post("/api/v1/admin/kafka/replay")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REPLAY_JSON));
+
+    assertTrue(status == 401 || status == 403, "status=" + status);
+  }
+}
