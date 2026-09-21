@@ -44,6 +44,26 @@ public class ProcessedEventStore {
     return inserted == 1;
   }
 
+  /**
+   * Yalniz OKUR, isaretlemez. Is, disari yan etki uretiyorsa ve DB transaction'ina sigmiyorsa (dis
+   * HTTP cagrisi) kullanilir: "daha once yapildi mi?" bak, isi transaction DISINDA yap, basariyla
+   * bitince {@link #markProcessed} ile isaretle. Bu, at-least-once semantigidir (gonderim ile
+   * isaretleme arasinda cokus = tekrar gonderim); transaction icinde dis cagri beklemek ise DB
+   * baglantisini cagri suresince tutardi.
+   */
+  @Transactional(readOnly = true)
+  public boolean isProcessed(String consumer, UUID eventId) {
+    Number count =
+        (Number)
+            entityManager
+                .createNativeQuery(
+                    "SELECT COUNT(*) FROM processed_events WHERE consumer = ?1 AND event_id = ?2")
+                .setParameter(1, consumer)
+                .setParameter(2, eventId)
+                .getSingleResult();
+    return count.longValue() > 0;
+  }
+
   /** Retention temizligi icin; bkz. {@link ProcessedEventCleanupJob}. */
   @Transactional
   public int deleteOlderThan(Instant cutoff, int batchSize) {

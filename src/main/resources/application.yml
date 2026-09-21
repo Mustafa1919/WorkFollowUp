@@ -48,6 +48,24 @@ app:
     refresh-token-ttl: P7D
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  webhook:
+    # DEV-ONLY varsayilan (public repoda): staging/prod'da WebhookSecretService bu degerle (veya
+    # 32 karakterden kisa bir degerle) acilisi REDDEDER — gercek deger WEBHOOK_SECRET_MASTER_KEY.
+    secret-master-key: ${WEBHOOK_SECRET_MASTER_KEY:dev-webhook-master-key-not-a-secret-0000}
+    max-body-size: 512KB
+    integration-cache-ttl: PT60S
+    send-timeout: PT2S
+  notification:
+    # Slack cikis bildirimi (SlackProperties). Devre kesici tek ve globaldir; retry YOK (Kafka
+    # error handler zincirdeki tek retry sorumlusu).
+    slack:
+      connect-timeout: PT2S
+      read-timeout: PT5S
+      sliding-window-size: 20
+      minimum-number-of-calls: 5
+      failure-rate-threshold: 50
+      open-state-duration: PT30S
+      permitted-calls-in-half-open-state: 3
   security:
     # SystemAdminProperties javadoc'u — bu listedeki e-postalar ilk girişte SYSTEM_ADMIN olarak
     # isaretlenir (DB'deki bayrak kalici gercek kaynaktir, buradan çıkarmak geri almaz).

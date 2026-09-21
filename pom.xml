@@ -94,6 +94,14 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!-- Slack cikis bildirimi icin devre kesici (Dilim 3.5). Yalniz cekirdek modul: resilience4j'nin
+		     Spring Boot starter'lari Boot 4 icin dogrulanmadi, devre kesici programatik kuruluyor.
+		     Maven Central'da dogrulandi: 2.4.0 (2026-03-14), bagimlilik: resilience4j-core. -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-circuitbreaker</artifactId>
+			<version>2.4.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>

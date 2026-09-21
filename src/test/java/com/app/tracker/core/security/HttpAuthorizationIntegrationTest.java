@@ -64,6 +64,7 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
   private static final Set<String> MANAGE = Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER);
   private static final Set<String> WRITE =
       Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER, WorkspaceRole.DEVELOPER);
+  private static final Set<String> ADMIN_ONLY = Set.of(WorkspaceRole.ADMIN);
 
   private static final String SPRINT_JSON =
       "{\"name\":\"S\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-14\"}";
@@ -119,7 +120,25 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         // Analitik okuma: rol siniri yok, workspace uyeligi yeterli (AnalyticsController javadoc).
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/velocity", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/throughput", null, ALL_ROLES),
-        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/cycle-time", null, ALL_ROLES));
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/cycle-time", null, ALL_ROLES),
+        // Webhook entegrasyonlari: dis bir sisteme gorev durumu degistirme yetkisi veren kimlik
+        // bilgisi; yalniz workspace ADMIN (MANAGER bile degil).
+        Endpoint.of(HttpMethod.POST, "/api/v1/integrations/webhooks", null, ADMIN_ONLY),
+        Endpoint.of(HttpMethod.GET, "/api/v1/integrations/webhooks", null, ADMIN_ONLY),
+        Endpoint.of(
+            HttpMethod.POST, "/api/v1/integrations/webhooks/{id}/rotate-secret", null, ADMIN_ONLY),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/integrations/webhooks/{id}", null, ADMIN_ONLY),
+        // Slack entegrasyonu: sunucuyu bir dis adrese HTTP atmaya yonlendiren kimlik bilgisi;
+        // yalniz
+        // ADMIN. PUT govdesi bilerek GECERSIZ adres: yetkili rol 400 (is kurali) alir, kayit
+        // olusmaz.
+        Endpoint.of(
+            HttpMethod.PUT,
+            "/api/v1/integrations/slack",
+            "{\"webhookUrl\":\"https://invalid.example\"}",
+            ADMIN_ONLY),
+        Endpoint.of(HttpMethod.GET, "/api/v1/integrations/slack", null, ADMIN_ONLY),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/integrations/slack", null, ADMIN_ONLY));
   }
 
   static Stream<Arguments> endpointsByRole() {

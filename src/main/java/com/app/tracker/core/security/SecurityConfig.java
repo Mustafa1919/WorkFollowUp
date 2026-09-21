@@ -51,8 +51,14 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
+                // /api/v1/webhooks/**: dis sistemler (GitHub) JWT tasimaz; kimlik dogrulamasi
+                // controller'daki HMAC imza kontroludur (bkz. GithubWebhookController).
                 auth.requestMatchers(
-                        "/api/v1/auth/**", "/actuator/health/**", "/actuator/info", "/ws/**")
+                        "/api/v1/auth/**",
+                        "/api/v1/webhooks/**",
+                        "/actuator/health/**",
+                        "/actuator/info",
+                        "/ws/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

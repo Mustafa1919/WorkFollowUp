@@ -3,6 +3,7 @@ package com.app.tracker.task.repository;
 import com.app.tracker.task.model.Task;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,9 @@ import org.springframework.data.repository.query.Param;
  * icin, esdeger lexicographic OR/AND ifadesiyle yazildi.
  */
 public interface TaskRepository extends JpaRepository<Task, UUID> {
+
+  /** {@code uq_tasks_project_number} (project_id, task_number) essizligine dayanir. */
+  Optional<Task> findByProjectIdAndTaskNumber(UUID projectId, Integer taskNumber);
 
   @Query("SELECT t FROM Task t WHERE t.projectId = :projectId ORDER BY t.createdAt DESC, t.id DESC")
   List<Task> findFirstPage(@Param("projectId") UUID projectId, Pageable pageable);
