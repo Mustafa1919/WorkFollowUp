@@ -2,6 +2,7 @@ package com.app.tracker.core.realtime;
 
 import com.app.tracker.core.security.CorsProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -12,9 +13,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * PHASE_2_DETAILED_DESIGN.md Bolum 4/5.3 — native WebSocket + STOMP (SockJS fallback yok, bu yuzden
  * Load Balancer'da sticky session GEREKMEZ, bkz. Bolum 5.3). In-memory Simple Broker (Secenek
  * A/broadcast consumer fan-out ile birlikte kullanilir — bkz. TaskEventBroadcastListener).
+ *
+ * <p>{@code migrate} profilinde yuklenmez: broker lifecycle bean'leri lazy-initialization'a ragmen
+ * baslatilir ve web'siz Job'da "No handlers" ile context'i dusururdu.
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@Profile("!migrate")
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   private final WebSocketAuthInterceptor authInterceptor;

@@ -1,6 +1,9 @@
 spring:
   main:
     web-application-type: none
+    # Job yalniz Flyway'i kosar: uygulama bean'leri (security, Kafka/Redis bagimlilari) hic
+    # olusturulmaz, aksi halde haric tutulan auto-config'ler yuzunden context acilamazdi.
+    lazy-initialization: true
   flyway:
     enabled: true
   autoconfigure:
