@@ -63,7 +63,9 @@ jobs:
     name: OWASP Dependency-Check
     runs-on: ubuntu-latest
     # Varsayilan 6 saat: NVD takilirsa runner saatlerce bos bekliyordu (run #8: 40+ dk, iptal).
-    timeout-minutes: 30
+    # 75 dk: cache BOSKEN tam NVD indirmesi NVD yavas gunlerde ~40 dk (2026-09-21: 2000 kayit/14 sn);
+    # 30 dk'da kesilince cache hic kaydedilmiyor, her kosu yine sifirdan basliyordu (run #10).
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
