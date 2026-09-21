@@ -15,8 +15,8 @@ import org.springframework.mock.env.MockEnvironment;
 /** Sifreleme; Slack adresi bir kimlik bilgisidir. Docker/Spring context gerektirmez. */
 class SlackUrlCipherTest {
 
-  private static final String KEY_A = "k3Jx9Vb2Qm7Zp1Lw8Yt4Nc6Rd0Hf5Sg3Ua9Ie2O";
-  private static final String KEY_B = "Zq8Wn4Vm1Xc7Bt3Lk9Jh5Gd2Fs6Ap0Ou4Ye8Ri1";
+  private static final String KEY_A = "a".repeat(40); // dusuk entropi: gitleaks yanlis pozitifi
+  private static final String KEY_B = "b".repeat(40);
   private static final String URL = "https://hooks.slack.com/services/T1/B2/SuperSecretToken";
 
   private static SlackUrlCipher cipher(String masterKey) {

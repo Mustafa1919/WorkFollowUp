@@ -11,3 +11,7 @@ description = "Bilerek commit edilmis, gercek sir OLMAYAN gelistirme JWT anahtar
 # secret'i ile gelir ve asla repoya girmez. Allowlist path bazlidir: baska bir PEM/anahtar
 # dosyasi hala yakalanir.
 paths = ['''src/main/resources/keys/dev-jwt-private\.pem''']
+# cd33524: birim testlerinde rastgele gorunen SAHTE anahtarlar (generic-api-key yanlis pozitifi);
+# sonraki commit'te dusuk entropili degerlerle degistirildi. Pushlanmis main yeniden yazilmasin
+# diye yalniz o commit muaf; kural baska her commit'te acik.
+commits = ["cd335249dbc1fe5f93619334829bf5913e15dc73"]

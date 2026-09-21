@@ -22,7 +22,8 @@ import org.springframework.mock.env.MockEnvironment;
 class WebhookSecretServiceTest {
 
   private static final String DEV_KEY = "dev-webhook-master-key-not-a-secret-0000";
-  private static final String STRONG_KEY = "k3Jx9Vb2Qm7Zp1Lw8Yt4Nc6Rd0Hf5Sg3Ua9Ie2O";
+  private static final String STRONG_KEY =
+      "a".repeat(40); // dusuk entropi: gitleaks yanlis pozitifi
 
   private static WebhookProperties properties(String key) {
     WebhookProperties properties = new WebhookProperties();
