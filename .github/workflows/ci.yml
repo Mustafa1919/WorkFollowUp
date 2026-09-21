@@ -62,6 +62,8 @@ jobs:
   dependency-check:
     name: OWASP Dependency-Check
     runs-on: ubuntu-latest
+    # Varsayilan 6 saat: NVD takilirsa runner saatlerce bos bekliyordu (run #8: 40+ dk, iptal).
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -70,6 +72,16 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+
+      # NVD veritabani (~300 bin CVE) her kosuda sifirdan inmesin: son kosunun verisi geri yuklenir,
+      # dependency-check yalniz degisen kayitlari ceker. Anahtar run_id'ye bagli, boylece her basarili
+      # kosu guncel veriyi yeni bir cache girdisi olarak kaydeder (actions/cache girdileri degismez).
+      - name: Cache NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: nvd-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: nvd-${{ runner.os }}-
 
       # NVD_API_KEY zorunlu: anahtar olmadan NVD API agir rate-limit uygular, ilk
       # calisma saatler surebilir. Ucretsiz anahtar: https://nvd.nist.gov/developers/request-an-api-key
