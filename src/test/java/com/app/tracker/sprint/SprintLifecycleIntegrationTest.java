@@ -161,8 +161,8 @@ class SprintLifecycleIntegrationTest extends AbstractIntegrationTest {
                     otherProject.getId(),
                     "Foreign",
                     null,
-                    LocalDate.now(),
-                    LocalDate.now().plusDays(14)));
+                    LocalDate.of(2099, 1, 1),
+                    LocalDate.of(2099, 1, 15)));
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T1"));
 
     assertThrows(
@@ -193,6 +193,20 @@ class SprintLifecycleIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void sprintWithPastStartDateIsRejected() {
+    // 2 gun: test JVM saat dilimi ile is saat dilimi (Istanbul) gece yarisi farki yaniltmasin.
+    LocalDate yesterday = LocalDate.now().minusDays(2);
+
+    assertThrows(
+        BusinessRuleException.class,
+        () ->
+            inWorkspace(
+                () ->
+                    sprintService.createSprint(
+                        project.getId(), "Past Sprint", null, yesterday, yesterday.plusDays(14))));
+  }
+
+  @Test
   void otherWorkspaceCannotSeeOrStartSprint() {
     Sprint sprint = newSprint("S1");
     UUID otherWorkspace = UUID.randomUUID();
@@ -208,7 +222,7 @@ class SprintLifecycleIntegrationTest extends AbstractIntegrationTest {
     return inWorkspace(
         () ->
             sprintService.createSprint(
-                project.getId(), name, null, LocalDate.now(), LocalDate.now().plusDays(14)));
+                project.getId(), name, null, LocalDate.of(2099, 1, 1), LocalDate.of(2099, 1, 15)));
   }
 
   private <T> T inWorkspace(java.util.function.Supplier<T> action) {

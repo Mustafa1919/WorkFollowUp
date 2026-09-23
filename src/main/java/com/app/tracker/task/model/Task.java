@@ -12,11 +12,11 @@ import org.hibernate.annotations.SQLRestriction;
 
 /**
  * DATABASE_SCHEMA.md 2.7 — RLS'e tabidir (bkz. V2__add_rls_policies.sql). Faz 1'in bu diliminde
- * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; parent_task_id/assignee_id nullable
- * oldugundan DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda eklenecek. sprint_id Faz 3
- * Dilim 3.0'da eklendi. custom_fields (story_point) bilerek entity'ye MAPLENMEDI: JSONB type
- * mapping'i yerine {@code TaskCustomFieldRepository} native SQL ile yonetir (TaskEventRepository
- * ile ayni desen).
+ * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; assignee_id nullable oldugundan
+ * DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda eklenecek. sprint_id Faz 3 Dilim 3.0'da,
+ * parentTaskId V19'da (Subtask) eklendi. custom_fields (story_point) bilerek entity'ye MAPLENMEDI:
+ * JSONB type mapping'i yerine {@code TaskCustomFieldRepository} native SQL ile yonetir
+ * (TaskEventRepository ile ayni desen).
  */
 @Entity
 @Table(name = "tasks")
@@ -32,6 +32,9 @@ public class Task {
   private UUID projectId;
 
   private UUID sprintId;
+
+  /** V19: tek seviyeli subtask iliskisi (aynı projeyle sinirlidir, TaskService kontrol eder). */
+  private UUID parentTaskId;
 
   private Integer taskNumber;
 
@@ -73,6 +76,10 @@ public class Task {
 
   public void changeSprint(UUID newSprintId) {
     this.sprintId = newSprintId;
+  }
+
+  public void changeParent(UUID newParentTaskId) {
+    this.parentTaskId = newParentTaskId;
   }
 
   public void changeDueDate(LocalDate newDueDate) {

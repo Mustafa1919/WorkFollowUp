@@ -107,6 +107,7 @@ public class TaskService {
     payload.put("title", saved.getTitle());
     payload.put("status", saved.getStatus());
     payload.put("dueDate", dueDate == null ? null : dueDate.toString());
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     outboxEventRepository.write(
         TASK_EVENTS_TOPIC,
         "TASK_CREATED",
@@ -155,6 +156,7 @@ public class TaskService {
     payload.put("projectId", saved.getProjectId().toString());
     payload.put("oldStatus", oldStatus);
     payload.put("newStatus", newStatus);
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     outboxEventRepository.write(
         TASK_EVENTS_TOPIC,
         "TASK_STATUS_UPDATED",
@@ -197,6 +199,7 @@ public class TaskService {
     payload.put("projectId", saved.getProjectId().toString());
     payload.put("oldSprintId", oldSprintId == null ? null : oldSprintId.toString());
     payload.put("newSprintId", sprintId == null ? null : sprintId.toString());
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     writeTaskEvent("TASK_SPRINT_CHANGED", saved, payload);
     return saved;
   }
@@ -215,6 +218,7 @@ public class TaskService {
     payload.put("projectId", task.getProjectId().toString());
     payload.put("oldStoryPoint", oldStoryPoint);
     payload.put("newStoryPoint", storyPoint);
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     writeTaskEvent("TASK_STORY_POINT_UPDATED", task, payload);
     return task;
   }
@@ -238,6 +242,7 @@ public class TaskService {
     payload.put("projectId", saved.getProjectId().toString());
     payload.put("oldDueDate", oldDueDate == null ? null : oldDueDate.toString());
     payload.put("newDueDate", dueDate == null ? null : dueDate.toString());
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     writeTaskEvent("TASK_DUE_DATE_CHANGED", saved, payload);
     return saved;
   }
@@ -270,7 +275,7 @@ public class TaskService {
     task.approve(actorId, clock.instant().truncatedTo(ChronoUnit.MILLIS));
     Task saved = taskRepository.save(task);
     taskEventRepository.recordApprovalChange(taskId, actorId, true);
-    writeTaskEvent("TASK_APPROVED", saved, basePayload(saved));
+    writeTaskEvent("TASK_APPROVED", saved, basePayload(saved, actorId));
     return saved;
   }
 
@@ -284,8 +289,92 @@ public class TaskService {
     task.revokeApproval();
     Task saved = taskRepository.save(task);
     taskEventRepository.recordApprovalChange(taskId, actorId, false);
-    writeTaskEvent("TASK_APPROVAL_REVOKED", saved, basePayload(saved));
+    writeTaskEvent("TASK_APPROVAL_REVOKED", saved, basePayload(saved, actorId));
     return saved;
+  }
+
+  /**
+   * V19: gorevi bir parent'a subtask olarak baglar / kaldirir ({@code parentTaskId == null}). Tek
+   * seviye kurali: parent'in kendi parent'i OLAMAZ, hedef'in de zaten cocuklari OLAMAZ — ikisi ayni
+   * anda gerceklesirse gercek bir agac olusurdu (kullanici karariyla bilerek engellendi, tag/
+   * dependency'nin aksine kendi paketi yok, dogrudan TaskService'te — subtask salt tasks.parent_
+   * task_id kolonu, ayri bir join tablosu gerektirmiyor).
+   */
+  @Transactional
+  public Task setParent(UUID taskId, UUID parentTaskId, UUID actorId) {
+    Task task = requireTask(taskId);
+    if (Objects.equals(task.getParentTaskId(), parentTaskId)) {
+      return task;
+    }
+    if (parentTaskId == null) {
+      return removeParent(taskId, actorId);
+    }
+    if (taskId.equals(parentTaskId)) {
+      throw new BusinessRuleException("Bir gorev kendisinin alt gorevi olamaz.");
+    }
+    rejectIfApproved(task);
+    Task parent = requireTask(parentTaskId);
+    if (!parent.getProjectId().equals(task.getProjectId())) {
+      throw new BusinessRuleException("Alt gorev iliskisi ayni proje icinde kurulabilir.");
+    }
+    if (parent.getParentTaskId() != null) {
+      throw new BusinessRuleException("Bir alt gorev baska bir gorevin ust gorevi olamaz.");
+    }
+    if (!taskRepository.findByParentTaskIdOrderByTaskNumber(taskId).isEmpty()) {
+      throw new BusinessRuleException("Alt gorevi olan bir gorev subtask yapilamaz.");
+    }
+    task.changeParent(parentTaskId);
+    Task saved = taskRepository.save(task);
+    writeTaskEvent("TASK_PARENT_CHANGED", saved, parentPayload(saved, parentTaskId, actorId));
+    return saved;
+  }
+
+  @Transactional
+  public Task removeParent(UUID taskId, UUID actorId) {
+    Task task = requireTask(taskId);
+    if (task.getParentTaskId() == null) {
+      return task;
+    }
+    rejectIfApproved(task);
+    task.changeParent(null);
+    Task saved = taskRepository.save(task);
+    writeTaskEvent("TASK_PARENT_CHANGED", saved, parentPayload(saved, null, actorId));
+    return saved;
+  }
+
+  /** TaskDialog'un alt gorev listesi icin — tam gorev alani gerekir, sadece sayi degil. */
+  @Transactional(readOnly = true)
+  public List<Task> listChildren(UUID taskId) {
+    return taskRepository.findByParentTaskIdOrderByTaskNumber(taskId);
+  }
+
+  /** Liste uc noktalarinda N+1'i onlemek icin batch: parent basina (toplam, Done sayisi). */
+  @Transactional(readOnly = true)
+  public Map<UUID, int[]> subtaskCounts(List<UUID> taskIds) {
+    if (taskIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<UUID, int[]> result = new LinkedHashMap<>();
+    for (Object[] row : taskRepository.countChildrenByParentTaskIds(taskIds)) {
+      UUID parentId = (UUID) row[0];
+      long total = (Long) row[1];
+      long done = row[2] == null ? 0L : (Long) row[2];
+      result.put(parentId, new int[] {(int) total, (int) done});
+    }
+    return result;
+  }
+
+  private static Map<String, Object> parentPayload(Task task, UUID parentTaskId, UUID actorId) {
+    Map<String, Object> payload = basePayload(task, actorId);
+    payload.put("parentTaskId", parentTaskId == null ? null : parentTaskId.toString());
+    return payload;
+  }
+
+  /** TaskDependencyService'teki AYNI kilit kurali: onaylanmis gorev donuk. */
+  private static void rejectIfApproved(Task task) {
+    if (task.isApproved()) {
+      throw new BusinessRuleException("Onaylanmis gorevin ust gorevi degistirilemez.");
+    }
   }
 
   /**
@@ -296,6 +385,10 @@ public class TaskService {
   @Transactional
   public void deleteTask(UUID taskId, UUID actorId) {
     Task task = requireTask(taskId);
+    if (!taskRepository.findByParentTaskIdOrderByTaskNumber(taskId).isEmpty()) {
+      throw new BusinessRuleException(
+          "Alt gorevleri olan bir gorev silinemez, once alt gorevleri kaldirin.");
+    }
     if (task.getSprintId() != null) {
       taskEventRepository.recordSprintChange(taskId, actorId, task.getSprintId(), null);
       task.changeSprint(null);
@@ -303,7 +396,7 @@ public class TaskService {
     task.markDeleted(actorId, clock.instant());
     Task saved = taskRepository.save(task);
     taskEventRepository.recordDeletion(taskId, actorId);
-    writeTaskEvent("TASK_DELETED", saved, basePayload(saved));
+    writeTaskEvent("TASK_DELETED", saved, basePayload(saved, actorId));
   }
 
   @Transactional(readOnly = true)
@@ -340,10 +433,11 @@ public class TaskService {
     }
   }
 
-  private static Map<String, Object> basePayload(Task task) {
+  private static Map<String, Object> basePayload(Task task, UUID actorId) {
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("taskId", task.getId().toString());
     payload.put("projectId", task.getProjectId().toString());
+    payload.put("actorId", actorId == null ? null : actorId.toString());
     return payload;
   }
 

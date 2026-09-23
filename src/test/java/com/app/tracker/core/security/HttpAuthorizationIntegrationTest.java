@@ -66,8 +66,15 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
       Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER, WorkspaceRole.DEVELOPER);
   private static final Set<String> ADMIN_ONLY = Set.of(WorkspaceRole.ADMIN);
 
+  // 2099: SprintService artik gecmis baslangic tarihini reddediyor (rejectPastStartDate) —
+  // 2026-01-01 bu testin kosuldugu "bugun"den ONCE kalir ve MANAGE rolleri bile 400 alirdi.
   private static final String SPRINT_JSON =
-      "{\"name\":\"S\",\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-14\"}";
+      "{\"name\":\"S\",\"startDate\":\"2099-01-01\",\"endDate\":\"2099-01-14\"}";
+
+  // 2099: MeetingService de ayni gerekceyle gecmis baslangic tarihini reddediyor (bkz. yukarida).
+  private static final String MEETING_JSON =
+      "{\"title\":\"M\",\"startDate\":\"2099-01-01\",\"startTime\":\"10:00:00\","
+          + "\"durationMinutes\":30,\"frequency\":\"ONCE\",\"intervalCount\":1}";
 
   /** {@code {id}} her istekte rastgele bir UUID ile degistirilir. */
   private record Endpoint(
@@ -150,7 +157,60 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             "{\"webhookUrl\":\"https://invalid.example\"}",
             ADMIN_ONLY),
         Endpoint.of(HttpMethod.GET, "/api/v1/integrations/slack", null, ADMIN_ONLY),
-        Endpoint.of(HttpMethod.DELETE, "/api/v1/integrations/slack", null, ADMIN_ONLY));
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/integrations/slack", null, ADMIN_ONLY),
+        // Etiketler: tanim (olustur/degistir/sil) ADMIN/MANAGER (tum projeleri etkiler), listeleme
+        // her uye; goreve atama/kaldirma diger gorev mutasyonlariyla AYNI (yazma) roller.
+        Endpoint.of(
+            HttpMethod.POST, "/api/v1/tags", "{\"name\":\"Bug\",\"color\":\"#FF0000\"}", MANAGE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/tags", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PUT,
+            "/api/v1/tags/{id}",
+            "{\"name\":\"Bug\",\"color\":\"#00FF00\"}",
+            MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tags/{id}", null, MANAGE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/tags/{id}", null, WRITE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/tags/{id}", null, WRITE),
+        // Subtask/Dependency: tag'lerle AYNI yazma rolleri (gorev duzenlemenin bir parcasi);
+        // listeleme (subtasks) her uye.
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/parent/{id}", null, WRITE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/parent", null, WRITE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/subtasks", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
+        // Workspace uyeligi: ekleme/rol degistirme/cikarma yalniz ADMIN; listeleme her uye.
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/workspaces/members",
+            "{\"email\":\"someone@example.com\",\"role\":\"DEVELOPER\"}",
+            ADMIN_ONLY),
+        Endpoint.of(HttpMethod.GET, "/api/v1/workspaces/members", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PATCH,
+            "/api/v1/workspaces/members/{id}",
+            "{\"role\":\"DEVELOPER\"}",
+            ADMIN_ONLY),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/workspaces/members/{id}", null, ADMIN_ONLY),
+        // Inbox bildirimleri: rol siniri yok (hep KENDI bildirimlerim, ownership
+        // NotificationService
+        // katmaninda), workspace uyeligi yeterli — TaskController/TagController'in GET uc
+        // noktalariyla
+        // AYNI desen.
+        Endpoint.of(HttpMethod.GET, "/api/v1/notifications", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/notifications/unread-count", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/notifications/{id}/read", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/notifications/read-all", null, ALL_ROLES),
+        // Toplanti planlama: tanim (olustur/degistir/sil) ADMIN/MANAGER (Tags ile AYNI gerekce —
+        // workspace geneli paylasilan yapi), listeleme/occurrence sorgusu her uye.
+        Endpoint.of(HttpMethod.POST, "/api/v1/meetings", MEETING_JSON, MANAGE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/meetings", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.GET,
+            "/api/v1/meetings/occurrences?from=2026-09-01&to=2026-10-12",
+            null,
+            ALL_ROLES),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/meetings/{id}", MEETING_JSON, MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/meetings/{id}", null, MANAGE));
   }
 
   static Stream<Arguments> endpointsByRole() {
@@ -276,6 +336,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
     List<String> paths =
         List.of(
             "/api/v1/projects",
+            "/api/v1/tags",
+            "/api/v1/workspaces/members",
             base + "/sprints",
             base + "/tasks",
             base + "/analytics/velocity",

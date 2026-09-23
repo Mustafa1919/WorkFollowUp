@@ -12,4 +12,12 @@ public interface WorkspaceUserRepository extends JpaRepository<WorkspaceUser, Wo
   Optional<WorkspaceUser> findByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 
   List<WorkspaceUser> findByUserId(UUID userId);
+
+  /**
+   * {@code workspace_users} RLS'e tabi DEGIL (V2 notu) — workspaceId HER ZAMAN acikca verilmeli.
+   */
+  List<WorkspaceUser> findByWorkspaceId(UUID workspaceId);
+
+  /** "Son ADMIN kaldirilamaz/rolu degistirilemez" kuralinin dayandigi sayim. */
+  long countByWorkspaceIdAndRole(UUID workspaceId, String role);
 }

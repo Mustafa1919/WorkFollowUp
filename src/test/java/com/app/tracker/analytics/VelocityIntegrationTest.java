@@ -218,7 +218,7 @@ class VelocityIntegrationTest extends AbstractIntegrationTest {
     return inWorkspace(
         () ->
             sprintService.createSprint(
-                project.getId(), name, null, LocalDate.now(), LocalDate.now().plusDays(14)));
+                project.getId(), name, null, LocalDate.of(2099, 1, 1), LocalDate.of(2099, 1, 15)));
   }
 
   /** {@code status == null}: durum hic degistirilmez (baslangic "To Do"). */

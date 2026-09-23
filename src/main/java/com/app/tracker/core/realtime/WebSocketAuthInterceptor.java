@@ -27,12 +27,21 @@ import org.springframework.stereotype.Component;
  * dogrulanmis kullanicinin ({@code workspace_users} uzerinden, RLS'ten ONCE — SecurityGuard ayni
  * gerekceyle bunu yapiyor) uyeligi kontrol edilir; aksi halde herhangi bir kimlik dogrulanmis
  * kullanici baska bir workspace'in kanalina abone olabilirdi (IDOR).
+ *
+ * <p>{@code /user/queue/notifications} (V18, Inbox) AYRI bir kural: destination'da hicbir kimlik
+ * TASIMAZ (istemci bunu HERKES icin ayni literal string olarak gonderir), bu yuzden workspace
+ * kanaliyla ayni id-eslestirme kontrolune tabi tutulmaz — gercek yonlendirme Spring'in
+ * UserDestinationMessageHandler'inin CONNECT'te set edilen Principal'dan kurdugu session-ozel
+ * hedefle yapilir (bkz. WebSocketConfig javadoc'u).
  */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
   private static final Pattern PROJECT_TOPIC_PATTERN =
       Pattern.compile("^/topic/workspace\\.([0-9a-fA-F-]{36})\\.project\\.([0-9a-fA-F-]{36})$");
+
+  /** Istemcinin gonderdigi TAM CAPALI literal hedef (bkz. sinif javadoc'u); id tasimaz. */
+  private static final String USER_NOTIFICATIONS_DESTINATION = "/user/queue/notifications";
 
   private final JwtService jwtService;
   private final StringRedisTemplate redisTemplate;
@@ -83,15 +92,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     if (destination == null) {
       throw new MessagingException("Hedef kanal belirtilmemis.");
     }
+    WebSocketPrincipal principal = (WebSocketPrincipal) accessor.getUser();
+    if (principal == null) {
+      throw new MessagingException("Once kimlik dogrulanmali.");
+    }
+    if (USER_NOTIFICATIONS_DESTINATION.equals(destination)) {
+      // Ek kontrol GEREKMEZ: gercek hedef Spring tarafindan CONNECT'teki Principal'dan kurulur,
+      // istemcinin gonderdigi id yoktur (bkz. sinif javadoc'u).
+      return;
+    }
     Matcher matcher = PROJECT_TOPIC_PATTERN.matcher(destination);
     if (!matcher.matches()) {
       throw new MessagingException("Gecersiz kanal: " + destination);
     }
     UUID workspaceId = UUID.fromString(matcher.group(1));
-    WebSocketPrincipal principal = (WebSocketPrincipal) accessor.getUser();
-    if (principal == null) {
-      throw new MessagingException("Once kimlik dogrulanmali.");
-    }
     if (membershipService.findRole(principal.userId(), workspaceId).isEmpty()) {
       throw new MessagingException("Bu workspace'e uye degilsiniz: " + workspaceId);
     }

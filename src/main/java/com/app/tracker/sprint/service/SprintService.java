@@ -8,6 +8,7 @@ import com.app.tracker.project.repository.ProjectRepository;
 import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.model.SprintStatus;
 import com.app.tracker.sprint.repository.SprintRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -34,21 +35,25 @@ public class SprintService {
   private final ProjectRepository projectRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
+  private final Clock clock;
 
   public SprintService(
       SprintRepository sprintRepository,
       ProjectRepository projectRepository,
       OutboxEventRepository outboxEventRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      Clock clock) {
     this.sprintRepository = sprintRepository;
     this.projectRepository = projectRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
+    this.clock = clock;
   }
 
   @Transactional
   public Sprint createSprint(
       UUID projectId, String name, String goal, LocalDate startDate, LocalDate endDate) {
+    rejectPastStartDate(startDate);
     if (!endDate.isAfter(startDate)) {
       throw new BusinessRuleException("Bitis tarihi baslangic tarihinden sonra olmalidir.");
     }
@@ -96,6 +101,16 @@ public class SprintService {
     sprintRepository.save(sprint);
     writeEvent("SPRINT_COMPLETED", sprint, sprint.getCompletedAt(), "completedAt");
     return sprint;
+  }
+
+  /**
+   * Yeni bir baslangic tarihi bugunden (is saat dilimi, bkz. {@code ClockConfig}) once olamaz.
+   * Bugun kabul edilir.
+   */
+  private void rejectPastStartDate(LocalDate startDate) {
+    if (startDate.isBefore(LocalDate.now(clock))) {
+      throw new BusinessRuleException("Sprint baslangic tarihi gecmiste olamaz.");
+    }
   }
 
   private void writeEvent(String eventType, Sprint sprint, Instant at, String atField) {

@@ -16,6 +16,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * <p>{@code migrate} profilinde yuklenmez: broker lifecycle bean'leri lazy-initialization'a ragmen
  * baslatilir ve web'siz Job'da "No handlers" ile context'i dusururdu.
+ *
+ * <p>{@code /queue} + {@code setUserDestinationPrefix("/user")}: Inbox bildirimi (V18) icin
+ * kullaniciya ozel push. Bir istemci {@code /user/queue/notifications}'a abone olunca Spring'in
+ * {@code UserDestinationMessageHandler}'i bunu CONNECT'te kurulan Principal'a (bkz.
+ * WebSocketAuthInterceptor) gore session'a ozel gercek bir {@code /queue/...} hedefine cevirir;
+ * istemcinin gonderdigi id YOKTUR, bu yuzden baska bir kullanicinin kanalina abone olmak yapisal
+ * olarak imkansizdir (workspace kanalinin aksine ayri bir uyelik kontrolu GEREKMEZ).
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -39,7 +46,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   @Override
   public void configureMessageBroker(MessageBrokerRegistry registry) {
-    registry.enableSimpleBroker("/topic");
+    registry.enableSimpleBroker("/topic", "/queue");
+    registry.setUserDestinationPrefix("/user");
   }
 
   @Override

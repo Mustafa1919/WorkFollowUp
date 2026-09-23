@@ -33,4 +33,8 @@ public class WorkspaceUser {
     workspaceUser.role = role;
     return workspaceUser;
   }
+
+  public void changeRole(String newRole) {
+    this.role = newRole;
+  }
 }

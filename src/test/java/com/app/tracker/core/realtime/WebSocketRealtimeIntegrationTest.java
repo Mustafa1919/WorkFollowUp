@@ -2,6 +2,7 @@ package com.app.tracker.core.realtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.app.tracker.core.AbstractIntegrationTest;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.converter.StringMessageConverter;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -50,6 +52,7 @@ class WebSocketRealtimeIntegrationTest extends AbstractIntegrationTest {
   @Autowired private WorkspaceMembershipService membershipService;
   @Autowired private TenantExecutor tenantExecutor;
   @Autowired private KafkaTemplate<String, String> kafkaTemplate;
+  @Autowired private SimpMessagingTemplate messagingTemplate;
 
   private String wsUrl() {
     return "ws://localhost:" + port + "/ws/connect";
@@ -219,5 +222,68 @@ class WebSocketRealtimeIntegrationTest extends AbstractIntegrationTest {
 
     Throwable error = subscriptionError.get(10, TimeUnit.SECONDS);
     assertNotNull(error);
+  }
+
+  /**
+   * V18 Inbox — {@code /user/queue/notifications}: destination hicbir kimlik TASIMAZ (bkz.
+   * WebSocketAuthInterceptor javadoc'u), bu yuzden A ve B AYNI literal string'e abone olur; gercek
+   * yonlendirme sunucu tarafinda CONNECT'teki Principal'a gore yapilir. Yalniz hedeflenen kullanici
+   * mesaji almalidir.
+   */
+  @Test
+  void userReceivesOwnNotificationPushButNotAnotherUsersPush() throws Exception {
+    String tokenA = issueTokenForNewUser("inbox-ws-a@tracker.local");
+    String tokenB = issueTokenForNewUser("inbox-ws-b@tracker.local");
+    DecodedJwt decodedA = jwtService.verify(tokenA);
+    DecodedJwt decodedB = jwtService.verify(tokenB);
+
+    StompSession sessionA = connect(tokenA);
+    StompSession sessionB = connect(tokenB);
+    LinkedBlockingQueue<String> receivedByA = new LinkedBlockingQueue<>();
+    LinkedBlockingQueue<String> receivedByB = new LinkedBlockingQueue<>();
+    subscribeToOwnNotifications(sessionA, receivedByA);
+    subscribeToOwnNotifications(sessionB, receivedByB);
+    Thread.sleep(500); // SUBSCRIBE'in sunucuda islenmesi icin (STOMP'ta senkron onay yok).
+
+    messagingTemplate.convertAndSendToUser(
+        decodedA.userId().toString(), "/queue/notifications", "hello-a");
+
+    String messageA = receivedByA.poll(15, TimeUnit.SECONDS);
+    assertNotNull(messageA, "A kendi bildirimini almadi");
+    assertEquals("hello-a", messageA);
+    assertNull(receivedByB.poll(2, TimeUnit.SECONDS), "B, A'ya gonderilen mesaji ALMAMALI");
+
+    sessionA.disconnect();
+    sessionB.disconnect();
+  }
+
+  private StompSession connect(String token) throws Exception {
+    WebSocketStompClient client = newStompClient();
+    StompHeaders connectHeaders = new StompHeaders();
+    connectHeaders.setHeartbeat(new long[] {0, 0});
+    connectHeaders.add("Authorization", "Bearer " + token);
+    return client
+        .connectAsync(
+            wsUrl(),
+            (WebSocketHttpHeaders) null,
+            connectHeaders,
+            new StompSessionHandlerAdapter() {})
+        .get(10, TimeUnit.SECONDS);
+  }
+
+  private void subscribeToOwnNotifications(StompSession session, LinkedBlockingQueue<String> sink) {
+    session.subscribe(
+        "/user/queue/notifications",
+        new StompFrameHandler() {
+          @Override
+          public Type getPayloadType(StompHeaders headers) {
+            return String.class;
+          }
+
+          @Override
+          public void handleFrame(StompHeaders headers, Object payload) {
+            sink.offer((String) payload);
+          }
+        });
   }
 }

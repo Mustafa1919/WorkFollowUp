@@ -60,4 +60,20 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
       @Param("cursorApprovedAt") Instant cursorApprovedAt,
       @Param("cursorId") UUID cursorId,
       Pageable pageable);
+
+  /**
+   * Bir gorevin alt gorevleri (V19, tek seviye — donen satirlarin kendi parentTaskId'si NULL'dir).
+   */
+  List<Task> findByParentTaskIdOrderByTaskNumber(UUID parentTaskId);
+
+  /**
+   * Liste uc noktalarinda N+1'i onlemek icin batch: her parent icin (toplam, Done sayisi).
+   * TaskTagRepository#findTagsForTasks ile ayni sebeple native degil JPQL yeterli (dinamik IN
+   * genisletmesi gerekmiyor, tek sorguda tum sonuc GROUP BY ile geliyor).
+   */
+  @Query(
+      "SELECT t.parentTaskId, COUNT(t), "
+          + "SUM(CASE WHEN t.status = 'Done' THEN 1L ELSE 0L END) "
+          + "FROM Task t WHERE t.parentTaskId IN :parentTaskIds GROUP BY t.parentTaskId")
+  List<Object[]> countChildrenByParentTaskIds(@Param("parentTaskIds") List<UUID> parentTaskIds);
 }
