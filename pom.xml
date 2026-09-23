@@ -103,6 +103,14 @@
 			<version>2.4.0</version>
 		</dependency>
 
+		<!-- Boot 4.1.1 (Spring Framework 7) icin dogrulanmis en yeni surum bu; springdoc henuz
+		     Framework 7'ye ozel bir major yayinlamadi (Maven Central'da en yeni: 2.8.6, Mart 2025,
+		     Framework 6 hedefli). Once smoke-test edildi (bkz. Ilerleme.md), calisiyor. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.6</version>
+		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

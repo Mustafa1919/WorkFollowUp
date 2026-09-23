@@ -58,7 +58,10 @@ public class SecurityConfig {
                         "/api/v1/webhooks/**",
                         "/actuator/health/**",
                         "/actuator/info",
-                        "/ws/**")
+                        "/ws/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())
