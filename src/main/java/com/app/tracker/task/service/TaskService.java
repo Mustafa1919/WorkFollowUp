@@ -14,6 +14,9 @@ import com.app.tracker.task.repository.TaskCounterRepository;
 import com.app.tracker.task.repository.TaskCustomFieldRepository;
 import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +55,7 @@ public class TaskService {
   private final SprintRepository sprintRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
+  private final Clock clock;
 
   public TaskService(
       ProjectRepository projectRepository,
@@ -61,7 +65,8 @@ public class TaskService {
       TaskCustomFieldRepository taskCustomFieldRepository,
       SprintRepository sprintRepository,
       OutboxEventRepository outboxEventRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      Clock clock) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskCounterRepository = taskCounterRepository;
@@ -70,21 +75,38 @@ public class TaskService {
     this.sprintRepository = sprintRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
+    this.clock = clock;
   }
 
   @Transactional
   public Task createTask(UUID projectId, String title) {
+    return createTask(projectId, title, null, null);
+  }
+
+  /**
+   * {@code dueDate} verilirse tarihceye {@code null -> dueDate} olarak {@code due_date_changed}
+   * yazilir; bu yuzden {@code actorId} o durumda zorunludur.
+   */
+  @Transactional
+  public Task createTask(UUID projectId, String title, LocalDate dueDate, UUID actorId) {
     Project project = requireProject(projectId);
+    rejectPastDueDate(dueDate);
     int taskNumber = taskCounterRepository.nextNumber(project.getId());
     Task task =
         Task.of(UUID.randomUUID(), project.getWorkspaceId(), project.getId(), taskNumber, title);
+    task.changeDueDate(dueDate);
     Task saved = taskRepository.save(task);
+    if (dueDate != null) {
+      taskEventRepository.recordDueDateChange(
+          saved.getId(), Objects.requireNonNull(actorId, "actorId"), null, dueDate);
+    }
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("taskId", saved.getId().toString());
     payload.put("projectId", saved.getProjectId().toString());
     payload.put("taskNumber", saved.getTaskNumber());
     payload.put("title", saved.getTitle());
     payload.put("status", saved.getStatus());
+    payload.put("dueDate", dueDate == null ? null : dueDate.toString());
     outboxEventRepository.write(
         TASK_EVENTS_TOPIC,
         "TASK_CREATED",
@@ -119,10 +141,11 @@ public class TaskService {
     if (!VALID_STATUSES.contains(newStatus)) {
       throw new BusinessRuleException("Gecersiz durum: " + newStatus);
     }
-    Task task =
-        taskRepository
-            .findById(taskId)
-            .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+    Task task = requireTask(taskId);
+    if (task.isApproved() && !TaskStatus.DONE.equals(newStatus)) {
+      throw new BusinessRuleException(
+          "Onaylanmis gorevin durumu degistirilemez; once onay geri alinmali.");
+    }
     String oldStatus = task.getStatus();
     task.updateStatus(newStatus);
     Task saved = taskRepository.save(task);
@@ -196,6 +219,134 @@ public class TaskService {
     return task;
   }
 
+  @Transactional
+  public Task updateDueDate(UUID taskId, LocalDate dueDate, UUID actorId) {
+    Task task = requireTask(taskId);
+    LocalDate oldDueDate = task.getDueDate();
+    if (Objects.equals(oldDueDate, dueDate)) {
+      return task;
+    }
+    rejectPastDueDate(dueDate);
+    if (task.isApproved()) {
+      throw new BusinessRuleException("Onaylanmis gorevin tarihi degistirilemez.");
+    }
+    task.changeDueDate(dueDate);
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordDueDateChange(taskId, actorId, oldDueDate, dueDate);
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("taskId", saved.getId().toString());
+    payload.put("projectId", saved.getProjectId().toString());
+    payload.put("oldDueDate", oldDueDate == null ? null : oldDueDate.toString());
+    payload.put("newDueDate", dueDate == null ? null : dueDate.toString());
+    writeTaskEvent("TASK_DUE_DATE_CHANGED", saved, payload);
+    return saved;
+  }
+
+  /** Takvim gorunumu; aralik ust siniri controller'da uygulanir. */
+  @Transactional(readOnly = true)
+  public List<Task> listTasksByDueDate(UUID projectId, LocalDate from, LocalDate to) {
+    if (to.isBefore(from)) {
+      throw new BusinessRuleException("'to', 'from' tarihinden once olamaz.");
+    }
+    requireProject(projectId);
+    return taskRepository.findByDueDateRange(projectId, from, to);
+  }
+
+  /**
+   * Tamamlanan (Done) gorevi onaylar: gorev Kanban'dan kalkar, Tamamlananlar listesine gecer. Durum
+   * 'Done' KALIR, bu yuzden analitik etkilenmez. Tekrar onay idempotent (ilk onay zamani korunur).
+   */
+  @Transactional
+  public Task approve(UUID taskId, UUID actorId) {
+    Task task = requireTask(taskId);
+    if (task.isApproved()) {
+      return task;
+    }
+    if (!TaskStatus.DONE.equals(task.getStatus())) {
+      throw new BusinessRuleException("Yalniz 'Done' durumundaki gorev onaylanabilir.");
+    }
+    // Millisaniyeye kesilir: Tamamlananlar cursor'i epoch-milli tasir, esitlik karsilastirmasi
+    // DB'deki degerle birebir tutmali.
+    task.approve(actorId, clock.instant().truncatedTo(ChronoUnit.MILLIS));
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordApprovalChange(taskId, actorId, true);
+    writeTaskEvent("TASK_APPROVED", saved, basePayload(saved));
+    return saved;
+  }
+
+  /** Yanlislikla verilen onayi geri alir; gorev 'Done' olarak Kanban'a doner. */
+  @Transactional
+  public Task revokeApproval(UUID taskId, UUID actorId) {
+    Task task = requireTask(taskId);
+    if (!task.isApproved()) {
+      return task;
+    }
+    task.revokeApproval();
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordApprovalChange(taskId, actorId, false);
+    writeTaskEvent("TASK_APPROVAL_REVOKED", saved, basePayload(saved));
+    return saved;
+  }
+
+  /**
+   * Soft delete. Gorev bir sprint'teyse once sprint'ten cikarilir: aktif sprint'in taahhudunden
+   * duser; tamamlanmis sprint'lerin velocity'si degismez (uyelik {@code completedAt} kesitinden
+   * kurulur, bu olay kesitten sonradir). {@code TASK_DELETED} analitik read model'ini temizler.
+   */
+  @Transactional
+  public void deleteTask(UUID taskId, UUID actorId) {
+    Task task = requireTask(taskId);
+    if (task.getSprintId() != null) {
+      taskEventRepository.recordSprintChange(taskId, actorId, task.getSprintId(), null);
+      task.changeSprint(null);
+    }
+    task.markDeleted(actorId, clock.instant());
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordDeletion(taskId, actorId);
+    writeTaskEvent("TASK_DELETED", saved, basePayload(saved));
+  }
+
+  @Transactional(readOnly = true)
+  public PageResponse<Task> listApprovedTasks(UUID projectId, int limit, String cursor) {
+    requireProject(projectId);
+    Pageable pageable = PageRequest.of(0, limit + 1);
+    List<Task> rows;
+    if (cursor == null || cursor.isBlank()) {
+      rows = taskRepository.findFirstApprovedPage(projectId, pageable);
+    } else {
+      TaskCursor decoded = TaskCursor.decode(cursor);
+      rows =
+          taskRepository.findNextApprovedPage(
+              projectId, decoded.createdAt(), decoded.id(), pageable);
+    }
+    boolean hasMore = rows.size() > limit;
+    List<Task> page = hasMore ? rows.subList(0, limit) : rows;
+    String nextCursor = null;
+    if (hasMore) {
+      Task last = page.get(page.size() - 1);
+      // TaskCursor'in ilk alani burada onay zamanidir (siralama anahtari).
+      nextCursor = new TaskCursor(last.getApprovedAt(), last.getId()).encode();
+    }
+    return new PageResponse<>(page, nextCursor, hasMore);
+  }
+
+  /**
+   * Yeni bir bitis tarihi bugunden (is saat dilimi, bkz. {@code ClockConfig}) once olamaz. Yalniz
+   * DEGISEN tarihe uygulanir: gecikmis bir gorevin mevcut tarihi korunur, {@code null} serbesttir.
+   */
+  private void rejectPastDueDate(LocalDate dueDate) {
+    if (dueDate != null && dueDate.isBefore(LocalDate.now(clock))) {
+      throw new BusinessRuleException("Bitis tarihi gecmis bir gun olamaz.");
+    }
+  }
+
+  private static Map<String, Object> basePayload(Task task) {
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("taskId", task.getId().toString());
+    payload.put("projectId", task.getProjectId().toString());
+    return payload;
+  }
+
   private void writeTaskEvent(String eventType, Task task, Map<String, Object> payload) {
     outboxEventRepository.write(
         TASK_EVENTS_TOPIC,
@@ -206,8 +357,11 @@ public class TaskService {
   }
 
   private Task requireTask(UUID taskId) {
+    // isDeleted: @SQLRestriction'a ek savunma (ayni persistence context'te onceden yuklenmis
+    // bir entity filtreden gecmeden donebilir).
     return taskRepository
         .findById(taskId)
+        .filter(task -> !task.isDeleted())
         .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
   }
 

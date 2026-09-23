@@ -15,8 +15,9 @@ import tools.jackson.databind.ObjectMapper;
  * dogrudan native INSERT ile yaziliyor — TaskCounterRepository ile ayni desen.
  *
  * <p>Event tipleri ({@code event_type}): {@code status_changed}, {@code sprint_changed}, {@code
- * story_point_changed}. Analitik Worker (Faz 3) sprint uyeligini ve story point'i bu tarihceden
- * yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak zorundadir.
+ * story_point_changed}, {@code due_date_changed}. Analitik Worker (Faz 3) sprint uyeligini ve story
+ * point'i bu tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak
+ * zorundadir.
  */
 @Repository
 public class TaskEventRepository {
@@ -47,6 +48,28 @@ public class TaskEventRepository {
   public void recordStoryPointChange(
       UUID taskId, UUID actorId, Integer oldStoryPoint, Integer newStoryPoint) {
     record(taskId, actorId, "story_point_changed", "storyPoint", oldStoryPoint, newStoryPoint);
+  }
+
+  /** Onay verildi ({@code approved=true}) ya da geri alindi ({@code false}). */
+  public void recordApprovalChange(UUID taskId, UUID actorId, boolean approved) {
+    record(taskId, actorId, "approval_changed", "approved", !approved, approved);
+  }
+
+  /** Soft delete; satir tasks'ta kalir, tarihce korunur. */
+  public void recordDeletion(UUID taskId, UUID actorId) {
+    record(taskId, actorId, "deleted", "deleted", false, true);
+  }
+
+  /** {@code null} deger gecerlidir (gorevi takvimden kaldirma). ISO tarih (yyyy-MM-dd) yazilir. */
+  public void recordDueDateChange(
+      UUID taskId, UUID actorId, LocalDate oldDueDate, LocalDate newDueDate) {
+    record(
+        taskId,
+        actorId,
+        "due_date_changed",
+        "dueDate",
+        oldDueDate == null ? null : oldDueDate.toString(),
+        newDueDate == null ? null : newDueDate.toString());
   }
 
   /**

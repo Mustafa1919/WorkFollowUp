@@ -117,6 +117,18 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.PATCH, "/api/v1/tasks/{id}", "{\"status\":\"Done\"}", WRITE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/sprint", "{\"sprintId\":null}", WRITE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/story-point", "{\"storyPoint\":3}", WRITE),
+        Endpoint.of(
+            HttpMethod.GET,
+            "/api/v1/projects/{id}/tasks/calendar?from=2026-09-01&to=2026-10-12",
+            null,
+            ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PUT, "/api/v1/tasks/{id}/due-date", "{\"dueDate\":\"2099-09-30\"}", WRITE),
+        // Onay: ADMIN/MANAGER (gorevi yapan DEVELOPER kendi isini onaylayamaz); silme yalniz ADMIN.
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks/approved", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/approval", null, MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/approval", null, MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}", null, ADMIN_ONLY),
         // Analitik okuma: rol siniri yok, workspace uyeligi yeterli (AnalyticsController javadoc).
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/velocity", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/throughput", null, ALL_ROLES),

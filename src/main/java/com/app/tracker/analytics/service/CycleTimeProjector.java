@@ -50,4 +50,17 @@ public class CycleTimeProjector {
       taskAnalyticsRepository.save(analytics);
     }
   }
+
+  /**
+   * Silinen gorevin read model satirini kaldirir. Olaylar ayni anahtarla (taskId) ayni partition'a
+   * gittigi icin silmeden SONRA ayni gorev icin durum olayi gelmez (DLT replay'i haric; bilinen
+   * sinir: eski bir olay replay edilirse satir yeniden olusur).
+   */
+  @Transactional
+  public void forget(UUID eventId, UUID taskId) {
+    if (!processedEventStore.markProcessed(CONSUMER, eventId)) {
+      return;
+    }
+    taskAnalyticsRepository.deleteById(taskId);
+  }
 }

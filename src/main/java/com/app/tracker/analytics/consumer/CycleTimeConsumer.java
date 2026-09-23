@@ -29,6 +29,9 @@ public class CycleTimeConsumer {
 
   private static final String EVENT_TYPE = "TASK_STATUS_UPDATED";
 
+  /** Silinen gorev Throughput/Cycle Time'dan cikar (read model satiri silinir). */
+  private static final String DELETED_EVENT_TYPE = "TASK_DELETED";
+
   private final ObjectMapper objectMapper;
   private final TenantExecutor tenantExecutor;
   private final CycleTimeProjector projector;
@@ -46,7 +49,15 @@ public class CycleTimeConsumer {
       properties = {"auto.offset.reset=earliest"})
   public void onMessage(String envelopeJson) {
     JsonNode envelope = parse(envelopeJson);
-    if (!EVENT_TYPE.equals(envelope.path("eventType").asString(null))) {
+    String eventType = envelope.path("eventType").asString(null);
+    if (DELETED_EVENT_TYPE.equals(eventType)) {
+      UUID eventId = UUID.fromString(required(envelope, "eventId"));
+      UUID workspaceId = UUID.fromString(required(envelope, "workspaceId"));
+      UUID taskId = UUID.fromString(required(envelope.path("payload"), "taskId"));
+      tenantExecutor.runAs(workspaceId, () -> projector.forget(eventId, taskId));
+      return;
+    }
+    if (!EVENT_TYPE.equals(eventType)) {
       return;
     }
     try {
