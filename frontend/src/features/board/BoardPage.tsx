@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { BarChart3, CalendarDays, CheckCircle2, KanbanSquare, Plus } from 'lucide-react'
-import { useProjects, useSprints, useTasks, useCurrentRole } from '@/api/queries'
+import * as DM from '@radix-ui/react-dropdown-menu'
+import { BarChart3, CalendarDays, Check, CheckCircle2, KanbanSquare, Plus, Tag as TagIcon } from 'lucide-react'
+import { useProjectRealtime, useProjects, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
 import { cn } from '@/lib/cn'
 import type { Task } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -21,24 +22,45 @@ export function BoardPage() {
   const [params, setParams] = useSearchParams()
   const view: View = params.get('view') === 'calendar' ? 'calendar' : 'kanban'
   const sprintFilter = params.get('sprint') ?? 'all'
+  // Coklu-secim tek bir query param'da virgullu tutulur (URL'de paylasilabilir/kalici kalsin).
+  const tagFilter = useMemo(() => (params.get('tags') ?? '').split(',').filter(Boolean), [params])
 
   const { data: projects } = useProjects()
   const project = projects?.find((p) => p.id === projectId)
   const { data: tasks, isLoading } = useTasks(projectId)
   const { data: sprints } = useSprints(projectId)
+  const { data: tags } = useTags()
   const role = useCurrentRole()
   const canWrite = role !== undefined && role !== 'VIEWER'
+  useProjectRealtime(projectId)
 
   const [selected, setSelected] = useState<Task | null>(null)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [sprintsOpen, setSprintsOpen] = useState(false)
 
+  // Komut paletinden derin baglanti: `?task=<id>` ile gelinirse ilgili gorevi ac, sonra param'i
+  // temizle (bir daha tasks yenilendiginde tekrar acilmasin).
+  const taskParam = params.get('task')
+  useEffect(() => {
+    if (!taskParam || !tasks) return
+    const found = tasks.find((t) => t.id === taskParam)
+    if (found) setSelected(found)
+    const next = new URLSearchParams(params)
+    next.delete('task')
+    setParams(next, { replace: true })
+  }, [taskParam, tasks, params, setParams])
+
   const filtered = useMemo(() => {
     if (!tasks) return []
-    if (sprintFilter === 'all') return tasks
-    if (sprintFilter === 'backlog') return tasks.filter((t) => !t.sprintId)
-    return tasks.filter((t) => t.sprintId === sprintFilter)
-  }, [tasks, sprintFilter])
+    let result = tasks
+    if (sprintFilter === 'backlog') result = result.filter((t) => !t.sprintId)
+    else if (sprintFilter !== 'all') result = result.filter((t) => t.sprintId === sprintFilter)
+    // Secili etiketlerden HERHANGI BIRINI tasiyan gorev eslesir (OR); backend bunu ayrica
+    // desteklemiyor (bkz. rapor: liste zaten tamami cekilip client-side filtreleniyor, sprint
+    // filtresiyle AYNI desen).
+    if (tagFilter.length > 0) result = result.filter((t) => t.tags.some((tag) => tagFilter.includes(tag.id)))
+    return result
+  }, [tasks, sprintFilter, tagFilter])
 
   function set(key: string, value: string | null) {
     const next = new URLSearchParams(params)
@@ -81,6 +103,13 @@ export function BoardPage() {
             </option>
           ))}
         </select>
+        {tags && tags.length > 0 && (
+          <TagFilter
+            tags={tags}
+            selected={tagFilter}
+            onChange={(ids) => set('tags', ids.length === 0 ? null : ids.join(','))}
+          />
+        )}
         <Button variant="outline" size="sm" className="h-9" onClick={() => setSprintsOpen(true)}>
           Sprintler
         </Button>
@@ -123,6 +152,7 @@ export function BoardPage() {
                 projectId={projectId}
                 projectKey={project?.key}
                 sprintFilter={sprintFilter}
+                tagFilter={tagFilter}
                 undated={filtered.filter((t) => !t.dueDate)}
                 canWrite={canWrite}
                 onOpen={setSelected}
@@ -142,6 +172,65 @@ export function BoardPage() {
       <NewTaskDialog projectId={projectId} open={newTaskOpen} onOpenChange={setNewTaskOpen} />
       <SprintsDialog projectId={projectId} open={sprintsOpen} onOpenChange={setSprintsOpen} canManage={role === 'WORKSPACE_ADMIN' || role === 'MANAGER'} />
     </Page>
+  )
+}
+
+/** Coklu-secim etiket filtresi: secili tag id'leri virgullu URL param'ina yansir (paylasilabilir). */
+function TagFilter({
+  tags,
+  selected,
+  onChange,
+}: {
+  tags: { id: string; name: string; color: string }[]
+  selected: string[]
+  onChange: (ids: string[]) => void
+}) {
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id])
+  }
+  return (
+    <DM.Root>
+      <DM.Trigger
+        className={cn(
+          'flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border px-3 text-sm outline-none transition-colors',
+          selected.length > 0 ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-surface text-fg hover:bg-surface-2',
+        )}
+      >
+        <TagIcon size={14} /> Etiket{selected.length > 0 ? ` (${selected.length})` : ''}
+      </DM.Trigger>
+      <DM.Portal>
+        <DM.Content align="start" sideOffset={6} className="z-50 max-h-72 w-56 overflow-y-auto rounded-xl border border-border bg-surface p-1.5 shadow-xl">
+          {tags.map((tag) => (
+            <DM.CheckboxItem
+              key={tag.id}
+              checked={selected.includes(tag.id)}
+              onSelect={(e) => {
+                e.preventDefault()
+                toggle(tag.id)
+              }}
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-2"
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+              <span className="flex-1 truncate">{tag.name}</span>
+              <DM.ItemIndicator>
+                <Check size={13} className="text-accent" />
+              </DM.ItemIndicator>
+            </DM.CheckboxItem>
+          ))}
+          {selected.length > 0 && (
+            <>
+              <DM.Separator className="my-1 h-px bg-border" />
+              <DM.Item
+                onSelect={() => onChange([])}
+                className="cursor-pointer rounded-lg px-2 py-1.5 text-sm text-muted outline-none data-[highlighted]:bg-surface-2 data-[highlighted]:text-fg"
+              >
+                Filtreyi temizle
+              </DM.Item>
+            </>
+          )}
+        </DM.Content>
+      </DM.Portal>
+    </DM.Root>
   )
 }
 

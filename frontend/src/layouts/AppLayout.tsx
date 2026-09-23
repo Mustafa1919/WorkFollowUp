@@ -2,12 +2,17 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronsUpDown, FolderKanban, Home, LogOut, Menu, Plus, Settings, X } from 'lucide-react'
+import { CalendarClock, Check, ChevronsUpDown, FolderKanban, Home, LogOut, Menu, Plus, Search, Settings, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateWorkspace, useCurrentRole, useProjects, useWorkspaces } from '@/api/queries'
+import { useCreateWorkspace, useCurrentRole, useNotificationRealtime, useProjects, useWorkspaces } from '@/api/queries'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { disconnectRealtime, ensureRealtimeConnected } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
+import { CommandPalette } from '@/components/CommandPalette'
+import { ShortcutsDialog } from '@/components/ShortcutsDialog'
+import { openCommandPalette } from '@/lib/commandPalette'
+import { NotificationBell } from '@/components/NotificationBell'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -19,6 +24,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 export function AppLayout() {
   const { data: workspaces, isLoading } = useWorkspaces()
+  const accessToken = useSession((s) => s.accessToken)
   const workspaceId = useSession((s) => s.workspaceId)
   const setWorkspace = useSession((s) => s.setWorkspace)
   // Mobil menu acildigi sayfaya baglidir: gezinince kendiliginden kapanir (effect gerekmez).
@@ -33,6 +39,16 @@ export function AppLayout() {
     if (!workspaces.some((w) => w.id === workspaceId)) setWorkspace(workspaces[0]?.id ?? null)
   }, [workspaces, workspaceId, setWorkspace])
 
+  // Tek paylasimli STOMP baglantisi: jeton yenilenince (refresh) veya workspace degisince tam
+  // yeniden kurulur (coordinator karari — proje kanali bagimsiz olarak BoardPage'de abone olur).
+  useEffect(() => {
+    disconnectRealtime()
+    if (accessToken) ensureRealtimeConnected(accessToken)
+    return () => disconnectRealtime()
+  }, [accessToken, workspaceId])
+
+  // Inbox push'u: workspace/proje'den bağımsız, oturum boyunca tek yerden abone olunur.
+  useNotificationRealtime()
 
   if (isLoading) return null
   if (workspaces && workspaces.length === 0) return <Onboarding />
@@ -84,6 +100,15 @@ export function AppLayout() {
           </button>
           <WorkspaceSwitcher />
           <div className="flex-1" />
+          <button
+            onClick={openCommandPalette}
+            className="hidden cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:bg-surface-2 sm:flex"
+            aria-label="Komut paleti (Ctrl+K)"
+          >
+            <Search size={13} /> Ara
+            <kbd className="rounded border border-border px-1 py-px text-[10px]">Ctrl K</kbd>
+          </button>
+          <NotificationBell />
           <ThemeToggle />
           <UserMenu />
         </header>
@@ -93,6 +118,8 @@ export function AppLayout() {
           </AnimatePresence>
         </main>
       </div>
+      <CommandPalette />
+      <ShortcutsDialog />
     </div>
   )
 }
@@ -120,6 +147,14 @@ function Sidebar() {
             <>
               {isActive && <ActivePill />}
               <Home size={17} className="relative" /> <span className="relative">Ana sayfa</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/meetings" className={link}>
+          {({ isActive }) => (
+            <>
+              {isActive && <ActivePill />}
+              <CalendarClock size={17} className="relative" /> <span className="relative">Toplantılar</span>
             </>
           )}
         </NavLink>

@@ -1,18 +1,27 @@
+import { useEffect } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
   CycleTimeResponse,
+  Meeting,
+  MeetingFrequency,
+  MeetingOccurrence,
+  Notification,
   Page,
   Project,
   SlackIntegration,
   Sprint,
+  Tag,
   Task,
   TaskStatus,
   ThroughputResponse,
   VelocityResponse,
   WebhookIntegration,
+  Weekday,
   Workspace,
+  WorkspaceMember,
 } from '@/lib/types'
 
 /** Tum sorgu anahtarlari workspace'e baglidir: workspace degisince cache karismaz. */
@@ -27,6 +36,14 @@ export const keys = {
   analytics: (ws: string | null, projectId: string, kind: string) => ['ws', ws, 'analytics', projectId, kind] as const,
   slack: (ws: string | null) => ['ws', ws, 'slack'] as const,
   webhooks: (ws: string | null) => ['ws', ws, 'webhooks'] as const,
+  tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
+  subtasks: (ws: string | null, taskId: string) => ['ws', ws, 'subtasks', taskId] as const,
+  members: (ws: string | null) => ['ws', ws, 'members'] as const,
+  notifications: (ws: string | null, unreadOnly: boolean) => ['ws', ws, 'notifications', unreadOnly] as const,
+  unreadCount: (ws: string | null) => ['ws', ws, 'notifications', 'unread-count'] as const,
+  meetings: (ws: string | null) => ['ws', ws, 'meetings'] as const,
+  meetingOccurrences: (ws: string | null, from: string, to: string) =>
+    ['ws', ws, 'meetings', 'occurrences', from, to] as const,
 }
 
 const ws = () => useSession.getState().workspaceId
@@ -77,7 +94,7 @@ async function fetchAllTasks(projectId: string): Promise<Task[]> {
       params: { limit: 200, cursor: cursor ?? undefined },
     })
     all.push(...res.data.data)
-    cursor = res.data.hasMore ? res.data.nextCursor : null
+    cursor = res.data.has_more ? res.data.next_cursor : null
   } while (cursor)
   return all
 }
@@ -174,6 +191,25 @@ export function useUpdateStoryPoint(projectId: string) {
   })
 }
 
+/**
+ * Backend WebSocket fan-out'una (`/topic/workspace.{ws}.project.{projectId}`) abone olur; herhangi
+ * bir task.events olayinda (durum/etiket/story point/tarih/onay/silme) ilgili sorgulari gecersiz
+ * kilar. `keys.tasks(...)` onekini gecersiz kilmak `calendar` anahtarini da kapsar (ayni dizi
+ * onekini paylasiyorlar); `approved` ayri bir dal oldugu icin ayrica belirtilir.
+ */
+export function useProjectRealtime(projectId: string) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!workspaceId || !projectId) return
+    return subscribeToProject(workspaceId, projectId, (envelope) => {
+      console.debug('[realtime] task.events çerçevesi alındı:', envelope)
+      qc.invalidateQueries({ queryKey: keys.tasks(workspaceId, projectId) })
+      qc.invalidateQueries({ queryKey: keys.approved(workspaceId, projectId) })
+    })
+  }, [workspaceId, projectId, qc])
+}
+
 // ---------------------------------------------------------------- approval / delete
 
 /** Tamamlananlar sayfasi: onay zamanina gore yeniden eskiye, "daha fazla" ile sayfalanir. */
@@ -188,7 +224,7 @@ export function useApprovedTasks(projectId: string) {
         })
       ).data,
     initialPageParam: null as string | null,
-    getNextPageParam: (last) => (last.hasMore ? last.nextCursor : null),
+    getNextPageParam: (last) => (last.has_more ? last.next_cursor : null),
     enabled: !!workspaceId && !!projectId,
   })
 }
@@ -334,10 +370,287 @@ export function useWebhookActions() {
   }
 }
 
+// ---------------------------------------------------------------- tags
+
+export function useTags() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.tags(workspaceId),
+    queryFn: async () => (await api.get<Tag[]>('/api/v1/tags')).data,
+    enabled: !!workspaceId,
+  })
+}
+
+export function useTagActions() {
+  const qc = useQueryClient()
+  // Bir etiketin adi/rengi degisince onu tasiyan TUM gorev cevaplari da degismis olur (embed edilmis
+  // kopya); tek tek gorev cache'ini yamamak yerine workspace altindaki her seyi (tasks/approved/tags)
+  // gecersiz kilmak daha basit ve dogru.
+  const invalidateAll = () => qc.invalidateQueries({ queryKey: ['ws', ws()] })
+  return {
+    create: useMutation({
+      mutationFn: async (body: { name: string; color: string }) => (await api.post<Tag>('/api/v1/tags', body)).data,
+      onSuccess: invalidateAll,
+    }),
+    update: useMutation({
+      mutationFn: async ({ id, ...body }: { id: string; name: string; color: string }) =>
+        (await api.put<Tag>(`/api/v1/tags/${id}`, body)).data,
+      onSuccess: invalidateAll,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/tags/${id}`),
+      onSuccess: invalidateAll,
+    }),
+  }
+}
+
+/** Bir gorevin etiketlerini atar/kaldirir; TaskDialog + Kanban kartlari icin ortak. */
+export function useTaskTagAssignment(projectId: string) {
+  const qc = useQueryClient()
+  const invalidate = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
+      qc.invalidateQueries({ queryKey: keys.approved(ws(), projectId) }),
+    ])
+  return {
+    assign: useMutation({
+      mutationFn: async ({ taskId, tagId }: { taskId: string; tagId: string }) =>
+        (await api.put<Task>(`/api/v1/tasks/${taskId}/tags/${tagId}`)).data,
+      onSuccess: invalidate,
+    }),
+    unassign: useMutation({
+      mutationFn: async ({ taskId, tagId }: { taskId: string; tagId: string }) =>
+        (await api.delete<Task>(`/api/v1/tasks/${taskId}/tags/${tagId}`)).data,
+      onSuccess: invalidate,
+    }),
+  }
+}
+
 /** Aktif workspace'teki rol (UI'da yetki gizleme icin; asil kontrol backend'de). */
+// ---------------------------------------------------------------- subtask / dependency
+
+/** Alt gorev listesi (TaskDialog) — tam Task alani gerekir, sadece sayi degil. */
+export function useSubtasks(taskId: string | undefined) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.subtasks(workspaceId, taskId ?? ''),
+    queryFn: async () => (await api.get<Task[]>(`/api/v1/tasks/${taskId}/subtasks`)).data,
+    enabled: !!workspaceId && !!taskId,
+  })
+}
+
+/** Bir gorevin ust gorevini atar/kaldirir — TaskDialog'un "Alt Görevler" bolumu icin. */
+export function useTaskParentAssignment(projectId: string) {
+  const qc = useQueryClient()
+  const invalidate = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
+      qc.invalidateQueries({ queryKey: keys.approved(ws(), projectId) }),
+      qc.invalidateQueries({ queryKey: ['ws', ws(), 'subtasks'] }),
+    ])
+  return {
+    setParent: useMutation({
+      mutationFn: async ({ taskId, parentTaskId }: { taskId: string; parentTaskId: string }) =>
+        (await api.put<Task>(`/api/v1/tasks/${taskId}/parent/${parentTaskId}`)).data,
+      onSuccess: invalidate,
+    }),
+    removeParent: useMutation({
+      mutationFn: async (taskId: string) => (await api.delete<Task>(`/api/v1/tasks/${taskId}/parent`)).data,
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+/**
+ * Dependency (Blocked by/Blocking) atar/kaldirir. Workspace geneli oldugundan (proje siniri yok)
+ * hangi projenin cache'i etkilenecegi bilinemez — invalidate PROJE FARKI GOZETMEKSIZIN tum
+ * workspace 'tasks' sorgularini kapsar (tags'teki invalidateAll ile ayni gerekce).
+ */
+export function useTaskDependencyAssignment() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['ws', ws()] })
+  return {
+    link: useMutation({
+      mutationFn: async ({ taskId, blockingTaskId }: { taskId: string; blockingTaskId: string }) =>
+        (await api.put<Task>(`/api/v1/tasks/${taskId}/dependencies/${blockingTaskId}`)).data,
+      onSuccess: invalidate,
+    }),
+    unlink: useMutation({
+      mutationFn: async ({ taskId, blockingTaskId }: { taskId: string; blockingTaskId: string }) =>
+        (await api.delete<Task>(`/api/v1/tasks/${taskId}/dependencies/${blockingTaskId}`)).data,
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+/** Bagimlilik/alt gorev secicileri icin: tum workspace projelerindeki gorevler, tek listede. */
+export function useAllTasks(projects: Project[]) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQueries({
+    queries: projects.map((p) => ({
+      queryKey: keys.tasks(workspaceId, p.id),
+      queryFn: () => fetchAllTasks(p.id),
+    })),
+    combine: (results) => ({
+      data: results.flatMap((r) => r.data ?? []),
+      isLoading: results.some((r) => r.isLoading),
+    }),
+  })
+}
+
 export function useCurrentRole() {
   const { data } = useWorkspaces()
   const workspaceId = useSession((s) => s.workspaceId)
   return data?.find((w) => w.id === workspaceId)?.role
+}
+
+// ---------------------------------------------------------------- workspace members
+
+export function useMembers(enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.members(workspaceId),
+    queryFn: async () => (await api.get<WorkspaceMember[]>('/api/v1/workspaces/members')).data,
+    enabled: enabled && !!workspaceId,
+  })
+}
+
+export function useMemberActions() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: keys.members(ws()) })
+  return {
+    add: useMutation({
+      mutationFn: async (body: { email: string; role: string }) =>
+        (await api.post<WorkspaceMember>('/api/v1/workspaces/members', body)).data,
+      onSuccess: invalidate,
+    }),
+    changeRole: useMutation({
+      mutationFn: async ({ userId, role }: { userId: string; role: string }) =>
+        (await api.patch<WorkspaceMember>(`/api/v1/workspaces/members/${userId}`, { role })).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (userId: string) => api.delete(`/api/v1/workspaces/members/${userId}`),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+// ---------------------------------------------------------------- notifications (Inbox)
+
+export function useUnreadCount() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.unreadCount(workspaceId),
+    queryFn: async () => (await api.get<{ count: number }>('/api/v1/notifications/unread-count')).data.count,
+    enabled: !!workspaceId,
+  })
+}
+
+/** Inbox listesi: keyset sayfalama, "daha fazla yükle" ile devam eder (Tamamlananlar ile aynı desen). */
+export function useNotifications(unreadOnly: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useInfiniteQuery({
+    queryKey: keys.notifications(workspaceId, unreadOnly),
+    queryFn: async ({ pageParam }) =>
+      (
+        await api.get<Page<Notification>>('/api/v1/notifications', {
+          params: { limit: 20, cursor: pageParam ?? undefined, unreadOnly },
+        })
+      ).data,
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.has_more ? last.next_cursor : null),
+    enabled: !!workspaceId,
+  })
+}
+
+export function useNotificationActions() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['ws', ws(), 'notifications'] })
+  return {
+    markRead: useMutation({
+      mutationFn: async (id: string) => (await api.post<Notification>(`/api/v1/notifications/${id}/read`)).data,
+      onSuccess: invalidate,
+    }),
+    markAllRead: useMutation({
+      mutationFn: async () => api.post('/api/v1/notifications/read-all'),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+/**
+ * Backend `/user/queue/notifications` push'una abone olur (bkz. lib/realtime.ts); yeni bir bildirim
+ * geldiğinde Inbox listesini ve okunmamış sayacını geçersiz kılar. `useProjectRealtime` ile AYNI
+ * desen ama workspace/proje'den BAĞIMSIZ — AppLayout'ta, oturum boyunca TEK yerden çağrılır.
+ */
+export function useNotificationRealtime() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!workspaceId) return
+    return subscribeToNotifications(() => {
+      qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'notifications'] })
+    })
+  }, [workspaceId, qc])
+}
+
+// ---------------------------------------------------------------- meetings
+
+export interface MeetingPayload {
+  title: string
+  description?: string | null
+  meetingUrl?: string | null
+  startDate: string
+  startTime: string
+  durationMinutes: number
+  frequency: MeetingFrequency
+  intervalCount: number
+  byWeekday?: Weekday[]
+  untilDate?: string | null
+  occurrenceCount?: number | null
+  reminderMinutesBefore?: number | null
+}
+
+/** Toplanti serilerinin tam listesi (yonetim paneli icin) — workspace geneli, proje siniri yok. */
+export function useMeetings() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.meetings(workspaceId),
+    queryFn: async () => (await api.get<Meeting[]>('/api/v1/meetings')).data,
+    enabled: !!workspaceId,
+  })
+}
+
+/** Takvim gorunumu: TUM serilerin verilen araliktaki occurrence'lari, duzlestirilmis. */
+export function useMeetingOccurrences(from: string, to: string) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.meetingOccurrences(workspaceId, from, to),
+    queryFn: async () =>
+      (await api.get<MeetingOccurrence[]>('/api/v1/meetings/occurrences', { params: { from, to } })).data,
+    enabled: !!workspaceId && !!from && !!to,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useMeetingActions() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['ws', ws(), 'meetings'] })
+  return {
+    create: useMutation({
+      mutationFn: async (body: MeetingPayload) => (await api.post<Meeting>('/api/v1/meetings', body)).data,
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: async ({ id, ...body }: MeetingPayload & { id: string }) =>
+        (await api.put<Meeting>(`/api/v1/meetings/${id}`, body)).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/meetings/${id}`),
+      onSuccess: invalidate,
+    }),
+  }
 }
 

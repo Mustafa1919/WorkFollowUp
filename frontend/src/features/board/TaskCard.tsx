@@ -1,10 +1,10 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { Ban, CalendarDays, ListChecks } from 'lucide-react'
 import { differenceInCalendarDays, startOfToday } from 'date-fns'
 import type { Task } from '@/lib/types'
 import { cn } from '@/lib/cn'
 import { fmt, fromIso } from '@/lib/dates'
-import { StatusDot } from '@/components/ui/misc'
+import { StatusDot, TagChip } from '@/components/ui/misc'
 import { taskKey } from '@/lib/status'
 
 interface TaskCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -20,6 +20,8 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
 ) {
   const diff = task.dueDate ? differenceInCalendarDays(fromIso(task.dueDate), startOfToday()) : null
   const late = diff !== null && diff < 0 && task.status !== 'Done'
+  // Bilgilendirici: sadece hala acik (Done olmayan) blocker'lar rozet gerektirir.
+  const openBlockers = task.blockedBy.filter((b) => b.status !== 'Done').length
   return (
     <div
       ref={ref}
@@ -35,9 +37,35 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
       <div className={cn('text-sm leading-snug', task.status === 'Done' && 'text-muted line-through decoration-muted/50')}>
         {task.title}
       </div>
+      {task.tags.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {task.tags.map((tag) => (
+            <TagChip key={tag.id} tag={tag} />
+          ))}
+        </div>
+      )}
       <div className="mt-2.5 flex items-center gap-2 text-xs text-muted">
         <StatusDot status={task.status} />
         <span className="font-mono">{taskKey(projectKey, task.taskNumber)}</span>
+        {task.storyPoint != null && (
+          <span
+            className="grid h-4 min-w-4 place-items-center rounded-full bg-surface-2 px-1 text-[10px] font-semibold tabular-nums"
+            title="Story point"
+          >
+            {task.storyPoint}
+          </span>
+        )}
+        {task.subtaskCount > 0 && (
+          <span className="inline-flex items-center gap-0.5" title="Alt görevler">
+            <ListChecks size={12} />
+            {task.completedSubtaskCount}/{task.subtaskCount}
+          </span>
+        )}
+        {openBlockers > 0 && (
+          <span className="inline-flex items-center gap-0.5 text-danger" title={`${openBlockers} açık bağımlılık tarafından bloklanıyor`}>
+            <Ban size={12} />
+          </span>
+        )}
         {task.dueDate && (
           <span
             className={cn(

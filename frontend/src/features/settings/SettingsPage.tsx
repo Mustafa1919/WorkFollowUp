@@ -1,19 +1,38 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Bell, Copy, GitBranch, Lock, Monitor, Moon, RefreshCw, Sun, Trash2 } from 'lucide-react'
+import { Bell, Copy, GitBranch, Lock, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSlack, useSlackActions, useWebhookActions, useWebhooks, useCurrentRole } from '@/api/queries'
+import {
+  useSlack,
+  useSlackActions,
+  useWebhookActions,
+  useWebhooks,
+  useCurrentRole,
+  useTags,
+  useTagActions,
+  useMembers,
+  useMemberActions,
+} from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/dates'
+import type { Tag, WorkspaceMember, WorkspaceRole } from '@/lib/types'
 import { useTheme } from '@/stores/theme'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Page } from '@/components/ui/misc'
 
+const ROLE_LABEL: Record<WorkspaceRole, string> = {
+  WORKSPACE_ADMIN: 'Yönetici',
+  MANAGER: 'Yönetmen',
+  DEVELOPER: 'Geliştirici',
+  VIEWER: 'İzleyici',
+}
+
 export function SettingsPage() {
   const role = useCurrentRole()
   const isAdmin = role === 'WORKSPACE_ADMIN'
+  const canManageTags = isAdmin || role === 'MANAGER'
   return (
     <Page className="max-w-3xl">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">Ayarlar</h1>
@@ -21,6 +40,14 @@ export function SettingsPage() {
         <Section title="Görünüm" text="Tercihin bu tarayıcıda saklanır.">
           <ThemePicker />
         </Section>
+        <Section title="Üyeler" text="Workspace'e önceden kayıtlı bir kullanıcıyı e-posta ile ekle." icon={<Users size={18} />}>
+          <MemberSettings isAdmin={isAdmin} />
+        </Section>
+        {canManageTags && (
+          <Section title="Etiketler" text="Görevleri sınıflandırmak için workspace genelinde etiketler." icon={<TagIcon size={18} />}>
+            <TagSettings />
+          </Section>
+        )}
         {isAdmin ? (
           <>
             <Section title="Slack bildirimleri" text="Görev oluşturma ve durum değişiklikleri bir Slack kanalına gönderilir." icon={<Bell size={18} />}>
@@ -90,6 +117,211 @@ function ThemePicker() {
       >
         <Monitor size={20} /> Sistem
       </button>
+    </div>
+  )
+}
+
+const ROLE_OPTIONS: WorkspaceRole[] = ['WORKSPACE_ADMIN', 'MANAGER', 'DEVELOPER', 'VIEWER']
+
+function MemberSettings({ isAdmin }: { isAdmin: boolean }) {
+  const { data: members } = useMembers(true)
+  const { add, changeRole, remove } = useMemberActions()
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<WorkspaceRole>('DEVELOPER')
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+  const onError = (err: unknown) => toast.error(errorMessage(err))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      await add.mutateAsync({ email, role })
+      setEmail('')
+      setRole('DEVELOPER')
+      toast.success('Üye eklendi')
+    } catch (err) {
+      onError(err)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {members?.map((m: WorkspaceMember) => (
+        <div key={m.userId} className="flex items-center gap-3 rounded-xl bg-surface-2 p-3 text-sm">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent uppercase">
+            {m.fullName.charAt(0) || m.email.charAt(0)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{m.fullName || m.email}</div>
+            <div className="truncate text-xs text-muted">{m.email}</div>
+          </div>
+          {isAdmin ? (
+            <>
+              <select
+                value={m.role}
+                onChange={(e) => changeRole.mutate({ userId: m.userId, role: e.target.value }, { onError })}
+                className="h-8 cursor-pointer rounded-lg border border-border bg-surface px-2 text-xs outline-none focus:border-accent"
+              >
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+              {confirmRemove === m.userId ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={remove.isPending}
+                    onClick={() => remove.mutate(m.userId, { onError, onSuccess: () => setConfirmRemove(null) })}
+                  >
+                    Emin misin?
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
+                    <X size={14} />
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="ghost" title="Kaldır" onClick={() => setConfirmRemove(m.userId)}>
+                  <Trash2 size={14} />
+                </Button>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+          )}
+        </div>
+      ))}
+      {isAdmin && (
+        <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            type="email"
+            required
+            placeholder="kullanici@sirket.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as WorkspaceRole)}
+            className="h-10 cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-accent"
+          >
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" loading={add.isPending} className="shrink-0">
+            Ekle
+          </Button>
+        </form>
+      )}
+      <p className="text-xs text-muted">
+        Kullanıcı önceden <code className="rounded bg-surface-2 px-1">/register</code> ile kendi hesabını açmış olmalı — davet e-postası
+        gönderilmiyor.
+      </p>
+    </div>
+  )
+}
+
+const DEFAULT_TAG_COLOR = '#6366f1'
+
+function TagSettings() {
+  const { data: tags } = useTags()
+  const { create, update, remove } = useTagActions()
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(DEFAULT_TAG_COLOR)
+  const [editing, setEditing] = useState<string | null>(null)
+  const onError = (err: unknown) => toast.error(errorMessage(err))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      await create.mutateAsync({ name, color })
+      setName('')
+      setColor(DEFAULT_TAG_COLOR)
+    } catch (err) {
+      onError(err)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {tags?.map((tag) =>
+        editing === tag.id ? (
+          <EditTagRow
+            key={tag.id}
+            tag={tag}
+            onCancel={() => setEditing(null)}
+            onSave={(next) =>
+              update.mutate(
+                { id: tag.id, ...next },
+                { onError, onSuccess: () => setEditing(null) },
+              )
+            }
+            saving={update.isPending}
+          />
+        ) : (
+          <div key={tag.id} className="flex items-center gap-3 rounded-xl bg-surface-2 p-3 text-sm">
+            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+            <span className="flex-1 truncate">{tag.name}</span>
+            <Button size="sm" variant="ghost" title="Düzenle" onClick={() => setEditing(tag.id)}>
+              <Pencil size={14} />
+            </Button>
+            <Button size="sm" variant="ghost" title="Sil" onClick={() => remove.mutate(tag.id, { onError })}>
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      )}
+      {tags?.length === 0 && <p className="text-xs text-muted">Henüz etiket yok.</p>}
+      <form onSubmit={submit} className="flex items-center gap-2">
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-border bg-surface p-1"
+          aria-label="Etiket rengi"
+        />
+        <Input required maxLength={40} placeholder="Yeni etiket adı" value={name} onChange={(e) => setName(e.target.value)} />
+        <Button type="submit" loading={create.isPending} className="shrink-0">
+          Ekle
+        </Button>
+      </form>
+    </div>
+  )
+}
+
+function EditTagRow({
+  tag,
+  onSave,
+  onCancel,
+  saving,
+}: {
+  tag: Tag
+  onSave: (next: { name: string; color: string }) => void
+  onCancel: () => void
+  saving: boolean
+}) {
+  const [name, setName] = useState(tag.name)
+  const [color, setColor] = useState(tag.color)
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-surface-2 p-3 text-sm">
+      <input
+        type="color"
+        value={color}
+        onChange={(e) => setColor(e.target.value)}
+        className="h-8 w-8 shrink-0 cursor-pointer rounded-lg border border-border bg-surface p-0.5"
+        aria-label="Etiket rengi"
+      />
+      <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8" />
+      <Button size="sm" loading={saving} onClick={() => onSave({ name, color })}>
+        Kaydet
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onCancel}>
+        <X size={14} />
+      </Button>
     </div>
   )
 }

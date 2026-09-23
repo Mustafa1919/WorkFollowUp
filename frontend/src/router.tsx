@@ -6,6 +6,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { BoardPage } from '@/features/board/BoardPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CompletedPage } from '@/features/completed/CompletedPage'
+import { MeetingsPage } from '@/features/meetings/MeetingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: '/', element: <DashboardPage /> },
+          { path: '/meetings', element: <MeetingsPage /> },
           { path: '/projects/:projectId', element: <BoardPage /> },
           { path: '/projects/:projectId/completed', element: <CompletedPage /> },
           {

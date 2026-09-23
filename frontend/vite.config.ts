@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': { target, changeOrigin: false },
         '/actuator': { target, changeOrigin: false },
+        // Native WebSocket (SockJS yok, bkz. backend WebSocketConfig javadoc'u): ws:true olmadan
+        // proxy sadece HTTP upgrade oncesi istegi gecirir, handshake tamamlanmaz.
+        '/ws': { target, changeOrigin: false, ws: true },
       },
     },
   }

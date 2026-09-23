@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCurrentRole, useTaskLifecycle, useUpdateStoryPoint, useUpdateTask } from '@/api/queries'
+import { useCurrentRole, useTaskLifecycle, useTaskTagAssignment, useUpdateStoryPoint, useUpdateTask } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { fmt, todayIso } from '@/lib/dates'
 import { cn } from '@/lib/cn'
@@ -9,8 +9,11 @@ import { TASK_STATUSES, type Sprint, type Task } from '@/lib/types'
 import { Dialog } from '@/components/ui/Dialog'
 import { Field, Input, inputClass } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { StatusDot } from '@/components/ui/misc'
+import { StatusDot, TagChip } from '@/components/ui/misc'
 import { STATUS_META, taskKey } from '@/lib/status'
+import { DependencyPanel } from './DependencyPanel'
+import { SubtaskPanel } from './SubtaskPanel'
+import { TagPicker } from './TagPicker'
 
 interface Props {
   task: Task | null
@@ -42,13 +45,26 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
 function TaskFields({ task, sprints, canWrite }: { task: Task; sprints: Sprint[]; canWrite: boolean }) {
   const update = useUpdateTask(task.projectId)
   const storyPoint = useUpdateStoryPoint(task.projectId)
-  const [sp, setSp] = useState('')
+  const { unassign } = useTaskTagAssignment(task.projectId)
+  // TaskDialog bu bileseni her gorev icin `key={task.id}` ile yeniden mount eder, bu yuzden lazy
+  // init GUVENLI (task degisince state sifirlanir, eski gorevin degeriyle karismaz).
+  const [sp, setSp] = useState(() => task.storyPoint?.toString() ?? '')
 
   const onError = (err: unknown) => toast.error(errorMessage(err))
   const assignable = sprints.filter((s) => s.status !== 'completed' || s.id === task.sprintId)
 
   return (
     <div className="space-y-5">
+      <div>
+        <div className="mb-2 text-xs font-medium text-muted">Etiketler</div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {task.tags.map((tag) => (
+            <TagChip key={tag.id} tag={tag} onRemove={canWrite ? () => unassign.mutate({ taskId: task.id, tagId: tag.id }, { onError }) : undefined} />
+          ))}
+          {canWrite && <TagPicker task={task} />}
+        </div>
+      </div>
+
       <div>
         <div className="mb-2 text-xs font-medium text-muted">Durum</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -128,6 +144,14 @@ function TaskFields({ task, sprints, canWrite }: { task: Task; sprints: Sprint[]
           </Button>
         </form>
       )}
+
+      <div className="border-t border-border pt-4">
+        <SubtaskPanel task={task} canWrite={canWrite} />
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <DependencyPanel task={task} canWrite={canWrite} />
+      </div>
     </div>
   )
 }

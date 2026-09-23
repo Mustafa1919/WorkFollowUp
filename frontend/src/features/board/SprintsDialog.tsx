@@ -41,6 +41,8 @@ export function SprintsDialog({
     try {
       await actions.create.mutateAsync({ name, startDate, endDate })
       setName('')
+      setStartDate(iso(today))
+      setEndDate(iso(addDays(today, 13)))
       toast.success('Sprint oluşturuldu')
     } catch (err) {
       onError(err)
@@ -80,10 +82,10 @@ export function SprintsDialog({
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Başlangıç" id="s-start">
-              <Input id="s-start" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input id="s-start" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} min={iso(today)} />
             </Field>
             <Field label="Bitiş" id="s-end">
-              <Input id="s-end" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <Input id="s-end" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate} />
             </Field>
           </div>
           <Button type="submit" loading={actions.create.isPending} className="w-full justify-center">

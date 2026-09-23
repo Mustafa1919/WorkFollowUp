@@ -1,11 +1,40 @@
 import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
-import type { TaskStatus } from '@/lib/types'
+import { X } from 'lucide-react'
+import type { Tag, TaskStatus } from '@/lib/types'
 import { STATUS_META } from '@/lib/status'
 import { cn } from '@/lib/cn'
 
 export function StatusDot({ status, className }: { status: TaskStatus; className?: string }) {
   return <span className={cn('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_META[status].dot, className)} />
+}
+
+/** Etiket rozeti: rengin kendisi arka plan degil, sadece bir nokta — koyu/acik temada okunabilirlik
+ * icin (rastgele bir #RRGGBB arka plan olarak metinle kontrast garantisi vermez). */
+export function TagChip({ tag, onRemove, className }: { tag: Tag; onRemove?: () => void; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pr-1.5 pl-2 text-xs',
+        className,
+      )}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+      <span className="truncate">{tag.name}</span>
+      {onRemove && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="cursor-pointer rounded-full p-0.5 text-muted hover:bg-surface hover:text-fg"
+          aria-label={`${tag.name} etiketini kaldır`}
+        >
+          <X size={10} />
+        </button>
+      )}
+    </span>
+  )
 }
 
 export function Skeleton({ className }: { className?: string }) {
