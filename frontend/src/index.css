@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/* Tema: <html data-theme="dark|light">. Renkler token olarak tanimli, bilesenler yalniz token kullanir. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+
+  --color-st-todo: var(--st-todo);
+  --color-st-progress: var(--st-progress);
+  --color-st-review: var(--st-review);
+  --color-st-done: var(--st-done);
+
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  @keyframes aurora {
+    0% { transform: translate3d(-10%, -6%, 0) rotate(0deg) scale(1); }
+    50% { transform: translate3d(8%, 4%, 0) rotate(20deg) scale(1.15); }
+    100% { transform: translate3d(-4%, 8%, 0) rotate(-10deg) scale(1.05); }
+  }
+}
+
+:root {
+  --bg: #f7f7fb;
+  --surface: #ffffff;
+  --surface-2: #f0f0f6;
+  --border: #e3e3ec;
+  --fg: #16161f;
+  --muted: #6b6b7b;
+  --accent: #6d4aff;
+  --accent-fg: #ffffff;
+  --accent-soft: #ece7ff;
+  --danger: #e5484d;
+
+  --st-todo: #8b8b9a;
+  --st-progress: #3b82f6;
+  --st-review: #f59e0b;
+  --st-done: #10b981;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0b12;
+  --surface: #13131c;
+  --surface-2: #1b1b27;
+  --border: #262636;
+  --fg: #ececf3;
+  --muted: #9191a3;
+  --accent: #8b6dff;
+  --accent-fg: #ffffff;
+  --accent-soft: #231c44;
+  --danger: #ff6369;
+
+  --st-todo: #7c7c8e;
+  --st-progress: #60a5fa;
+  --st-review: #fbbf24;
+  --st-done: #34d399;
+
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Ince, temaya uyan kaydirma cubugu */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* View Transitions: tema reveal'i sirasinda varsayilan cross-fade kapali (ThemeToggle kendi animasyonunu yapar). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

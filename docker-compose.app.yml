@@ -1,0 +1,49 @@
+# Uygulama katmani (infra docker-compose.yml'de). Kullanim:
+#   docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+# Frontend: http://localhost:3000  |  Swagger: http://localhost:8080/swagger-ui/index.html
+x-backend-env: &backend-env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: tracker
+  REDIS_HOST: redis
+  KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+
+services:
+  migrate:
+    build: .
+    image: workfollowup-backend:local
+    environment:
+      <<: *backend-env
+      DB_USER: app_migrator
+      DB_PASSWORD: app_migrator
+      SPRING_PROFILES_ACTIVE: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: workfollowup-backend:local
+    environment:
+      <<: *backend-env
+      DB_USER: app_runtime
+      DB_PASSWORD: app_runtime
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
