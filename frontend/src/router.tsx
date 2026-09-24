@@ -24,6 +24,11 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <DashboardPage /> },
           { path: '/meetings', element: <MeetingsPage /> },
+          {
+            path: '/reports',
+            // recharts yalniz analitik/rapor sayfalarinda: ayri chunk olarak yuklenir.
+            lazy: async () => ({ Component: (await import('@/features/reports/ReportsPage')).ReportsPage }),
+          },
           { path: '/projects/:projectId', element: <BoardPage /> },
           { path: '/projects/:projectId/completed', element: <CompletedPage /> },
           {

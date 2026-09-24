@@ -76,6 +76,12 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
       "{\"title\":\"M\",\"startDate\":\"2099-01-01\",\"startTime\":\"10:00:00\","
           + "\"durationMinutes\":30,\"frequency\":\"ONCE\",\"intervalCount\":1}";
 
+  // 2099: hedefler ileriye donuk tanimlanir; testin kosuldugu yildan bagimsiz kalsin diye sabit
+  // uzak bir donem secildi (GoalService donem gecmiste diye reddetmez, ama sayilar anlamsiz
+  // olurdu).
+  private static final String GOAL_JSON =
+      "{\"title\":\"H\",\"metricType\":\"COMPLETED_TASKS\",\"targetValue\":10,\"year\":2099}";
+
   /** {@code {id}} her istekte rastgele bir UUID ile degistirilir. */
   private record Endpoint(
       HttpMethod method, String path, Supplier<String> body, Set<String> allowedRoles) {
@@ -210,7 +216,18 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             null,
             ALL_ROLES),
         Endpoint.of(HttpMethod.PUT, "/api/v1/meetings/{id}", MEETING_JSON, MANAGE),
-        Endpoint.of(HttpMethod.DELETE, "/api/v1/meetings/{id}", null, MANAGE));
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/meetings/{id}", null, MANAGE),
+        // Donemsel rapor: okuma rol siniri YOK (AnalyticsController ile ayni gerekce).
+        Endpoint.of(HttpMethod.GET, "/api/v1/reports/period?year=2099", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/reports/period?year=2099&quarter=2", null, ALL_ROLES),
+        // Hedefler: tanim ve elle ilerleme ADMIN/MANAGER (Tags/Meetings ile ayni gerekce),
+        // listeleme her uye.
+        Endpoint.of(HttpMethod.GET, "/api/v1/goals?year=2099", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/goals", GOAL_JSON, MANAGE),
+        Endpoint.of(
+            HttpMethod.PUT, "/api/v1/goals/{id}", "{\"title\":\"H\",\"targetValue\":5}", MANAGE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/goals/{id}/progress", "{\"value\":1}", MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/goals/{id}", null, MANAGE));
   }
 
   static Stream<Arguments> endpointsByRole() {

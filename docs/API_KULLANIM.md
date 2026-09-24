@@ -152,6 +152,31 @@ DELETE /api/v1/tasks/{taskId}                           # yalnız ADMIN; soft de
 > DB'ye elle `workspace_users` satırı eklemeniz gerekir. Bu, tek kişilik yerel kullanım
 > için engel değil ama not edilmeli.
 
+### 3.3 Dönemsel rapor ve hedefler (V21)
+
+```
+GET    /api/v1/reports/period?year=2026[&quarter=3][&projectIds=<uuid>,<uuid>]
+GET    /api/v1/goals?year=2026[&quarter=3]
+POST   /api/v1/goals                       # ADMIN/MANAGER
+PUT    /api/v1/goals/{goalId}              # ADMIN/MANAGER; başlık/hedef/kapsam
+PUT    /api/v1/goals/{goalId}/progress     # ADMIN/MANAGER; yalnız metricType=CUSTOM
+DELETE /api/v1/goals/{goalId}              # ADMIN/MANAGER, 204
+```
+
+- Dönem **takvim** dönemidir: `quarter` verilmezse tüm yıl. Sınırlar iş saat diliminde
+  (`app.business-time-zone`) hesaplanır, yani `2026-Q3` Istanbul'da 1 Temmuz 00:00'da başlar.
+- Rapor **workspace geneli**dir; `projectIds` (virgülle ayrılmış, en fazla 100) yalnızca toplamları,
+  proje kırılımını, aylık trendi ve önceki dönem kıyaslamasını daraltır.
+  **Hedef ilerlemeleri süzgeçten etkilenmez** (`projectFilterApplied` bunu bildirir).
+- Tek istek sayfanın tamamını döndürür (KPI'lar, aylık kırılım, proje tablosu, hedefler): parçalar
+  aynı dönem kesitinden gelir.
+- Tüm sayılar mevcut read model'lerden (`task_analytics`, `sprint_analytics`) okunur; "tamamlanma"
+  tanımı Throughput/Cycle Time ile birebir aynıdır (görevin **son** `Done` geçişi; yeniden açılıp
+  kapanan görev yalnız son kapanışında sayılır). Puansız görev 0 puandır.
+- `metricType`: `COMPLETED_TASKS` | `COMPLETED_POINTS` (ilerleme otomatik) | `CUSTOM` (elle).
+  Hedefin dönemi ve metrik tipi oluşturulduktan sonra **değiştirilemez**; yeni hedef açılmalı.
+- Yıllık ve çeyreklik hedefler ayrı listelerdir: yıllık rapor çeyreklik hedefleri göstermez.
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
@@ -161,7 +186,8 @@ DELETE /api/v1/tasks/{taskId}                           # yalnız ADMIN; soft de
 | `POST /api/v1/projects` | ADMIN, MANAGER |
 | `POST /api/v1/projects/{id}/tasks`, task status/sprint/story-point güncelleme | ADMIN, MANAGER, DEVELOPER |
 | `POST/…/sprints/**` (oluştur/başlat/tamamla) | ADMIN, MANAGER |
-| `GET` uçları (liste, analitik) | tüm roller (VIEWER dahil) |
+| `GET` uçları (liste, analitik, rapor) | tüm roller (VIEWER dahil) |
+| Dönem hedefi yönetimi (`/api/v1/goals`) | ADMIN, MANAGER |
 | Webhook/Slack entegrasyon yönetimi | yalnız ADMIN |
 | Kafka DLT replay | yalnız SYSTEM_ADMIN (global rol, `SYSTEM_ADMIN_EMAILS` env'i ile atanır) |
 

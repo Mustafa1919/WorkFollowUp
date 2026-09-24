@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as RD from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CornerDownLeft, Home, Keyboard, LogOut, Moon, Search, Settings, Sun } from 'lucide-react'
+import { BarChart3, CalendarClock, CornerDownLeft, Home, Keyboard, LogOut, Moon, Search, Settings, Sun } from 'lucide-react'
 import { useAllTasks, useProjects } from '@/api/queries'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -86,6 +86,7 @@ export function CommandPalette() {
     const nav: Item[] = [
       { id: 'nav-home', group: 'Git', label: 'Ana sayfa', icon: <Home size={15} />, onSelect: () => navigate('/') },
       { id: 'nav-meetings', group: 'Git', label: 'Toplantılar', icon: <CalendarClock size={15} />, onSelect: () => navigate('/meetings') },
+      { id: 'nav-reports', group: 'Git', label: 'Raporlar', icon: <BarChart3 size={15} />, onSelect: () => navigate('/reports') },
       { id: 'nav-settings', group: 'Git', label: 'Ayarlar', icon: <Settings size={15} />, onSelect: () => navigate('/settings') },
       ...(projects ?? []).map((p) => ({
         id: `nav-project-${p.id}`,

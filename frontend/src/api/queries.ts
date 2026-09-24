@@ -5,11 +5,14 @@ import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
   CycleTimeResponse,
+  Goal,
+  GoalMetricType,
   Meeting,
   MeetingFrequency,
   MeetingOccurrence,
   Notification,
   Page,
+  PeriodReport,
   Project,
   SlackIntegration,
   Sprint,
@@ -44,6 +47,8 @@ export const keys = {
   meetings: (ws: string | null) => ['ws', ws, 'meetings'] as const,
   meetingOccurrences: (ws: string | null, from: string, to: string) =>
     ['ws', ws, 'meetings', 'occurrences', from, to] as const,
+  periodReport: (ws: string | null, year: number, quarter: number | null, projectIds: string[]) =>
+    ['ws', ws, 'report', year, quarter, projectIds.join(',')] as const,
 }
 
 const ws = () => useSession.getState().workspaceId
@@ -654,3 +659,70 @@ export function useMeetingActions() {
   }
 }
 
+
+// ---------------------------------------------------------------- raporlama (donemsel)
+
+/**
+ * Donemsel rapor. Proje suzgeci sorgu anahtarina girer (siralamadan bagimsiz olsun diye siralanir);
+ * `quarter` null ise TUM YIL raporlanir.
+ */
+export function usePeriodReport(year: number, quarter: number | null, projectIds: string[]) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  const filter = [...projectIds].sort()
+  return useQuery({
+    queryKey: keys.periodReport(workspaceId, year, quarter, filter),
+    queryFn: async () =>
+      (
+        await api.get<PeriodReport>('/api/v1/reports/period', {
+          params: {
+            year,
+            ...(quarter ? { quarter } : {}),
+            // Bos suzgec = tum projeler; parametreyi hic gondermemek gerekir.
+            ...(filter.length ? { projectIds: filter.join(',') } : {}),
+          },
+        })
+      ).data,
+    enabled: !!workspaceId,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useGoalActions(year: number, quarter: number | null) {
+  const qc = useQueryClient()
+  // Hedef degisikligi ilerlemeyi de degistirir; rapor sorgularinin TAMAMI tazelenmeli.
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['ws', ws(), 'report'] })
+  return {
+    create: useMutation({
+      mutationFn: async (body: {
+        title: string
+        metricType: GoalMetricType
+        targetValue: number
+        projectId: string | null
+      }) => (await api.post<Goal>('/api/v1/goals', { ...body, year, quarter })).data,
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: async ({
+        id,
+        ...body
+      }: {
+        id: string
+        title: string
+        targetValue: number
+        projectId: string | null
+      }) => (await api.put<Goal>(`/api/v1/goals/${id}`, body)).data,
+      onSuccess: invalidate,
+    }),
+    progress: useMutation({
+      mutationFn: async ({ id, value }: { id: string; value: number }) =>
+        (await api.put<Goal>(`/api/v1/goals/${id}/progress`, { value })).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => {
+        await api.delete(`/api/v1/goals/${id}`)
+      },
+      onSuccess: invalidate,
+    }),
+  }
+}

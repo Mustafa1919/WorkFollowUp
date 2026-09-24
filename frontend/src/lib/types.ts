@@ -178,3 +178,82 @@ export interface Notification {
   read: boolean
   createdAt: string
 }
+
+// ---------------------------------------------------------------- raporlama (donemsel)
+
+export type GoalMetricType = 'COMPLETED_TASKS' | 'COMPLETED_POINTS' | 'CUSTOM'
+
+export interface Goal {
+  id: string
+  title: string
+  metricType: GoalMetricType
+  targetValue: number
+  /** Yalniz CUSTOM hedeflerde dolu. */
+  manualValue: number | null
+  year: number
+  /** null = yillik hedef. */
+  quarter: number | null
+  /** null = workspace geneli hedef. */
+  projectId: string | null
+}
+
+export interface PeriodInfo {
+  year: number
+  quarter: number | null
+  label: string
+  /** yyyy-MM-dd */
+  startDate: string
+  endDate: string
+}
+
+export interface PeriodTotals {
+  completedTasks: number
+  completedPoints: number
+  cycleTimeAverageSeconds: number | null
+  cycleTimeMedianSeconds: number | null
+  cycleTimeP85Seconds: number | null
+  cycleTimeSample: number
+  sprintCount: number
+  sprintCommittedPoints: number
+  sprintCompletedPoints: number
+  averageVelocity: number | null
+}
+
+export interface PeriodProjectSummary {
+  projectId: string
+  projectKey: string
+  projectName: string
+  completedTasks: number
+  completedPoints: number
+  cycleTimeMedianSeconds: number | null
+  cycleTimeSample: number
+}
+
+export interface GoalProgress {
+  id: string
+  title: string
+  metricType: GoalMetricType
+  targetValue: number
+  currentValue: number
+  /** 0-100 arasina kirpilmis. */
+  progressPercent: number
+  projectId: string | null
+  projectName: string | null
+}
+
+/** Sayfanin tamami tek istekte doner: parcalar ayni donem/suzgec kesitinden gelir. */
+export interface PeriodReport {
+  period: PeriodInfo
+  previousPeriod: PeriodInfo
+  totals: PeriodTotals
+  previousTotals: {
+    completedTasks: number
+    completedPoints: number
+    cycleTimeMedianSeconds: number | null
+  }
+  projects: PeriodProjectSummary[]
+  months: { month: string; completedTasks: number; completedPoints: number }[]
+  /** Hedef ilerlemesi proje suzgecinden ETKILENMEZ. */
+  goals: GoalProgress[]
+  projectFilterApplied: boolean
+}
