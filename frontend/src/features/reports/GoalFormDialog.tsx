@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
+import { errorMessage } from '@/lib/api'
 import { useGoalActions, useProjects } from '@/api/queries'
 import type { GoalMetricType, GoalProgress } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -80,7 +82,7 @@ function GoalForm({
     e.preventDefault()
     if (!valid) return
     const scope = projectId || null
-    const done = { onSuccess: onDone }
+    const done = { onSuccess: onDone, onError: (err: unknown) => toast.error(errorMessage(err)) }
     if (editing) {
       update.mutate({ id: editing.id, title: title.trim(), targetValue: target, projectId: scope }, done)
     } else {

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { errorMessage } from '@/lib/api'
+import { toast } from 'sonner'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -266,8 +268,8 @@ export function ReportsPage() {
                       setEditingGoal(goal)
                       setGoalDialogOpen(true)
                     }}
-                    onDelete={() => remove.mutate(goal.id)}
-                    onProgress={(value) => progress.mutate({ id: goal.id, value })}
+                    onDelete={() => remove.mutate(goal.id, { onError: (e) => toast.error(errorMessage(e)) })}
+                    onProgress={(value) => progress.mutate({ id: goal.id, value }, { onError: (e) => toast.error(errorMessage(e)) })}
                   />
                 ))}
               </ul>

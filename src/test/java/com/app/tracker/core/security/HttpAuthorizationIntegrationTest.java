@@ -321,7 +321,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
   void anonymousRequestIsRejected(Endpoint endpoint) throws Exception {
     int status = statusAs(endpoint, null, true);
 
-    assertTrue(status == 401 || status == 403, "anonim istek gecti, status=" + status);
+    assertEquals(
+        401, status, "anonim istek 401 donmeli (frontend refresh yalniz 401 ile tetiklenir)");
   }
 
   @ParameterizedTest(name = "{0}")
@@ -329,7 +330,7 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
   void invalidTokenIsRejected(Endpoint endpoint) throws Exception {
     int status = statusAs(endpoint, "not-a-real-jwt", true);
 
-    assertTrue(status == 401 || status == 403, "gecersiz token gecti, status=" + status);
+    assertEquals(401, status, "gecersiz/suresi dolmus token 401 donmeli");
   }
 
   /**
@@ -430,6 +431,6 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(REPLAY_JSON));
 
-    assertTrue(status == 401 || status == 403, "status=" + status);
+    assertEquals(401, status);
   }
 }
