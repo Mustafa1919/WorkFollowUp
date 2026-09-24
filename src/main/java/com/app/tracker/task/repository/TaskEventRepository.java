@@ -16,8 +16,9 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>Event tipleri ({@code event_type}): {@code status_changed}, {@code sprint_changed}, {@code
  * story_point_changed}, {@code due_date_changed}, {@code assignee_changed}, {@code
- * description_changed} (V22). Analitik Worker (Faz 3) sprint uyeligini ve story point'i bu
- * tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak zorundadir.
+ * description_changed} (V22), {@code comment_added} (V23). Analitik Worker (Faz 3) sprint uyeligini
+ * ve story point'i bu tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak
+ * zorundadir.
  */
 @Repository
 public class TaskEventRepository {
@@ -91,6 +92,14 @@ public class TaskEventRepository {
    */
   public void recordDescriptionChange(UUID taskId, UUID actorId, int oldLength, int newLength) {
     record(taskId, actorId, "description_changed", "length", oldLength, newLength);
+  }
+
+  /**
+   * V23: yorumun kendisi (govde) tarihceye YAZILMAZ (comments tablosu zaten kalici kayittir);
+   * yalniz kimlik, Activity sekmesi (Dalga 1.5) icin "X bir yorum ekledi" satirina yeter.
+   */
+  public void recordCommentAdded(UUID taskId, UUID actorId, UUID commentId) {
+    record(taskId, actorId, "comment_added", "commentId", null, commentId.toString());
   }
 
   /**

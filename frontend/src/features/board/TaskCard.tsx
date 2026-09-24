@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { Ban, CalendarDays, ListChecks } from 'lucide-react'
+import { Ban, CalendarDays, ListChecks, MessageSquare } from 'lucide-react'
 import { differenceInCalendarDays, startOfToday } from 'date-fns'
 import type { Task } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -68,6 +68,12 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
         {openBlockers > 0 && (
           <span className="inline-flex items-center gap-0.5 text-danger" title={`${openBlockers} açık bağımlılık tarafından bloklanıyor`}>
             <Ban size={12} />
+          </span>
+        )}
+        {task.commentCount > 0 && (
+          <span className="inline-flex items-center gap-0.5" title={`${task.commentCount} yorum`}>
+            <MessageSquare size={12} />
+            {task.commentCount}
           </span>
         )}
         {assignee && <Avatar name={assignee.fullName} seed={assignee.userId} size={18} className="ml-auto" />}

@@ -193,6 +193,13 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/watch", null, ALL_ROLES),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/watch", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/me/tasks", null, ALL_ROLES),
+        // Yorumlar (V23): olusturma diger gorev mutasyonlariyla AYNI (WRITE); okuma her uye.
+        // Duzenleme/silme'de controller'da rol siniri YOK (yazan/ADMIN kontrolu CommentService'te,
+        // rastgele UUID'li commentId zaten 404 ile kisa devre yapar) — bu yuzden ALL_ROLES.
+        Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/comments", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/comments", "{\"body\":\"yorum\"}", WRITE),
+        Endpoint.of(HttpMethod.PATCH, "/api/v1/comments/{id}", "{\"body\":\"yorum\"}", ALL_ROLES),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/comments/{id}", null, ALL_ROLES),
         // Workspace uyeligi: ekleme/rol degistirme/cikarma yalniz ADMIN; listeleme her uye.
         Endpoint.of(
             HttpMethod.POST,

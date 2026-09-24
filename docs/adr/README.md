@@ -23,6 +23,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0006](0006-bildirim-teslim-semantigi.md) | Bildirim teslim semantiği: retry, devre kesici, offset | Kabul edildi |
 | [0007](0007-rapor-ve-hedef-modeli.md) | Rapor ve hedef modeli | Kabul edildi |
 | [0008](0008-izleyici-modeli-ve-inbox-alicilari.md) | İzleyici modeli ve Inbox alıcı tanımı | Kabul edildi |
+| [0009](0009-yorum-ve-mention-modeli.md) | Yorum ve mention modeli | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

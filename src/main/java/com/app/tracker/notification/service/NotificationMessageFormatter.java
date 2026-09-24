@@ -13,7 +13,9 @@ import tools.jackson.databind.JsonNode;
  * <p>Bildirime konu olay tipleri BILEREK dar tutuldu: RAKIP_ANALIZI.md gorev tanimi "durum
  * degisikligi, onay, bitis tarihi" diyor, etiket/sprint/story point degisikligi bildirim KONUSU
  * DEGIL (gurultu). {@code TASK_CREATED} de haric: olusturan zaten aktordur ve yeni gorevin baska
- * izleyicisi yoktur. V22: {@code TASK_ASSIGNED} eklendi (alicilar izleyiciler + yeni atanan).
+ * izleyicisi yoktur. V22: {@code TASK_ASSIGNED} eklendi (alicilar izleyiciler + yeni atanan). V23:
+ * {@code COMMENT_ADDED}/{@code COMMENT_MENTION} eklendi (bkz. InboxFanoutService — ayni yoruma iki
+ * kez bildirim gitmesin diye COMMENT_ADDED alicilarindan mention edilenler CIKARILIR).
  */
 public final class NotificationMessageFormatter {
 
@@ -22,6 +24,8 @@ public final class NotificationMessageFormatter {
   public static final String TASK_APPROVAL_REVOKED = "TASK_APPROVAL_REVOKED";
   public static final String TASK_DUE_DATE_CHANGED = "TASK_DUE_DATE_CHANGED";
   public static final String TASK_ASSIGNED = "TASK_ASSIGNED";
+  public static final String COMMENT_ADDED = "COMMENT_ADDED";
+  public static final String COMMENT_MENTION = "COMMENT_MENTION";
 
   /**
    * {@code TASK_ASSIGNED}'in YENI atanana giden govdesi (digerleri {@link #format} govdesini alir).
@@ -36,7 +40,9 @@ public final class NotificationMessageFormatter {
         || TASK_APPROVED.equals(eventType)
         || TASK_APPROVAL_REVOKED.equals(eventType)
         || TASK_DUE_DATE_CHANGED.equals(eventType)
-        || TASK_ASSIGNED.equals(eventType);
+        || TASK_ASSIGNED.equals(eventType)
+        || COMMENT_ADDED.equals(eventType)
+        || COMMENT_MENTION.equals(eventType);
   }
 
   /** Gorevin bildirimde gorunen kimligi: proje anahtari + numara + baslik. */
@@ -74,6 +80,12 @@ public final class NotificationMessageFormatter {
       String newAssigneeId = payload.path("newAssigneeId").asString(null);
       String body = newAssigneeId == null ? "Atama kaldirildi." : "Atanan kisi degisti.";
       return Optional.of(new String[] {header, body});
+    }
+    if (COMMENT_ADDED.equals(eventType)) {
+      return Optional.of(new String[] {header, "Yeni yorum eklendi."});
+    }
+    if (COMMENT_MENTION.equals(eventType)) {
+      return Optional.of(new String[] {header, "Yorumda sizden bahsedildi."});
     }
     return Optional.empty();
   }

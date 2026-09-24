@@ -13,6 +13,7 @@ import com.app.tracker.workspace.model.WorkspaceUser;
 import com.app.tracker.workspace.repository.WorkspaceUserRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,14 @@ import tools.jackson.databind.JsonNode;
  *
  * <p>Izleyici listesi olay ANINDA degil TUKETIM aninda okunur: arada izlemeyi birakan kisi
  * bildirimi almaz, yeni izleyen alir — kabul edilmis, zararsiz bir fark.
+ *
+ * <p><b>V23 yorum/mention alicilari:</b> {@code COMMENT_MENTION}'in alicilari SADECE payload'daki
+ * {@code mentionedUserIds}'tir (izliyor olsun olmasin, "her zaman" TASK_ASSIGNED'in yeni atanani
+ * gibi). {@code COMMENT_ADDED}'in alicilari her zamanki gibi izleyiciler-aktordur, ama mention
+ * edilenler bu kumeden CIKARILIR — aksi halde ayni yoruma iki bildirim giderdi (biri genel "yeni
+ * yorum", biri "sizden bahsedildi"). Bu disarida birakma, COMMENT_MENTION olayinin ayrica islenip
+ * islenmedigine BAGIMLI DEGILDIR (her olay kendi payload'indan karar verir) — bu yuzden iki olayin
+ * Kafka'da hangi sirada tuketildigi sonucu etkilemez.
  */
 @Service
 @Profile("!migrate")
@@ -103,7 +112,19 @@ public class InboxFanoutService {
         NotificationMessageFormatter.TASK_ASSIGNED.equals(eventType)
             ? uuidOrNull(payload, "newAssigneeId")
             : null;
-    List<UUID> recipients = resolveRecipients(workspaceId, taskId, actorId, newAssigneeId);
+    boolean isMention = NotificationMessageFormatter.COMMENT_MENTION.equals(eventType);
+    boolean isCommentAdded = NotificationMessageFormatter.COMMENT_ADDED.equals(eventType);
+    List<UUID> mentionedUserIds =
+        isMention || isCommentAdded ? uuidList(payload, "mentionedUserIds") : List.of();
+    List<UUID> recipients =
+        isMention
+            ? resolveMentionRecipients(workspaceId, mentionedUserIds, actorId)
+            : resolveRecipients(
+                workspaceId,
+                taskId,
+                actorId,
+                newAssigneeId,
+                isCommentAdded ? new HashSet<>(mentionedUserIds) : Set.of());
     if (recipients.isEmpty()) {
       return List.of();
     }
@@ -139,9 +160,17 @@ public class InboxFanoutService {
    * edilebilir bir gerileme (aktor kendi eylemi icin de bildirim gorebilir), yanlis kisiyi haric
    * tutmaktan (veri kaybi) daha guvenli bir varsayilan. Workspace'ten cikarilmis izleyici/atanan
    * ({@code workspace_users} RLS'siz, workspace id acik) bildirim almaz.
+   *
+   * @param excludeFromWatchers V23: {@code COMMENT_ADDED} icin mention edilenler — ayrica
+   *     COMMENT_MENTION olayiyla bildirilecekleri icin buradan CIKARILIR (cift bildirim onlenir).
+   *     Diger tum olay tipleri icin bos kume verilir.
    */
   private List<UUID> resolveRecipients(
-      UUID workspaceId, UUID taskId, UUID actorId, UUID newAssigneeId) {
+      UUID workspaceId,
+      UUID taskId,
+      UUID actorId,
+      UUID newAssigneeId,
+      Set<UUID> excludeFromWatchers) {
     Set<UUID> members =
         workspaceUserRepository.findByWorkspaceId(workspaceId).stream()
             .map(WorkspaceUser::getUserId)
@@ -150,11 +179,53 @@ public class InboxFanoutService {
     if (newAssigneeId != null) {
       candidates.add(newAssigneeId);
     }
-    candidates.addAll(taskWatcherRepository.findWatcherIds(taskId));
+    for (UUID watcherId : taskWatcherRepository.findWatcherIds(taskId)) {
+      if (!excludeFromWatchers.contains(watcherId)) {
+        candidates.add(watcherId);
+      }
+    }
     return candidates.stream()
         .filter(members::contains)
         .filter(userId -> !userId.equals(actorId))
         .toList();
+  }
+
+  /** COMMENT_MENTION: alicilar SADECE mention edilenlerdir, izleyici listesinden bagimsiz. */
+  private List<UUID> resolveMentionRecipients(
+      UUID workspaceId, List<UUID> mentionedUserIds, UUID actorId) {
+    if (mentionedUserIds.isEmpty()) {
+      return List.of();
+    }
+    Set<UUID> members =
+        workspaceUserRepository.findByWorkspaceId(workspaceId).stream()
+            .map(WorkspaceUser::getUserId)
+            .collect(Collectors.toSet());
+    return mentionedUserIds.stream()
+        .distinct()
+        .filter(members::contains)
+        .filter(userId -> !userId.equals(actorId))
+        .toList();
+  }
+
+  private static List<UUID> uuidList(JsonNode node, String field) {
+    JsonNode array = node.path(field);
+    if (!array.isArray()) {
+      return List.of();
+    }
+    List<UUID> result = new ArrayList<>();
+    for (JsonNode item : array) {
+      String value = item.asString(null);
+      if (value != null && !value.isBlank()) {
+        try {
+          result.add(UUID.fromString(value));
+        } catch (IllegalArgumentException ignored) {
+          // Bozuk mesaj: bu tek girdiyi atla, olayin tamamini reddetme (IllegalArgumentException
+          // burada firlatilsaydi DLT'ye giderdi — mention listesindeki tek bir kotu deger yuzunden
+          // butun bildirim kaybolmasin).
+        }
+      }
+    }
+    return result;
   }
 
   private static UUID uuid(JsonNode node, String field) {

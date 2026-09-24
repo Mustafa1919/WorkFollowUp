@@ -11,6 +11,7 @@ import { Field, Input, inputClass } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { StatusDot, TagChip } from '@/components/ui/misc'
 import { STATUS_META, taskKey } from '@/lib/status'
+import { CommentPanel } from './CommentPanel'
 import { DependencyPanel } from './DependencyPanel'
 import { SubtaskPanel } from './SubtaskPanel'
 import { TagPicker } from './TagPicker'
@@ -35,7 +36,14 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
     >
       {task && (
         <>
-          <TaskFields key={task.id} task={task} sprints={sprints} canWrite={canWrite && !task.approvedAt} />
+          <TaskFields
+            key={task.id}
+            task={task}
+            sprints={sprints}
+            canWrite={canWrite && !task.approvedAt}
+            // Yorum yazmak is verisini degistirmez; onayli gorevde de acik kalir (ADR-0009 madde 8).
+            canComment={canWrite}
+          />
           <TaskLifecycle key={`lc-${task.id}`} task={task} onClosed={() => onOpenChange(false)} />
         </>
       )}
@@ -43,7 +51,17 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
   )
 }
 
-function TaskFields({ task, sprints, canWrite }: { task: Task; sprints: Sprint[]; canWrite: boolean }) {
+function TaskFields({
+  task,
+  sprints,
+  canWrite,
+  canComment,
+}: {
+  task: Task
+  sprints: Sprint[]
+  canWrite: boolean
+  canComment: boolean
+}) {
   const update = useUpdateTask(task.projectId)
   const storyPoint = useUpdateStoryPoint(task.projectId)
   const { unassign } = useTaskTagAssignment(task.projectId)
@@ -161,6 +179,10 @@ function TaskFields({ task, sprints, canWrite }: { task: Task; sprints: Sprint[]
 
       <div className="border-t border-border pt-4">
         <DependencyPanel task={task} canWrite={canWrite} />
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <CommentPanel task={task} canWrite={canComment} />
       </div>
     </div>
   )

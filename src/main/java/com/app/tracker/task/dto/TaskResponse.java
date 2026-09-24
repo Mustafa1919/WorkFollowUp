@@ -26,7 +26,9 @@ public record TaskResponse(
     int subtaskCount,
     int completedSubtaskCount,
     List<TaskRefResponse> blocking,
-    List<TaskRefResponse> blockedBy) {
+    List<TaskRefResponse> blockedBy,
+    /** V23: silinmis olanlar DAHIL toplam yorum sayisi (liste "[silindi]" satirini da gosterir). */
+    int commentCount) {
 
   /** PageResponse ile AYNI desen: EI_EXPOSE_REP'e karsi degismez kopya (List.copyOf). */
   public TaskResponse {
@@ -47,7 +49,8 @@ public record TaskResponse(
       Integer storyPoint,
       int subtaskCount,
       int completedSubtaskCount,
-      DependencySummary dependencies) {
+      DependencySummary dependencies,
+      int commentCount) {
     return new TaskResponse(
         task.getId(),
         task.getProjectId(),
@@ -65,6 +68,7 @@ public record TaskResponse(
         subtaskCount,
         completedSubtaskCount,
         dependencies.blocking(),
-        dependencies.blockedBy());
+        dependencies.blockedBy(),
+        commentCount);
   }
 }

@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
+  Comment,
   CycleTimeResponse,
   Goal,
   GoalMetricType,
@@ -44,6 +45,7 @@ export const keys = {
   subtasks: (ws: string | null, taskId: string) => ['ws', ws, 'subtasks', taskId] as const,
   members: (ws: string | null) => ['ws', ws, 'members'] as const,
   taskDetail: (ws: string | null, taskId: string) => ['ws', ws, 'taskDetail', taskId] as const,
+  comments: (ws: string | null, taskId: string) => ['ws', ws, 'comments', taskId] as const,
   myTasks: (ws: string | null) => ['ws', ws, 'myTasks'] as const,
   notifications: (ws: string | null, unreadOnly: boolean) => ['ws', ws, 'notifications', unreadOnly] as const,
   unreadCount: (ws: string | null) => ['ws', ws, 'notifications', 'unread-count'] as const,
@@ -245,6 +247,51 @@ export function useTaskCollaboration(projectId: string) {
   }
 }
 
+// ---------------------------------------------------------------- yorumlar (V23)
+
+/** Bir gorevin yorumlari: keyset sayfalama, eskiden yeniye (sohbet gibi "devamini yukle"). */
+export function useComments(taskId: string | undefined) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useInfiniteQuery({
+    queryKey: keys.comments(workspaceId, taskId ?? ''),
+    queryFn: async ({ pageParam }) =>
+      (
+        await api.get<Page<Comment>>(`/api/v1/tasks/${taskId}/comments`, {
+          params: { limit: 20, cursor: pageParam ?? undefined },
+        })
+      ).data,
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.has_more ? last.next_cursor : null),
+    enabled: !!workspaceId && !!taskId,
+  })
+}
+
+/** Ekleme/duzenleme/silme; hepsi yorum listesini VE (commentCount rozeti icin) gorev listesini yeniler. */
+export function useCommentActions(taskId: string, projectId: string) {
+  const qc = useQueryClient()
+  const invalidate = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: keys.comments(ws(), taskId) }),
+      qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
+    ])
+  return {
+    add: useMutation({
+      mutationFn: async (body: string) =>
+        (await api.post<Comment>(`/api/v1/tasks/${taskId}/comments`, { body })).data,
+      onSuccess: invalidate,
+    }),
+    edit: useMutation({
+      mutationFn: async ({ id, body }: { id: string; body: string }) =>
+        (await api.patch<Comment>(`/api/v1/comments/${id}`, { body })).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/comments/${id}`),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
 /** "Benim islerim": aktif workspace'te bana atanmis, onaylanmamis gorevler (tum projeler). */
 export function useMyTasks() {
   const workspaceId = useSession((s) => s.workspaceId)
@@ -282,6 +329,7 @@ export function useProjectRealtime(projectId: string) {
       qc.invalidateQueries({ queryKey: keys.tasks(workspaceId, projectId) })
       qc.invalidateQueries({ queryKey: keys.approved(workspaceId, projectId) })
       qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'taskDetail'] })
+      qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'comments'] })
       qc.invalidateQueries({ queryKey: keys.myTasks(workspaceId) })
     })
   }, [workspaceId, projectId, qc])

@@ -1,5 +1,6 @@
 package com.app.tracker.task.controller;
 
+import com.app.tracker.comment.service.CommentService;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.web.PageResponse;
@@ -51,16 +52,19 @@ public class TaskController {
   private final TagService tagService;
   private final TaskDependencyService taskDependencyService;
   private final TaskCustomFieldRepository taskCustomFieldRepository;
+  private final CommentService commentService;
 
   public TaskController(
       TaskService taskService,
       TagService tagService,
       TaskDependencyService taskDependencyService,
-      TaskCustomFieldRepository taskCustomFieldRepository) {
+      TaskCustomFieldRepository taskCustomFieldRepository,
+      CommentService commentService) {
     this.taskService = taskService;
     this.tagService = tagService;
     this.taskDependencyService = taskDependencyService;
     this.taskCustomFieldRepository = taskCustomFieldRepository;
+    this.commentService = commentService;
   }
 
   @PostMapping("/api/v1/projects/{projectId}/tasks")
@@ -79,7 +83,7 @@ public class TaskController {
     // Yeni gorevin hicbir etiketi/story point'i/alt gorevi/bagimliligi olamaz: DB'ye sorgu atmadan
     // sabit deger (kucuk optimizasyon).
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(TaskResponse.from(task, List.of(), null, 0, 0, DependencySummary.empty()));
+        .body(TaskResponse.from(task, List.of(), null, 0, 0, DependencySummary.empty(), 0));
   }
 
   /**
@@ -378,13 +382,15 @@ public class TaskController {
   private TaskResponse toResponse(Task task) {
     Map<UUID, int[]> subtaskCounts = taskService.subtaskCounts(List.of(task.getId()));
     int[] counts = subtaskCounts.getOrDefault(task.getId(), new int[] {0, 0});
+    Map<UUID, Integer> commentCounts = commentService.commentCounts(List.of(task.getId()));
     return TaskResponse.from(
         task,
         tagService.tagsForTask(task.getId()),
         taskCustomFieldRepository.getStoryPoint(task.getId()),
         counts[0],
         counts[1],
-        taskDependencyService.dependenciesForTask(task.getId()));
+        taskDependencyService.dependenciesForTask(task.getId()),
+        commentCounts.getOrDefault(task.getId(), 0));
   }
 
   /**
@@ -399,6 +405,7 @@ public class TaskController {
     Map<UUID, int[]> subtaskCountsByTask = taskService.subtaskCounts(taskIds);
     Map<UUID, DependencySummary> dependenciesByTask =
         taskDependencyService.dependenciesForTasks(taskIds);
+    Map<UUID, Integer> commentCountsByTask = commentService.commentCounts(taskIds);
     return tasks.stream()
         .map(
             task -> {
@@ -409,7 +416,8 @@ public class TaskController {
                   storyPointByTask.get(task.getId()),
                   counts[0],
                   counts[1],
-                  dependenciesByTask.getOrDefault(task.getId(), DependencySummary.empty()));
+                  dependenciesByTask.getOrDefault(task.getId(), DependencySummary.empty()),
+                  commentCountsByTask.getOrDefault(task.getId(), 0));
             })
         .toList();
   }

@@ -65,6 +65,21 @@ export interface Task {
   blocking: TaskRef[]
   /** Bu gorevi bloklayan (once bitmesi gereken) gorevler — sadece bilgilendirici. */
   blockedBy: TaskRef[]
+  /** V23: silinenler DAHIL toplam yorum sayisi. */
+  commentCount: number
+}
+
+/** V23: tek seviye yorum, mention `@[userId]` sozdizimiyle. */
+export interface Comment {
+  id: string
+  taskId: string
+  authorId: string
+  /** Silinmisse "[silindi]" (asil govde API'de gorunmez). */
+  body: string
+  edited: boolean
+  deleted: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 /** Gorev detayi (V22): liste yanitlarinda tasinmayan aciklama + izleyiciler. */

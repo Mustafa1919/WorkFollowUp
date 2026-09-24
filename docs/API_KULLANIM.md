@@ -194,6 +194,30 @@ GET    /api/v1/me/tasks?limit=&cursor=      # bana atanmış, onaylanmamış gö
 - **Inbox alıcıları = görevin izleyicileri − işlemi yapan kişi.** Görevi oluşturan ve atanan
   otomatik izleyici olur. `TASK_ASSIGNED` yeni atanana izlemese bile gider (ADR-0008).
 
+### 3.5 Yorumlar ve @mention (V23)
+
+```
+GET    /api/v1/tasks/{taskId}/comments?limit=&cursor=   # her üye; eskiden yeniye (keyset)
+POST   /api/v1/tasks/{taskId}/comments                  # yazma rolleri; {"body": "<markdown>"}
+PATCH  /api/v1/comments/{commentId}                     # yalnız yazan; {"body": "<markdown>"}
+DELETE /api/v1/comments/{commentId}                     # yazan veya workspace ADMIN
+```
+
+- Yorum gövdesi Markdown'dır (en fazla 10.000 karakter). Mention sözdizimi `@[<userId>]` —
+  frontend autocomplete ile ekler, sunucu üye listesine karşı doğrular; geçersiz/üye olmayan
+  token'lar sessizce yok sayılır (serbest isim eşleştirme YOK). Bir yorumda en fazla 20 mention
+  işlenir.
+- Silinen bir yorum listede **kalır**, gövdesi `"[silindi]"` olarak döner (`deleted: true`);
+  gövde asıl olarak DB'de korunur, yalnız API'de maskelenir.
+- `TaskResponse.commentCount`: silinenler dahil toplam yorum sayısı (liste/kanban rozeti için).
+- **Bildirim (ADR-0009):** yorum yazan ve geçerli mention edilenler otomatik izleyici olur.
+  `COMMENT_ADDED` izleyicilere (aktör ve o yorumda mention edilenler hariç) gider; mention
+  edilenler AYRICA (izliyor olsun olmasın, "her zaman") `COMMENT_MENTION` ile bildirilir — aynı
+  yoruma iki bildirim gitmez.
+- Yazan/ADMIN olmayanın düzenleme/silme denemesi **403** döner (silinmiş yorumu düzenlemek 400).
+  Düzenleme `COMMENT_UPDATED`, silme `COMMENT_DELETED` yayınlar — yalnız canlı yenileme için,
+  bildirim üretmezler.
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
@@ -201,7 +225,7 @@ GET    /api/v1/me/tasks?limit=&cursor=      # bana atanmış, onaylanmamış gö
 | Endpoint | İzinli roller |
 |---|---|
 | `POST /api/v1/projects` | ADMIN, MANAGER |
-| `POST /api/v1/projects/{id}/tasks`, task status/sprint/story-point güncelleme | ADMIN, MANAGER, DEVELOPER |
+| `POST /api/v1/projects/{id}/tasks`, task status/sprint/story-point güncelleme, yorum ekleme | ADMIN, MANAGER, DEVELOPER |
 | `POST/…/sprints/**` (oluştur/başlat/tamamla) | ADMIN, MANAGER |
 | `GET` uçları (liste, analitik, rapor) | tüm roller (VIEWER dahil) |
 | Dönem hedefi yönetimi (`/api/v1/goals`) | ADMIN, MANAGER |
