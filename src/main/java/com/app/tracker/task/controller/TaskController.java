@@ -9,7 +9,10 @@ import com.app.tracker.tag.dto.TagResponse;
 import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.dto.AssignSprintRequest;
 import com.app.tracker.task.dto.CreateTaskRequest;
+import com.app.tracker.task.dto.TaskDetailResponse;
 import com.app.tracker.task.dto.TaskResponse;
+import com.app.tracker.task.dto.UpdateAssigneeRequest;
+import com.app.tracker.task.dto.UpdateDescriptionRequest;
 import com.app.tracker.task.dto.UpdateDueDateRequest;
 import com.app.tracker.task.dto.UpdateStoryPointRequest;
 import com.app.tracker.task.dto.UpdateTaskStatusRequest;
@@ -308,6 +311,68 @@ public class TaskController {
   public TaskResponse unlinkDependency(
       @PathVariable UUID taskId, @PathVariable UUID blockingTaskId) {
     return toResponse(taskDependencyService.unlink(taskId, blockingTaskId));
+  }
+
+  /** V22: {@code assigneeId: null} atamayi kaldirir. Yetki diger gorev mutasyonlariyla AYNI. */
+  @PutMapping("/api/v1/tasks/{taskId}/assignee")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
+  public TaskResponse assign(
+      @PathVariable UUID taskId, @RequestBody UpdateAssigneeRequest request) {
+    return toResponse(taskService.assign(taskId, request.assigneeId(), CurrentUser.id()));
+  }
+
+  /** Aciklama + izleyiciler; liste yanitlari aciklamayi tasimaz. Okuma rol sinirsiz. */
+  @GetMapping("/api/v1/tasks/{taskId}/detail")
+  public TaskDetailResponse detail(@PathVariable UUID taskId) {
+    return TaskDetailResponse.from(taskService.getDetail(taskId), CurrentUser.id());
+  }
+
+  @PutMapping("/api/v1/tasks/{taskId}/description")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
+  public TaskDetailResponse updateDescription(
+      @PathVariable UUID taskId, @Valid @RequestBody UpdateDescriptionRequest request) {
+    UUID actorId = CurrentUser.id();
+    taskService.updateDescription(taskId, request.description(), actorId);
+    return TaskDetailResponse.from(taskService.getDetail(taskId), actorId);
+  }
+
+  /**
+   * Izleme rol sinirsiz (VIEWER dahil): izlemek gorevi degistirmez, yalniz bildirim almaktir.
+   * Idempotent PUT/DELETE.
+   */
+  @PutMapping("/api/v1/tasks/{taskId}/watch")
+  public TaskDetailResponse watch(@PathVariable UUID taskId) {
+    UUID userId = CurrentUser.id();
+    return TaskDetailResponse.from(taskService.watch(taskId, userId), userId);
+  }
+
+  @DeleteMapping("/api/v1/tasks/{taskId}/watch")
+  public TaskDetailResponse unwatch(@PathVariable UUID taskId) {
+    UUID userId = CurrentUser.id();
+    return TaskDetailResponse.from(taskService.unwatch(taskId, userId), userId);
+  }
+
+  /** "Benim islerim": aktif workspace'te bana atanmis, onaylanmamis gorevler (projeler arasi). */
+  @GetMapping("/api/v1/me/tasks")
+  public PageResponse<TaskResponse> myTasks(
+      @RequestParam(defaultValue = "50") int limit, @RequestParam(required = false) String cursor) {
+    int boundedLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
+    PageResponse<Task> page = taskService.listAssignedTo(CurrentUser.id(), boundedLimit, cursor);
+    return new PageResponse<>(toResponses(page.data()), page.nextCursor(), page.hasMore());
   }
 
   private TaskResponse toResponse(Task task) {

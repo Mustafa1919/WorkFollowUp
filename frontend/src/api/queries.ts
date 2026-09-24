@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
@@ -18,6 +18,7 @@ import type {
   Sprint,
   Tag,
   Task,
+  TaskDetail,
   TaskStatus,
   ThroughputResponse,
   VelocityResponse,
@@ -42,6 +43,8 @@ export const keys = {
   tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
   subtasks: (ws: string | null, taskId: string) => ['ws', ws, 'subtasks', taskId] as const,
   members: (ws: string | null) => ['ws', ws, 'members'] as const,
+  taskDetail: (ws: string | null, taskId: string) => ['ws', ws, 'taskDetail', taskId] as const,
+  myTasks: (ws: string | null) => ['ws', ws, 'myTasks'] as const,
   notifications: (ws: string | null, unreadOnly: boolean) => ['ws', ws, 'notifications', unreadOnly] as const,
   unreadCount: (ws: string | null) => ['ws', ws, 'notifications', 'unread-count'] as const,
   meetings: (ws: string | null) => ['ws', ws, 'meetings'] as const,
@@ -196,6 +199,73 @@ export function useUpdateStoryPoint(projectId: string) {
   })
 }
 
+// ---------------------------------------------------------------- assignee / description / watch (V22)
+
+/** Aciklama + izleyiciler: liste yanitlari aciklamayi tasimadigi icin ayri sorgu. */
+export function useTaskDetail(taskId: string | undefined) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.taskDetail(workspaceId, taskId ?? ''),
+    queryFn: async () => (await api.get<TaskDetail>(`/api/v1/tasks/${taskId}/detail`)).data,
+    enabled: !!workspaceId && !!taskId,
+  })
+}
+
+/**
+ * Atama degisince board, takvim ve "Benim islerim" listeleri; aciklama/izleme degisince yalniz detay
+ * yenilenir (detay yaniti dogrudan cache'e yazilir, ikinci istek atilmaz).
+ */
+export function useTaskCollaboration(projectId: string) {
+  const qc = useQueryClient()
+  const setDetail = (detail: TaskDetail) => qc.setQueryData(keys.taskDetail(ws(), detail.taskId), detail)
+  return {
+    assign: useMutation({
+      mutationFn: async ({ taskId, assigneeId }: { taskId: string; assigneeId: string | null }) =>
+        (await api.put<Task>(`/api/v1/tasks/${taskId}/assignee`, { assigneeId })).data,
+      onSuccess: (task) =>
+        Promise.all([
+          qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
+          qc.invalidateQueries({ queryKey: keys.myTasks(ws()) }),
+          qc.invalidateQueries({ queryKey: keys.taskDetail(ws(), task.id) }),
+        ]),
+    }),
+    updateDescription: useMutation({
+      mutationFn: async ({ taskId, description }: { taskId: string; description: string | null }) =>
+        (await api.put<TaskDetail>(`/api/v1/tasks/${taskId}/description`, { description })).data,
+      onSuccess: setDetail,
+    }),
+    watch: useMutation({
+      mutationFn: async (taskId: string) => (await api.put<TaskDetail>(`/api/v1/tasks/${taskId}/watch`)).data,
+      onSuccess: setDetail,
+    }),
+    unwatch: useMutation({
+      mutationFn: async (taskId: string) => (await api.delete<TaskDetail>(`/api/v1/tasks/${taskId}/watch`)).data,
+      onSuccess: setDetail,
+    }),
+  }
+}
+
+/** "Benim islerim": aktif workspace'te bana atanmis, onaylanmamis gorevler (tum projeler). */
+export function useMyTasks() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.myTasks(workspaceId),
+    queryFn: async () => {
+      const all: Task[] = []
+      let cursor: string | null = null
+      do {
+        const res: { data: Page<Task> } = await api.get<Page<Task>>('/api/v1/me/tasks', {
+          params: { limit: 200, cursor: cursor ?? undefined },
+        })
+        all.push(...res.data.data)
+        cursor = res.data.has_more ? res.data.next_cursor : null
+      } while (cursor)
+      return all
+    },
+    enabled: !!workspaceId,
+  })
+}
+
 /**
  * Backend WebSocket fan-out'una (`/topic/workspace.{ws}.project.{projectId}`) abone olur; herhangi
  * bir task.events olayinda (durum/etiket/story point/tarih/onay/silme) ilgili sorgulari gecersiz
@@ -211,6 +281,8 @@ export function useProjectRealtime(projectId: string) {
       console.debug('[realtime] task.events çerçevesi alındı:', envelope)
       qc.invalidateQueries({ queryKey: keys.tasks(workspaceId, projectId) })
       qc.invalidateQueries({ queryKey: keys.approved(workspaceId, projectId) })
+      qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'taskDetail'] })
+      qc.invalidateQueries({ queryKey: keys.myTasks(workspaceId) })
     })
   }, [workspaceId, projectId, qc])
 }
@@ -518,6 +590,12 @@ export function useMembers(enabled: boolean) {
     queryFn: async () => (await api.get<WorkspaceMember[]>('/api/v1/workspaces/members')).data,
     enabled: enabled && !!workspaceId,
   })
+}
+
+/** userId -> uye: kart/secici gibi cok yerde isim cozmek icin (tek sorgu, react-query paylasir). */
+export function useMemberMap(): Map<string, WorkspaceMember> {
+  const { data } = useMembers(true)
+  return useMemo(() => new Map((data ?? []).map((m) => [m.userId, m])), [data])
 }
 
 export function useMemberActions() {

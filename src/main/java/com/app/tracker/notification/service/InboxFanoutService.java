@@ -8,15 +8,17 @@ import com.app.tracker.project.model.Project;
 import com.app.tracker.project.repository.ProjectRepository;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskRepository;
-import com.app.tracker.workspace.model.WorkspaceRole;
+import com.app.tracker.task.repository.TaskWatcherRepository;
 import com.app.tracker.workspace.model.WorkspaceUser;
 import com.app.tracker.workspace.repository.WorkspaceUserRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,14 +31,15 @@ import tools.jackson.databind.JsonNode;
  * saf DB yazimi) oldugu icin Slack worker'inin "kisa tx + dis cagri arasi" bolunmesine gerek
  * yoktur.
  *
- * <p><b>Alici tanimi (bilincli tasarim karari):</b> {@code tasks.assignee_id} (V1'den beri var ama
- * hicbir yerde kullanilmayan bir kolon) kasitli olarak KULLANILMADI — bu ozelligin kapsami sadece
- * Inbox'tir, gorev atama Hedefler.md yol haritasinda daha sonraki bir dilim. Bunun yerine alici =
- * "workspace'teki DEVELOPER ve uzeri roller (ADMIN/MANAGER/DEVELOPER), VIEWER HARIC (salt-okunur
- * uye is yapmiyor, bildirim onun icin gurultu), aktor HARIC". Bu, mevcut Slack entegrasyonuyla AYNI
- * "workspace genelinde yayin" felsefesini (tek kanal, tum uyeler) kullanicilar seviyesine tasir.
- * Bilinen sinir: buyuk workspace'lerde her durum degisikligi TUM aktif uyelere duser, gurultu
- * uretebilir; assignee_id koda baglanirsa alici tanimi "yalniz atanan + izleyenler"e daralmali.
+ * <p><b>Alici tanimi (V22):</b> gorevin IZLEYICILERI, aktor HARIC, yalniz hala workspace uyesi
+ * olanlar. Izleyiciler otomatik eklenir (olusturan, atanan — TaskService) ve kullanici elle
+ * izleyebilir/birakabilir; boylece V18'deki "workspace'in tum ADMIN/MANAGER/DEVELOPER uyelerine
+ * yayin" gurultusu kalkar. VIEWER bir gorevi kendisi izlemeyi secerse bildirim alir (kendi
+ * tercihi). Ek kural: {@code TASK_ASSIGNED} yeni atanana, izleyici listesinden bagimsiz, HER ZAMAN
+ * gider ve ona ozel metinle ("size atandi").
+ *
+ * <p>Izleyici listesi olay ANINDA degil TUKETIM aninda okunur: arada izlemeyi birakan kisi
+ * bildirimi almaz, yeni izleyen alir — kabul edilmis, zararsiz bir fark.
  */
 @Service
 @Profile("!migrate")
@@ -44,14 +47,11 @@ public class InboxFanoutService {
 
   public static final String CONSUMER = "notification-inbox";
 
-  /** VIEWER haric: salt-okunur uye is akisinin bir parcasi degil, bildirim onun icin gurultu. */
-  private static final Set<String> RECIPIENT_ROLES =
-      Set.of(WorkspaceRole.ADMIN, WorkspaceRole.MANAGER, WorkspaceRole.DEVELOPER);
-
   private final ProcessedEventStore processedEventStore;
   private final NotificationRepository notificationRepository;
   private final WorkspaceUserRepository workspaceUserRepository;
   private final TaskRepository taskRepository;
+  private final TaskWatcherRepository taskWatcherRepository;
   private final ProjectRepository projectRepository;
 
   public InboxFanoutService(
@@ -59,11 +59,13 @@ public class InboxFanoutService {
       NotificationRepository notificationRepository,
       WorkspaceUserRepository workspaceUserRepository,
       TaskRepository taskRepository,
+      TaskWatcherRepository taskWatcherRepository,
       ProjectRepository projectRepository) {
     this.processedEventStore = processedEventStore;
     this.notificationRepository = notificationRepository;
     this.workspaceUserRepository = workspaceUserRepository;
     this.taskRepository = taskRepository;
+    this.taskWatcherRepository = taskWatcherRepository;
     this.projectRepository = projectRepository;
   }
 
@@ -97,7 +99,11 @@ public class InboxFanoutService {
       return List.of();
     }
     UUID actorId = uuidOrNull(payload, "actorId");
-    List<UUID> recipients = resolveRecipients(workspaceId, actorId);
+    UUID newAssigneeId =
+        NotificationMessageFormatter.TASK_ASSIGNED.equals(eventType)
+            ? uuidOrNull(payload, "newAssigneeId")
+            : null;
+    List<UUID> recipients = resolveRecipients(workspaceId, taskId, actorId, newAssigneeId);
     if (recipients.isEmpty()) {
       return List.of();
     }
@@ -108,6 +114,8 @@ public class InboxFanoutService {
     String body = message.get()[1];
     List<Notification> created = new ArrayList<>();
     for (UUID recipientId : recipients) {
+      String recipientBody =
+          recipientId.equals(newAssigneeId) ? NotificationMessageFormatter.ASSIGNED_TO_YOU : body;
       Notification notification =
           Notification.of(
               UUID.randomUUID(),
@@ -117,7 +125,7 @@ public class InboxFanoutService {
               taskId,
               task.getProjectId(),
               title,
-              body,
+              recipientBody,
               now);
       notificationRepository.save(notification);
       notificationRepository.writePayload(notification.getId(), payloadJson);
@@ -129,14 +137,23 @@ public class InboxFanoutService {
   /**
    * {@code actorId} eksikse (eski/replay edilmis bir olay) kimse HARIC TUTULMAZ — bu bilinen, kabul
    * edilebilir bir gerileme (aktor kendi eylemi icin de bildirim gorebilir), yanlis kisiyi haric
-   * tutmaktan (veri kaybi) daha guvenli bir varsayilan.
+   * tutmaktan (veri kaybi) daha guvenli bir varsayilan. Workspace'ten cikarilmis izleyici/atanan
+   * ({@code workspace_users} RLS'siz, workspace id acik) bildirim almaz.
    */
-  private List<UUID> resolveRecipients(UUID workspaceId, UUID actorId) {
-    return workspaceUserRepository.findByWorkspaceId(workspaceId).stream()
-        .filter(member -> RECIPIENT_ROLES.contains(member.getRole()))
-        .map(WorkspaceUser::getUserId)
+  private List<UUID> resolveRecipients(
+      UUID workspaceId, UUID taskId, UUID actorId, UUID newAssigneeId) {
+    Set<UUID> members =
+        workspaceUserRepository.findByWorkspaceId(workspaceId).stream()
+            .map(WorkspaceUser::getUserId)
+            .collect(Collectors.toSet());
+    Set<UUID> candidates = new LinkedHashSet<>();
+    if (newAssigneeId != null) {
+      candidates.add(newAssigneeId);
+    }
+    candidates.addAll(taskWatcherRepository.findWatcherIds(taskId));
+    return candidates.stream()
+        .filter(members::contains)
         .filter(userId -> !userId.equals(actorId))
-        .distinct()
         .toList();
   }
 

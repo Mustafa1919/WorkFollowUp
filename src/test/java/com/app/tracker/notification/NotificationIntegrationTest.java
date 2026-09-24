@@ -90,7 +90,7 @@ class NotificationIntegrationTest extends AbstractIntegrationTest {
     assertTrue(developerInbox.get(0).getBody().contains("In Progress"));
 
     assertTrue(forUser(tenant, tenant.adminId()).isEmpty(), "aktor kendine bildirim almaz");
-    assertTrue(forUser(tenant, tenant.viewerId()).isEmpty(), "VIEWER alici degildir");
+    assertTrue(forUser(tenant, tenant.viewerId()).isEmpty(), "izlemeyen uye alici degildir");
   }
 
   @Test
@@ -237,9 +237,19 @@ class NotificationIntegrationTest extends AbstractIntegrationTest {
   // ---- yardimcilar
   // --------------------------------------------------------------------------------
 
+  /**
+   * V22: alicilar = izleyiciler. Aktor olan admin ve developer gorevi izler; VIEWER izlemez (aktor
+   * haric tutma ve "izlemeyen almaz" kurallari birlikte sinanir).
+   */
   private Task createTask(Tenant tenant) {
     return tenantExecutor.runAs(
-        tenant.workspaceId(), () -> taskService.createTask(tenant.projectId(), "Bildirim gorevi"));
+        tenant.workspaceId(),
+        () -> {
+          Task task = taskService.createTask(tenant.projectId(), "Bildirim gorevi");
+          taskService.watch(task.getId(), tenant.adminId());
+          taskService.watch(task.getId(), tenant.developerId());
+          return task;
+        });
   }
 
   /** {@link NotificationService} UZERINDEN okur (bkz. sinif javadoc'undaki tuzak). */

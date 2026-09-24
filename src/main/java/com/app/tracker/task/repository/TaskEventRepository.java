@@ -15,9 +15,9 @@ import tools.jackson.databind.ObjectMapper;
  * dogrudan native INSERT ile yaziliyor — TaskCounterRepository ile ayni desen.
  *
  * <p>Event tipleri ({@code event_type}): {@code status_changed}, {@code sprint_changed}, {@code
- * story_point_changed}, {@code due_date_changed}. Analitik Worker (Faz 3) sprint uyeligini ve story
- * point'i bu tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak
- * zorundadir.
+ * story_point_changed}, {@code due_date_changed}, {@code assignee_changed}, {@code
+ * description_changed} (V22). Analitik Worker (Faz 3) sprint uyeligini ve story point'i bu
+ * tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak zorundadir.
  */
 @Repository
 public class TaskEventRepository {
@@ -70,6 +70,27 @@ public class TaskEventRepository {
         "dueDate",
         oldDueDate == null ? null : oldDueDate.toString(),
         newDueDate == null ? null : newDueDate.toString());
+  }
+
+  /** {@code null} deger gecerlidir (atamayi kaldirma). */
+  public void recordAssigneeChange(
+      UUID taskId, UUID actorId, UUID oldAssigneeId, UUID newAssigneeId) {
+    record(
+        taskId,
+        actorId,
+        "assignee_changed",
+        "assigneeId",
+        oldAssigneeId == null ? null : oldAssigneeId.toString(),
+        newAssigneeId == null ? null : newAssigneeId.toString());
+  }
+
+  /**
+   * Aciklamanin KENDISI tarihceye yazilmaz (20.000 karaktere kadar metin, her duzenlemede append-
+   * only tabloyu sisirirdi); yalniz uzunlugu yazilir — Activity sekmesi "aciklamayi guncelledi"
+   * demek icin bu kadarina ihtiyac duyar.
+   */
+  public void recordDescriptionChange(UUID taskId, UUID actorId, int oldLength, int newLength) {
+    record(taskId, actorId, "description_changed", "length", oldLength, newLength);
   }
 
   /**

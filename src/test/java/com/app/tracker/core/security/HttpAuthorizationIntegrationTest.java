@@ -184,6 +184,15 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/subtasks", null, ALL_ROLES),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
+        // V22 atama/aciklama: gorev mutasyonuyla AYNI yazma rolleri; detay okuma ve izleme her uye
+        // (izlemek gorevi degistirmez, yalniz bildirim almaktir).
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/assignee", "{\"assigneeId\":null}", WRITE),
+        Endpoint.of(
+            HttpMethod.PUT, "/api/v1/tasks/{id}/description", "{\"description\":\"d\"}", WRITE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/detail", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/watch", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/watch", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/me/tasks", null, ALL_ROLES),
         // Workspace uyeligi: ekleme/rol degistirme/cikarma yalniz ADMIN; listeleme her uye.
         Endpoint.of(
             HttpMethod.POST,

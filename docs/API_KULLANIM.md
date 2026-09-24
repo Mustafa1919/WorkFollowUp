@@ -146,11 +146,9 @@ DELETE /api/v1/tasks/{taskId}                           # yalnız ADMIN; soft de
 - Silme soft'tur (`deleted_at`); görev tüm okuma uçlarından düşer, tarihçe (`task_events`) korunur,
   sprint'teyse sprint'ten çıkarılır, `TASK_DELETED` olayı Cycle Time/Throughput read model'ini temizler.
 
-> **Bilinen kısıt:** Şu an başka bir kullanıcıyı workspace'e davet eden/ekleyen bir API
-> endpoint'i YOK. Her kullanıcı sadece kendi oluşturduğu workspace'in admin'i olabilir;
-> çok kullanıcılı bir workspace test etmek istiyorsanız (rol matrisini denemek için)
-> DB'ye elle `workspace_users` satırı eklemeniz gerekir. Bu, tek kişilik yerel kullanım
-> için engel değil ama not edilmeli.
+> **Bilinen kısıt:** E-postayla davet akışı henüz yok. ADMIN, **kayıtlı** bir kullanıcıyı
+> `POST /api/v1/workspaces/members` (`{"email","role"}`) ile ekleyebilir; kayıtlı olmayan
+> e-posta `404` döner.
 
 ### 3.3 Dönemsel rapor ve hedefler (V21)
 
@@ -176,6 +174,25 @@ DELETE /api/v1/goals/{goalId}              # ADMIN/MANAGER, 204
 - `metricType`: `COMPLETED_TASKS` | `COMPLETED_POINTS` (ilerleme otomatik) | `CUSTOM` (elle).
   Hedefin dönemi ve metrik tipi oluşturulduktan sonra **değiştirilemez**; yeni hedef açılmalı.
 - Yıllık ve çeyreklik hedefler ayrı listelerdir: yıllık rapor çeyreklik hedefleri göstermez.
+
+### 3.4 Atanan, açıklama, izleyiciler ve "Benim işlerim" (V22)
+
+```
+PUT    /api/v1/tasks/{taskId}/assignee      # yazma rolleri; {"assigneeId": "<uuid>" | null}
+PUT    /api/v1/tasks/{taskId}/description   # yazma rolleri; {"description": "<markdown>" | null}
+GET    /api/v1/tasks/{taskId}/detail        # her üye; açıklama + izleyiciler + watching
+PUT    /api/v1/tasks/{taskId}/watch         # her üye (VIEWER dahil); idempotent
+DELETE /api/v1/tasks/{taskId}/watch         # her üye; idempotent
+GET    /api/v1/me/tasks?limit=&cursor=      # bana atanmış, onaylanmamış görevler (tüm projeler)
+```
+
+- Görevin **tek** atananı vardır; atanan, workspace'in VIEWER dışı bir üyesi olmalıdır (`400`).
+  Onaylı görevin atananı ve açıklaması değiştirilemez.
+- Açıklama Markdown'dır (en fazla 20.000 karakter); boş metin açıklamayı kaldırır. Liste
+  yanıtları (`TaskResponse`) açıklamayı **taşımaz**, yalnız `assigneeId` taşır; açıklama için
+  `/detail` çağrılır.
+- **Inbox alıcıları = görevin izleyicileri − işlemi yapan kişi.** Görevi oluşturan ve atanan
+  otomatik izleyici olur. `TASK_ASSIGNED` yeni atanana izlemese bile gider (ADR-0008).
 
 ## 4. Roller
 

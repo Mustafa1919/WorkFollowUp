@@ -6,6 +6,8 @@ import { cn } from '@/lib/cn'
 import { fmt, fromIso } from '@/lib/dates'
 import { StatusDot, TagChip } from '@/components/ui/misc'
 import { taskKey } from '@/lib/status'
+import { useMemberMap } from '@/api/queries'
+import { Avatar } from '@/components/ui/Avatar'
 
 interface TaskCardProps extends HTMLAttributes<HTMLDivElement> {
   task: Task
@@ -22,6 +24,8 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
   const late = diff !== null && diff < 0 && task.status !== 'Done'
   // Bilgilendirici: sadece hala acik (Done olmayan) blocker'lar rozet gerektirir.
   const openBlockers = task.blockedBy.filter((b) => b.status !== 'Done').length
+  const memberMap = useMemberMap()
+  const assignee = task.assigneeId ? memberMap.get(task.assigneeId) : undefined
   return (
     <div
       ref={ref}
@@ -66,10 +70,12 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
             <Ban size={12} />
           </span>
         )}
+        {assignee && <Avatar name={assignee.fullName} seed={assignee.userId} size={18} className="ml-auto" />}
         {task.dueDate && (
           <span
             className={cn(
-              'ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5',
+              !assignee && 'ml-auto',
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5',
               late ? 'bg-danger/15 text-danger' : diff === 0 ? 'bg-accent-soft text-accent' : 'bg-surface-2',
             )}
           >

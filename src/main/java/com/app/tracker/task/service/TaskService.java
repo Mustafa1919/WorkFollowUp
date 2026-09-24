@@ -14,6 +14,10 @@ import com.app.tracker.task.repository.TaskCounterRepository;
 import com.app.tracker.task.repository.TaskCustomFieldRepository;
 import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
+import com.app.tracker.task.repository.TaskWatcherRepository;
+import com.app.tracker.workspace.model.WorkspaceRole;
+import com.app.tracker.workspace.model.WorkspaceUser;
+import com.app.tracker.workspace.repository.WorkspaceUserRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -53,6 +57,8 @@ public class TaskService {
   private final TaskEventRepository taskEventRepository;
   private final TaskCustomFieldRepository taskCustomFieldRepository;
   private final SprintRepository sprintRepository;
+  private final TaskWatcherRepository taskWatcherRepository;
+  private final WorkspaceUserRepository workspaceUserRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
   private final Clock clock;
@@ -64,6 +70,8 @@ public class TaskService {
       TaskEventRepository taskEventRepository,
       TaskCustomFieldRepository taskCustomFieldRepository,
       SprintRepository sprintRepository,
+      TaskWatcherRepository taskWatcherRepository,
+      WorkspaceUserRepository workspaceUserRepository,
       OutboxEventRepository outboxEventRepository,
       ObjectMapper objectMapper,
       Clock clock) {
@@ -73,6 +81,8 @@ public class TaskService {
     this.taskEventRepository = taskEventRepository;
     this.taskCustomFieldRepository = taskCustomFieldRepository;
     this.sprintRepository = sprintRepository;
+    this.taskWatcherRepository = taskWatcherRepository;
+    this.workspaceUserRepository = workspaceUserRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
     this.clock = clock;
@@ -95,7 +105,14 @@ public class TaskService {
     Task task =
         Task.of(UUID.randomUUID(), project.getWorkspaceId(), project.getId(), taskNumber, title);
     task.changeDueDate(dueDate);
+    if (actorId != null) {
+      task.recordCreator(actorId);
+    }
     Task saved = taskRepository.save(task);
+    if (actorId != null) {
+      // Olusturan otomatik izleyicidir (V22): kendi actigi gorevin ilerleyisini Inbox'tan gorur.
+      taskWatcherRepository.watch(saved.getId(), actorId, saved.getWorkspaceId());
+    }
     if (dueDate != null) {
       taskEventRepository.recordDueDateChange(
           saved.getId(), Objects.requireNonNull(actorId, "actorId"), null, dueDate);
@@ -245,6 +262,129 @@ public class TaskService {
     payload.put("actorId", actorId == null ? null : actorId.toString());
     writeTaskEvent("TASK_DUE_DATE_CHANGED", saved, payload);
     return saved;
+  }
+
+  /**
+   * V22: gorevi bir kisiye atar ({@code assigneeId == null} atamayi kaldirir). Atanan, gorevin
+   * workspace'inde VIEWER disi bir uye olmalidir ({@code workspace_users} RLS'siz oldugundan
+   * workspace id acikca verilir). Atanan otomatik izleyici olur; {@code TASK_ASSIGNED} izlemese
+   * bile atanana bildirilir (InboxFanoutService).
+   */
+  @Transactional
+  public Task assign(UUID taskId, UUID assigneeId, UUID actorId) {
+    Task task = requireTask(taskId);
+    UUID oldAssigneeId = task.getAssigneeId();
+    if (Objects.equals(oldAssigneeId, assigneeId)) {
+      return task;
+    }
+    rejectIfApprovedTask(task, "Onaylanmis gorevin atanani degistirilemez.");
+    if (assigneeId != null) {
+      String role =
+          workspaceUserRepository
+              .findByWorkspaceIdAndUserId(task.getWorkspaceId(), assigneeId)
+              .map(WorkspaceUser::getRole)
+              .orElseThrow(() -> new BusinessRuleException("Atanan kisi workspace uyesi degil."));
+      if (WorkspaceRole.VIEWER.equals(role)) {
+        throw new BusinessRuleException("Salt-okunur (VIEWER) uyeye gorev atanamaz.");
+      }
+    }
+    task.changeAssignee(assigneeId);
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordAssigneeChange(taskId, actorId, oldAssigneeId, assigneeId);
+    if (assigneeId != null) {
+      taskWatcherRepository.watch(taskId, assigneeId, saved.getWorkspaceId());
+    }
+    Map<String, Object> payload = basePayload(saved, actorId);
+    payload.put("oldAssigneeId", oldAssigneeId == null ? null : oldAssigneeId.toString());
+    payload.put("newAssigneeId", assigneeId == null ? null : assigneeId.toString());
+    writeTaskEvent("TASK_ASSIGNED", saved, payload);
+    return saved;
+  }
+
+  /**
+   * V22: Markdown aciklama. Bos/yalniz bosluk {@code null} sayilir. Icerik olay payload'ina KONMAZ:
+   * outbox + Kafka + WebSocket yayini buyuk metni tasimasin; istemci olay gelince detayi yeniden
+   * ceker.
+   */
+  @Transactional
+  public Task updateDescription(UUID taskId, String description, UUID actorId) {
+    Task task = requireTask(taskId);
+    String normalized = description == null || description.isBlank() ? null : description;
+    String oldDescription = task.getDescription();
+    if (Objects.equals(oldDescription, normalized)) {
+      return task;
+    }
+    rejectIfApprovedTask(task, "Onaylanmis gorevin aciklamasi degistirilemez.");
+    task.changeDescription(normalized);
+    Task saved = taskRepository.save(task);
+    taskEventRepository.recordDescriptionChange(
+        taskId, actorId, length(oldDescription), length(normalized));
+    writeTaskEvent("TASK_DESCRIPTION_CHANGED", saved, basePayload(saved, actorId));
+    return saved;
+  }
+
+  /** Detay gorunumu (aciklama + izleyiciler) — liste yanitlari aciklamayi tasimaz. */
+  @Transactional(readOnly = true)
+  public TaskDetail getDetail(UUID taskId) {
+    Task task = requireTask(taskId);
+    return new TaskDetail(task, taskWatcherRepository.findWatcherIds(taskId));
+  }
+
+  /**
+   * Izleme herkese acik (VIEWER dahil): izlemek okumaktir, gorevi degistirmez. Idempotent.
+   * Kullanici workspace uyesi oldugu icin (WorkspaceContextFilter) ayrica uyelik kontrolu gerekmez.
+   */
+  @Transactional
+  public TaskDetail watch(UUID taskId, UUID userId) {
+    Task task = requireTask(taskId);
+    taskWatcherRepository.watch(taskId, userId, task.getWorkspaceId());
+    return new TaskDetail(task, taskWatcherRepository.findWatcherIds(taskId));
+  }
+
+  @Transactional
+  public TaskDetail unwatch(UUID taskId, UUID userId) {
+    Task task = requireTask(taskId);
+    taskWatcherRepository.unwatch(taskId, userId);
+    return new TaskDetail(task, taskWatcherRepository.findWatcherIds(taskId));
+  }
+
+  /** "Benim islerim": projeler arasi, onaylanmamis atanmis gorevler (keyset). */
+  @Transactional(readOnly = true)
+  public PageResponse<Task> listAssignedTo(UUID userId, int limit, String cursor) {
+    Pageable pageable = PageRequest.of(0, limit + 1);
+    List<Task> rows;
+    if (cursor == null || cursor.isBlank()) {
+      rows = taskRepository.findFirstAssignedPage(userId, pageable);
+    } else {
+      TaskCursor decoded = TaskCursor.decode(cursor);
+      rows =
+          taskRepository.findNextAssignedPage(userId, decoded.createdAt(), decoded.id(), pageable);
+    }
+    boolean hasMore = rows.size() > limit;
+    List<Task> page = hasMore ? rows.subList(0, limit) : rows;
+    String nextCursor = null;
+    if (hasMore) {
+      Task last = page.get(page.size() - 1);
+      nextCursor = new TaskCursor(last.getCreatedAt(), last.getId()).encode();
+    }
+    return new PageResponse<>(page, nextCursor, hasMore);
+  }
+
+  /** Gorev + izleyici kimlikleri; controller DTO'ya cevirir. */
+  public record TaskDetail(Task task, List<UUID> watcherIds) {
+    public TaskDetail {
+      watcherIds = List.copyOf(watcherIds);
+    }
+  }
+
+  private static int length(String value) {
+    return value == null ? 0 : value.length();
+  }
+
+  private static void rejectIfApprovedTask(Task task, String message) {
+    if (task.isApproved()) {
+      throw new BusinessRuleException(message);
+    }
   }
 
   /** Takvim gorunumu; aralik ust siniri controller'da uygulanir. */

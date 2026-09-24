@@ -11,12 +11,10 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
 
 /**
- * DATABASE_SCHEMA.md 2.7 — RLS'e tabidir (bkz. V2__add_rls_policies.sql). Faz 1'in bu diliminde
- * yalnizca REST API'nin ihtiyac duydugu alanlar mapleniyor; assignee_id nullable oldugundan
- * DB-seviyesi bir kisitlama olusturmuyor, sonraki fazlarda eklenecek. sprint_id Faz 3 Dilim 3.0'da,
- * parentTaskId V19'da (Subtask) eklendi. custom_fields (story_point) bilerek entity'ye MAPLENMEDI:
- * JSONB type mapping'i yerine {@code TaskCustomFieldRepository} native SQL ile yonetir
- * (TaskEventRepository ile ayni desen).
+ * DATABASE_SCHEMA.md 2.7 — RLS'e tabidir (bkz. V2__add_rls_policies.sql). sprint_id Faz 3 Dilim
+ * 3.0'da, parentTaskId V19'da (Subtask), assigneeId/description/createdBy V22'de maplendi.
+ * custom_fields (story_point) bilerek entity'ye MAPLENMEDI: JSONB type mapping'i yerine {@code
+ * TaskCustomFieldRepository} native SQL ile yonetir (TaskEventRepository ile ayni desen).
  */
 @Entity
 @Table(name = "tasks")
@@ -41,6 +39,15 @@ public class Task {
   private String title;
 
   private String status;
+
+  /** V22: tek atanan kisi; null = atanmamis. Workspace uyeligi TaskService'te dogrulanir. */
+  private UUID assigneeId;
+
+  /** V22: Markdown aciklama (en fazla 20.000 karakter, DB CHECK); liste yanitlarina girmez. */
+  private String description;
+
+  /** V22: olusturan kullanici; V22'den once acilmis gorevlerde null. */
+  private UUID createdBy;
 
   /** Takvim gunu (V15); null = tarihsiz. */
   private LocalDate dueDate;
@@ -84,6 +91,18 @@ public class Task {
 
   public void changeDueDate(LocalDate newDueDate) {
     this.dueDate = newDueDate;
+  }
+
+  public void changeAssignee(UUID newAssigneeId) {
+    this.assigneeId = newAssigneeId;
+  }
+
+  public void changeDescription(String newDescription) {
+    this.description = newDescription;
+  }
+
+  public void recordCreator(UUID creatorId) {
+    this.createdBy = creatorId;
   }
 
   public boolean isApproved() {

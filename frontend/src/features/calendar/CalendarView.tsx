@@ -44,6 +44,8 @@ interface Props {
   sprintFilter: string
   /** Secili etiket id'leri; bos = filtre yok. HERHANGI BIRINI tasiyan gorev eslesir (OR). */
   tagFilter: string[]
+  /** Atanan filtresi: undefined = herkes, null = atanmamis, aksi halde kullanici id'si. */
+  assigneeTarget?: string | null
   undated: Task[]
   canWrite: boolean
   onOpen: (task: Task) => void
@@ -54,7 +56,7 @@ interface Props {
  * altinda). Gorev cipleri gunler arasinda ya da "Tarihsiz" listesine suruklenir; gune tiklayinca
  * hizli ekleme acilir. Gorunen ay URL'de (`?month=2026-09`).
  */
-export function CalendarView({ projectId, projectKey, sprintFilter, tagFilter, undated, canWrite, onOpen }: Props) {
+export function CalendarView({ projectId, projectKey, sprintFilter, tagFilter, assigneeTarget, undated, canWrite, onOpen }: Props) {
   const [params, setParams] = useSearchParams()
   const monthParam = params.get('month')
   const month = useMemo(() => {
@@ -82,10 +84,11 @@ export function CalendarView({ projectId, projectKey, sprintFilter, tagFilter, u
       if (sprintFilter === 'backlog' && t.sprintId) continue
       if (sprintFilter !== 'all' && sprintFilter !== 'backlog' && t.sprintId !== sprintFilter) continue
       if (tagFilter.length > 0 && !t.tags.some((tag) => tagFilter.includes(tag.id))) continue
+      if (assigneeTarget !== undefined && t.assigneeId !== assigneeTarget) continue
       map.set(t.dueDate, [...(map.get(t.dueDate) ?? []), t])
     }
     return map
-  }, [raw, sprintFilter, tagFilter])
+  }, [raw, sprintFilter, tagFilter, assigneeTarget])
 
   function goTo(target: Date) {
     setDirection(target > month ? 1 : -1)

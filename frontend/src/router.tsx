@@ -7,6 +7,7 @@ import { BoardPage } from '@/features/board/BoardPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CompletedPage } from '@/features/completed/CompletedPage'
 import { MeetingsPage } from '@/features/meetings/MeetingsPage'
+import { MyWorkPage } from '@/features/my-work/MyWorkPage'
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: '/', element: <DashboardPage /> },
+          { path: '/my-work', element: <MyWorkPage /> },
           { path: '/meetings', element: <MeetingsPage /> },
           {
             path: '/reports',

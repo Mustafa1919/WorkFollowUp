@@ -14,6 +14,7 @@ import { STATUS_META, taskKey } from '@/lib/status'
 import { DependencyPanel } from './DependencyPanel'
 import { SubtaskPanel } from './SubtaskPanel'
 import { TagPicker } from './TagPicker'
+import { AssigneeField, DescriptionField, WatchButton } from './TaskPeoplePanel'
 
 interface Props {
   task: Task | null
@@ -55,6 +56,15 @@ function TaskFields({ task, sprints, canWrite }: { task: Task; sprints: Sprint[]
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <AssigneeField task={task} canWrite={canWrite} />
+        </div>
+        <WatchButton task={task} />
+      </div>
+
+      <DescriptionField task={task} canWrite={canWrite} />
+
       <div>
         <div className="mb-2 text-xs font-medium text-muted">Etiketler</div>
         <div className="flex flex-wrap items-center gap-1.5">

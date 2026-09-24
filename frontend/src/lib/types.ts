@@ -50,6 +50,8 @@ export interface Task {
   taskNumber: number
   title: string
   status: TaskStatus
+  /** V22: tek atanan kisi (workspace uyesi, VIEWER olamaz). */
+  assigneeId: string | null
   /** yyyy-MM-dd */
   dueDate: string | null
   createdAt: string
@@ -63,6 +65,17 @@ export interface Task {
   blocking: TaskRef[]
   /** Bu gorevi bloklayan (once bitmesi gereken) gorevler — sadece bilgilendirici. */
   blockedBy: TaskRef[]
+}
+
+/** Gorev detayi (V22): liste yanitlarinda tasinmayan aciklama + izleyiciler. */
+export interface TaskDetail {
+  taskId: string
+  /** Markdown; null = aciklama yok. */
+  description: string | null
+  createdBy: string | null
+  watcherIds: string[]
+  /** Istegi yapan kullanici izliyor mu. */
+  watching: boolean
 }
 
 /**

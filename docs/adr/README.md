@@ -22,6 +22,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0005](0005-slack-adres-guvenligi.md) | Slack adres güvenliği: allow-list + şifreleme | Kabul edildi |
 | [0006](0006-bildirim-teslim-semantigi.md) | Bildirim teslim semantiği: retry, devre kesici, offset | Kabul edildi |
 | [0007](0007-rapor-ve-hedef-modeli.md) | Rapor ve hedef modeli | Kabul edildi |
+| [0008](0008-izleyici-modeli-ve-inbox-alicilari.md) | İzleyici modeli ve Inbox alıcı tanımı | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

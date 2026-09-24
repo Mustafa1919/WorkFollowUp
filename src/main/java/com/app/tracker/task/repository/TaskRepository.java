@@ -44,6 +44,26 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
       @Param("cursorId") UUID cursorId,
       Pageable pageable);
 
+  /**
+   * "Benim islerim" (V22): kullaniciya atanmis, onaylanmamis gorevler — projeler arasi, workspace'e
+   * RLS ile sinirli. {@code idx_tasks_assignee_open} kismi indeksini kullanir.
+   */
+  @Query(
+      "SELECT t FROM Task t WHERE t.assigneeId = :assigneeId AND t.approvedAt IS NULL "
+          + "ORDER BY t.createdAt DESC, t.id DESC")
+  List<Task> findFirstAssignedPage(@Param("assigneeId") UUID assigneeId, Pageable pageable);
+
+  @Query(
+      "SELECT t FROM Task t WHERE t.assigneeId = :assigneeId AND t.approvedAt IS NULL "
+          + "AND (t.createdAt < :cursorCreatedAt "
+          + "OR (t.createdAt = :cursorCreatedAt AND t.id < :cursorId)) "
+          + "ORDER BY t.createdAt DESC, t.id DESC")
+  List<Task> findNextAssignedPage(
+      @Param("assigneeId") UUID assigneeId,
+      @Param("cursorCreatedAt") Instant cursorCreatedAt,
+      @Param("cursorId") UUID cursorId,
+      Pageable pageable);
+
   /** Tamamlananlar sayfasi: onaylanmis gorevler, onay zamanina gore yeniden eskiye. */
   @Query(
       "SELECT t FROM Task t WHERE t.projectId = :projectId AND t.approvedAt IS NOT NULL "

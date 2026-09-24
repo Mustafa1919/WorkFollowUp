@@ -58,3 +58,24 @@ export const useSession = create<SessionState>((set) => ({
     set({ accessToken: null, email: null })
   },
 }))
+
+/**
+ * Oturumdaki kullanicinin id'si, access token'in `sub` claim'inden (backend JwtService). Imza
+ * dogrulamasi YAPILMAZ ve gerekmez: deger yalniz UI kolayligi icin (ornegin "bana ata", "izliyorum"),
+ * yetki kararlari backend'de.
+ */
+export function userIdFromToken(token: string | null): string | null {
+  if (!token) return null
+  try {
+    const part = token.split('.')[1]
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'))
+    const sub = (JSON.parse(json) as { sub?: unknown }).sub
+    return typeof sub === 'string' ? sub : null
+  } catch {
+    return null
+  }
+}
+
+export function useCurrentUserId(): string | null {
+  return useSession((s) => userIdFromToken(s.accessToken))
+}

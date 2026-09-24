@@ -3,7 +3,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { BarChart3, CalendarDays, Check, CheckCircle2, KanbanSquare, Plus, Tag as TagIcon } from 'lucide-react'
-import { useProjectRealtime, useProjects, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
+import { useMembers, useProjectRealtime, useProjects, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
+import { useCurrentUserId } from '@/stores/session'
 import { cn } from '@/lib/cn'
 import type { Task } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +25,13 @@ export function BoardPage() {
   const sprintFilter = params.get('sprint') ?? 'all'
   // Coklu-secim tek bir query param'da virgullu tutulur (URL'de paylasilabilir/kalici kalsin).
   const tagFilter = useMemo(() => (params.get('tags') ?? '').split(',').filter(Boolean), [params])
+  // 'me' | 'none' | <userId>; yoksa herkes. 'me' URL'de kisiden bagimsiz kalir (paylasilan link
+  // aciliginda aciyan kisinin kendi islerini gosterir).
+  const assigneeFilter = params.get('assignee')
+  const me = useCurrentUserId()
+  const { data: members } = useMembers(true)
+  const assigneeTarget: string | null | undefined =
+    assigneeFilter === null ? undefined : assigneeFilter === 'none' ? null : assigneeFilter === 'me' ? me : assigneeFilter
 
   const { data: projects } = useProjects()
   const project = projects?.find((p) => p.id === projectId)
@@ -59,8 +67,9 @@ export function BoardPage() {
     // desteklemiyor (bkz. rapor: liste zaten tamami cekilip client-side filtreleniyor, sprint
     // filtresiyle AYNI desen).
     if (tagFilter.length > 0) result = result.filter((t) => t.tags.some((tag) => tagFilter.includes(tag.id)))
+    if (assigneeTarget !== undefined) result = result.filter((t) => t.assigneeId === assigneeTarget)
     return result
-  }, [tasks, sprintFilter, tagFilter])
+  }, [tasks, sprintFilter, tagFilter, assigneeTarget])
 
   function set(key: string, value: string | null) {
     const next = new URLSearchParams(params)
@@ -102,6 +111,26 @@ export function BoardPage() {
               {s.status === 'active' ? ' • aktif' : s.status === 'completed' ? ' • bitti' : ''}
             </option>
           ))}
+        </select>
+        <select
+          value={assigneeFilter ?? 'all'}
+          onChange={(e) => set('assignee', e.target.value === 'all' ? null : e.target.value)}
+          className={cn(
+            'h-9 cursor-pointer rounded-xl border bg-surface px-3 text-sm outline-none focus:border-accent',
+            assigneeFilter ? 'border-accent text-accent' : 'border-border',
+          )}
+          aria-label="Atanan filtresi"
+        >
+          <option value="all">Herkes</option>
+          <option value="me">Bana atananlar</option>
+          <option value="none">Atanmamış</option>
+          {members
+            ?.filter((m) => m.role !== 'VIEWER' && m.userId !== me)
+            .map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.fullName}
+              </option>
+            ))}
         </select>
         {tags && tags.length > 0 && (
           <TagFilter
@@ -153,6 +182,7 @@ export function BoardPage() {
                 projectKey={project?.key}
                 sprintFilter={sprintFilter}
                 tagFilter={tagFilter}
+                assigneeTarget={assigneeTarget}
                 undated={filtered.filter((t) => !t.dueDate)}
                 canWrite={canWrite}
                 onOpen={setSelected}
