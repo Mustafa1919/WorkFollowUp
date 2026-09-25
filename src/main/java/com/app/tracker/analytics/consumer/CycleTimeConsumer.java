@@ -2,6 +2,7 @@ package com.app.tracker.analytics.consumer;
 
 import com.app.tracker.analytics.service.CycleTimeProjector;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.forecast.ForecastCacheService;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
@@ -22,6 +23,12 @@ import tools.jackson.databind.ObjectMapper;
  * IllegalArgumentException} firlatir — yeniden denemek anlamsiz oldugu icin dogrudan DLT'ye gider.
  * Gecici hatalar (DB) ise ustel geri cekilmeyle yeniden denenir. Ilgilenilmeyen olay tipleri
  * sessizce atlanir.
+ *
+ * <p><b>Dalga 2.2:</b> her islenen durum degisikligi/silme sonrasi projenin Monte Carlo tahmin
+ * onbellegi ({@link ForecastCacheService#evictProject}) temizlenir — yalniz Done gecisine degil TUM
+ * durum degisikliklerine (kalan is sayisi da tahmine giren bir girdi oldugu icin) uygulanir; TTL (1
+ * saat) zaten sik degismeyen bir onbellek oldugundan bu asiri-temizleme ihmal edilebilir bir
+ * maliyettir.
  */
 @Component
 @Profile("!migrate")
@@ -35,12 +42,17 @@ public class CycleTimeConsumer {
   private final ObjectMapper objectMapper;
   private final TenantExecutor tenantExecutor;
   private final CycleTimeProjector projector;
+  private final ForecastCacheService forecastCacheService;
 
   public CycleTimeConsumer(
-      ObjectMapper objectMapper, TenantExecutor tenantExecutor, CycleTimeProjector projector) {
+      ObjectMapper objectMapper,
+      TenantExecutor tenantExecutor,
+      CycleTimeProjector projector,
+      ForecastCacheService forecastCacheService) {
     this.objectMapper = objectMapper;
     this.tenantExecutor = tenantExecutor;
     this.projector = projector;
+    this.forecastCacheService = forecastCacheService;
   }
 
   @KafkaListener(
@@ -53,8 +65,11 @@ public class CycleTimeConsumer {
     if (DELETED_EVENT_TYPE.equals(eventType)) {
       UUID eventId = UUID.fromString(required(envelope, "eventId"));
       UUID workspaceId = UUID.fromString(required(envelope, "workspaceId"));
-      UUID taskId = UUID.fromString(required(envelope.path("payload"), "taskId"));
+      JsonNode deletedPayload = envelope.path("payload");
+      UUID taskId = UUID.fromString(required(deletedPayload, "taskId"));
+      UUID deletedProjectId = UUID.fromString(required(deletedPayload, "projectId"));
       tenantExecutor.runAs(workspaceId, () -> projector.forget(eventId, taskId));
+      forecastCacheService.evictProject(workspaceId, deletedProjectId);
       return;
     }
     if (!EVENT_TYPE.equals(eventType)) {
@@ -74,6 +89,7 @@ public class CycleTimeConsumer {
       tenantExecutor.runAs(
           workspaceId,
           () -> projector.project(eventId, taskId, workspaceId, projectId, newStatus, occurredAt));
+      forecastCacheService.evictProject(workspaceId, projectId);
     } catch (DateTimeParseException e) {
       throw new IllegalArgumentException("Gecersiz timestamp: " + envelopeJson, e);
     }

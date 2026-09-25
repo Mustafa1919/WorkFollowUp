@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { addDays } from 'date-fns'
 import { Play, Flag } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSprintActions, useSprints } from '@/api/queries'
+import { useSprintActions, useSprintForecast, useSprints } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { fmt, iso } from '@/lib/dates'
 import { cn } from '@/lib/cn'
@@ -16,6 +16,20 @@ const BADGE = {
   completed: 'bg-st-done/15 text-st-done',
 }
 const LABEL = { planned: 'Planlandı', active: 'Aktif', completed: 'Tamamlandı' }
+
+/** Dalga 2.2 — kalan isin sprint sonuna kadar bitme olasiligi (Monte Carlo). Yetersiz gecmis
+ * verisi varsa (yeni proje) sessizce hic rozet gostermez. */
+function SprintForecastBadge({ sprintId }: { sprintId: string }) {
+  const { data } = useSprintForecast(sprintId, true)
+  if (!data?.available || data.probabilityByTargetDate == null) return null
+  const pct = Math.round(data.probabilityByTargetDate * 100)
+  const tone = pct >= 70 ? 'bg-st-done/15 text-st-done' : pct >= 40 ? 'bg-st-review/15 text-st-review' : 'bg-danger/15 text-danger'
+  return (
+    <span className={cn('rounded-md px-2 py-0.5 text-xs font-medium tabular-nums', tone)} title="Sprint sonuna kadar bitme olasılığı (Monte Carlo)">
+      %{pct}
+    </span>
+  )
+}
 
 export function SprintsDialog({
   projectId,
@@ -62,6 +76,7 @@ export function SprintsDialog({
               </div>
             </div>
             <span className={cn('rounded-md px-2 py-0.5 text-xs', BADGE[s.status])}>{LABEL[s.status]}</span>
+            {s.status === 'active' && <SprintForecastBadge sprintId={s.id} />}
             {canManage && s.status === 'planned' && (
               <Button size="sm" variant="outline" onClick={() => actions.start.mutate(s.id, { onError })} title="Başlat">
                 <Play size={13} />

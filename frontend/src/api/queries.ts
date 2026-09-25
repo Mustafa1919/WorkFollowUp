@@ -8,6 +8,7 @@ import type {
   BulkOperation,
   Comment,
   CycleTimeResponse,
+  ForecastResponse,
   Goal,
   GoalMetricType,
   Meeting,
@@ -48,6 +49,7 @@ export const keys = {
   sprints: (ws: string | null, projectId: string) => ['ws', ws, 'sprints', projectId] as const,
   analytics: (ws: string | null, projectId: string, kind: string) => ['ws', ws, 'analytics', projectId, kind] as const,
   agingWip: (ws: string | null, projectId: string) => ['ws', ws, 'aging-wip', projectId] as const,
+  forecast: (ws: string | null, scope: string, id: string) => ['ws', ws, 'forecast', scope, id] as const,
   slack: (ws: string | null) => ['ws', ws, 'slack'] as const,
   webhooks: (ws: string | null) => ['ws', ws, 'webhooks'] as const,
   tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
@@ -477,6 +479,30 @@ export function useAgingWip(projectId: string) {
     queryFn: async () =>
       (await api.get<AgingWipResponse>(`/api/v1/projects/${projectId}/flow/aging`)).data,
     enabled: !!workspaceId && !!projectId,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Dalga 2.2 — Monte Carlo tahmin (sprint bitis olasiligi). Sunucuda 1 saat Redis onbellekli. */
+export function useSprintForecast(sprintId: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.forecast(workspaceId, 'sprint', sprintId),
+    queryFn: async () =>
+      (await api.get<ForecastResponse>(`/api/v1/sprints/${sprintId}/forecast`)).data,
+    enabled: enabled && !!workspaceId && !!sprintId,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Dalga 2.2 — Monte Carlo tahmin (proje backlog bitis dagilimi). */
+export function useProjectForecast(projectId: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.forecast(workspaceId, 'project', projectId),
+    queryFn: async () =>
+      (await api.get<ForecastResponse>(`/api/v1/projects/${projectId}/forecast/backlog`)).data,
+    enabled: enabled && !!workspaceId && !!projectId,
     staleTime: 5 * 60 * 1000,
   })
 }

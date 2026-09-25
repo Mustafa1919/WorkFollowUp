@@ -191,6 +191,17 @@ export interface AgingWipResponse {
   }[]
 }
 
+export interface ForecastResponse {
+  available: boolean
+  sampleSize: number
+  remainingItems: number
+  p50CompletionDate: string | null
+  p85CompletionDate: string | null
+  p95CompletionDate: string | null
+  targetDate: string | null
+  probabilityByTargetDate: number | null
+}
+
 export interface WebhookIntegration {
   id: string
   provider: string

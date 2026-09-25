@@ -124,6 +124,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/sprints", null, ALL_ROLES),
         Endpoint.of(HttpMethod.POST, "/api/v1/sprints/{id}/start", null, MANAGE),
         Endpoint.of(HttpMethod.POST, "/api/v1/sprints/{id}/complete", null, MANAGE),
+        // Monte Carlo tahmin (Dalga 2.2): analitik okuma ile AYNI ilke, rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/forecast", null, ALL_ROLES),
         // Gorev: yazma ADMIN/MANAGER/DEVELOPER, VIEWER yalniz okur.
         Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/tasks", "{\"title\":\"T\"}", WRITE),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks", null, ALL_ROLES),
@@ -148,6 +150,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/cycle-time", null, ALL_ROLES),
         // Aging WIP (Dalga 2.1): analitik okuma ile AYNI ilke, rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/flow/aging", null, ALL_ROLES),
+        // Monte Carlo tahmin (Dalga 2.2): analitik okuma ile AYNI ilke, rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/forecast/backlog", null, ALL_ROLES),
         // Webhook entegrasyonlari: dis bir sisteme gorev durumu degistirme yetkisi veren kimlik
         // bilgisi; yalniz workspace ADMIN (MANAGER bile degil).
         Endpoint.of(HttpMethod.POST, "/api/v1/integrations/webhooks", null, ADMIN_ONLY),

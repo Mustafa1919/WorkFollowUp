@@ -84,6 +84,38 @@ public class ProjectMetricsRepository {
         toDouble(row[4]));
   }
 
+  /**
+   * Gunluk tamamlanan gorev sayisi (Dalga 2.2 Monte Carlo — {@code MonteCarloForecaster} bu
+   * ornekleri "bootstrap" olarak yeniden orneklemede kullanir). {@code weeklyCompletedTasks} ile
+   * AYNI tamamlanma tanimi (SON Done gecisi); FARK olarak burada gunu olmayanlar da SIFIR ile
+   * doldurulur (caglayanin degil, BU metodun kendisi doldurur) — resample'in "hic tamamlanma
+   * olmayan gunler de vardi" bilgisini kaybetmemesi icin zero-fill zorunludur.
+   */
+  public List<Long> dailyCompletedTaskCounts(
+      UUID projectId, LocalDate fromInclusive, LocalDate toInclusive) {
+    Instant since = fromInclusive.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows =
+        entityManager
+            .createNativeQuery(
+                "SELECT to_char(date_trunc('day', done_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), "
+                    + "COUNT(*) FROM task_analytics "
+                    + "WHERE project_id = ?1 AND done_at IS NOT NULL AND done_at >= ?2 "
+                    + "GROUP BY 1")
+            .setParameter(1, projectId)
+            .setParameter(2, since)
+            .getResultList();
+    Map<LocalDate, Long> byDay = new java.util.HashMap<>();
+    for (Object[] row : rows) {
+      byDay.put(LocalDate.parse((String) row[0]), ((Number) row[1]).longValue());
+    }
+    List<Long> samples = new java.util.ArrayList<>();
+    for (LocalDate day = fromInclusive; !day.isAfter(toInclusive); day = day.plusDays(1)) {
+      samples.add(byDay.getOrDefault(day, 0L));
+    }
+    return samples;
+  }
+
   private static Double toDouble(Object value) {
     return value == null ? null : ((Number) value).doubleValue();
   }

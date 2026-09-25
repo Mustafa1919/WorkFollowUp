@@ -27,6 +27,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0010](0010-e-posta-teslimi-ve-token-riski.md) | E-posta teslimi: devre kesici/offset, ham token riski, izin modeli | Kabul edildi |
 | [0011](0011-global-arama-modeli.md) | Global arama modeli: Postgres tsvector, simple+unaccent, dogrudan anahtar eslesme | Kabul edildi |
 | [0012](0012-aging-wip-esik-modeli.md) | Aging WIP eşik modeli: proje-göreli p85/2×p85, paylaşılan hesap | Kabul edildi |
+| [0013](0013-monte-carlo-tahmin-modeli.md) | Monte Carlo tahmin modeli: bootstrap resampling, Redis cache-aside | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

@@ -86,6 +86,14 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
    */
   List<Task> findByParentTaskIdOrderByTaskNumber(UUID parentTaskId);
 
+  /** Dalga 2.2 Monte Carlo — proje backlog'unda kalan (henuz Done olmamis) gorev sayisi. */
+  @Query("SELECT COUNT(t) FROM Task t WHERE t.projectId = :projectId AND t.status != 'Done'")
+  long countRemainingByProjectId(@Param("projectId") UUID projectId);
+
+  /** Dalga 2.2 Monte Carlo — sprint'te kalan (henuz Done olmamis) gorev sayisi. */
+  @Query("SELECT COUNT(t) FROM Task t WHERE t.sprintId = :sprintId AND t.status != 'Done'")
+  long countRemainingBySprintId(@Param("sprintId") UUID sprintId);
+
   /**
    * Liste uc noktalarinda N+1'i onlemek icin batch: her parent icin (toplam, Done sayisi).
    * TaskTagRepository#findTagsForTasks ile ayni sebeple native degil JPQL yeterli (dinamik IN

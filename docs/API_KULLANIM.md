@@ -320,6 +320,26 @@ GET /api/v1/projects/{projectId}/flow/aging
   izleyicilere Inbox bildirimi gönderir; aynı seviyede tekrar tekrar bildirim gitmez
   (`task_aging_alerts`). Bu uç yalnız OKUMA yapar, bildirim tetiklemez.
 
+### 3.11 Monte Carlo tahmin (Dalga 2.2, ADR-0013)
+
+```
+GET /api/v1/projects/{projectId}/forecast/backlog
+GET /api/v1/sprints/{sprintId}/forecast
+```
+
+- Rol sınırı yok. Projenin 12 haftalık (84 gün) penceresinde toplam en az 10 tamamlanmış iş yoksa
+  `{"available": false}` döner — az veriyle yanlış güvenli bir tarih göstermek yerine hiç
+  gösterilmez.
+- Yanıt: `available, sampleSize, remainingItems, p50CompletionDate, p85CompletionDate,
+  p95CompletionDate, targetDate, probabilityByTargetDate`. Proje (backlog) ucunda `targetDate`/
+  `probabilityByTargetDate` `null`dır; sprint ucunda `targetDate` sprint bitiş tarihi,
+  `probabilityByTargetDate` kalan işin o tarihe kadar bitme olasılığıdır (0.0-1.0).
+- Yöntem bootstrap resampling Monte Carlo'dur (deterministik ortalama değil); sonuç sunucuda 1 saat
+  Redis'te önbelleklenir, projede o günün içinde herhangi bir görev durumu değişince/silinince
+  önbellek temizlenir.
+- Yalnız görev SAYISINA dayanır (story point tabanlı tahmin ve hedef/goal bazlı olasılık bu
+  dilimde YOK, bkz. ADR-0013).
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
