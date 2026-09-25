@@ -30,6 +30,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0013](0013-monte-carlo-tahmin-modeli.md) | Monte Carlo tahmin modeli: bootstrap resampling, Redis cache-aside | Kabul edildi |
 | [0014](0014-standup-ozeti-modeli.md) | Toplantısız standup: olgu kategorileri, idempotency, "dün" tanımı | Kabul edildi |
 | [0015](0015-retro-ilk-taahhut-kesiti.md) | Retro: ilk taahhüt kesiti, geriye dönük tahmin, retro panosu | Kabul edildi |
+| [0016](0016-otomasyon-kurallari-modeli.md) | Otomasyon şablonları: sabit şablon, aktör-eşitliği döngü koruması | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

@@ -49,6 +49,21 @@ public class TaskDependencyRepository {
   }
 
   /**
+   * Dalga 3.1 (BLOCKER_DONE_NOTIFY): {@code blockingTaskId}'nin bloklaya geldigi (henuz silinmemis)
+   * gorevlerin id'leri — blocker Done olunca bunlara bildirim gitmesi icin.
+   */
+  @SuppressWarnings("unchecked")
+  public List<UUID> findBlockedTaskIds(UUID blockingTaskId) {
+    return entityManager
+        .createNativeQuery(
+            "SELECT d.blocked_task_id FROM task_dependencies d "
+                + "JOIN tasks t ON t.id = d.blocked_task_id AND t.deleted_at IS NULL "
+                + "WHERE d.blocking_task_id = ?1")
+        .setParameter(1, blockingTaskId)
+        .getResultList();
+  }
+
+  /**
    * Ters-cift kontrolu: {@code blockedTaskId} zaten {@code blockingTaskId}'yi bloklamis mi (V19'un
    * DB seviyesinde yakalayamadigi kisit — servis katmaninda burada kapatilir).
    */

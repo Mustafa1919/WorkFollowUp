@@ -86,6 +86,16 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
    */
   List<Task> findByParentTaskIdOrderByTaskNumber(UUID parentTaskId);
 
+  /**
+   * Dalga 3.1 (OVERDUE_NOTIFY): bitis tarihi {@code today}'den ONCEKI, Done olmayan, onaylanmamis
+   * gorevler — {@code @SQLRestriction} silinenleri zaten filtreler.
+   */
+  @Query(
+      "SELECT t FROM Task t WHERE t.projectId = :projectId AND t.dueDate < :today "
+          + "AND t.status != 'Done' AND t.approvedAt IS NULL")
+  List<Task> findOverdueByProjectId(
+      @Param("projectId") UUID projectId, @Param("today") LocalDate today);
+
   /** Dalga 2.2 Monte Carlo — proje backlog'unda kalan (henuz Done olmamis) gorev sayisi. */
   @Query("SELECT COUNT(t) FROM Task t WHERE t.projectId = :projectId AND t.status != 'Done'")
   long countRemainingByProjectId(@Param("projectId") UUID projectId);

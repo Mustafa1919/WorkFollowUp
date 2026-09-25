@@ -320,7 +320,15 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(
             HttpMethod.PUT, "/api/v1/goals/{id}", "{\"title\":\"H\",\"targetValue\":5}", MANAGE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/goals/{id}/progress", "{\"value\":1}", MANAGE),
-        Endpoint.of(HttpMethod.DELETE, "/api/v1/goals/{id}", null, MANAGE));
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/goals/{id}", null, MANAGE),
+        // Otomasyon sablonlari (Dalga 3.1, ADR-0016): okuma rol siniri yok (bilgilendirici),
+        // ac/kapa ADMIN/MANAGER — Tags/Goals ile AYNI gerekce (workspace-genelinde etkili karar).
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/automation-rules", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PUT,
+            "/api/v1/projects/{id}/automation-rules/SUBTASK_ALL_DONE_PARENT_TO_REVIEW",
+            "{\"enabled\":true}",
+            MANAGE));
   }
 
   static Stream<Arguments> endpointsByRole() {

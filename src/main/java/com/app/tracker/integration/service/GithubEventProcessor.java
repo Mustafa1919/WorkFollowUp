@@ -1,5 +1,7 @@
 package com.app.tracker.integration.service;
 
+import com.app.tracker.automation.AutomationRuleService;
+import com.app.tracker.automation.AutomationTemplateKey;
 import com.app.tracker.core.idempotency.ProcessedEventStore;
 import com.app.tracker.integration.IntegrationActor;
 import com.app.tracker.integration.service.GithubEventInterpreter.StatusIntent;
@@ -59,18 +61,21 @@ public class GithubEventProcessor {
   private final ProjectRepository projectRepository;
   private final TaskRepository taskRepository;
   private final TaskService taskService;
+  private final AutomationRuleService automationRuleService;
 
   public GithubEventProcessor(
       ObjectMapper objectMapper,
       ProcessedEventStore processedEventStore,
       ProjectRepository projectRepository,
       TaskRepository taskRepository,
-      TaskService taskService) {
+      TaskService taskService,
+      AutomationRuleService automationRuleService) {
     this.objectMapper = objectMapper;
     this.processedEventStore = processedEventStore;
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskService = taskService;
+    this.automationRuleService = automationRuleService;
   }
 
   /**
@@ -103,6 +108,15 @@ public class GithubEventProcessor {
   private boolean advance(TaskReference reference, String targetStatus) {
     Optional<Project> project = projectRepository.findByKey(reference.projectKey());
     if (project.isEmpty()) {
+      return false;
+    }
+    // Done'a giden TEK yol PR merge'idir (bkz. GithubEventInterpreter#interpretPullRequest) —
+    // Dalga 3.1 ADR-0016: PR_MERGE_TO_DONE sablonu kapatilmissa bu ilerleme uygulanmaz. Varsayilan
+    // ACIK (bkz. AutomationTemplateKey javadoc'u), boylece bu satirdan once var olan projelerde
+    // davranis SESSIZCE degismez.
+    if (TaskStatus.DONE.equals(targetStatus)
+        && !automationRuleService.isEnabled(
+            project.get().getId(), AutomationTemplateKey.PR_MERGE_TO_DONE)) {
       return false;
     }
     Optional<Task> task =

@@ -476,3 +476,17 @@ export interface RetroItemResponse {
   taskId: string | null
   createdAt: string
 }
+
+/** Backend `AutomationTemplateKey` (Dalga 3.1, ADR-0016). */
+export type AutomationTemplateKey =
+  | 'PR_MERGE_TO_DONE'
+  | 'SUBTASK_ALL_DONE_PARENT_TO_REVIEW'
+  | 'BLOCKER_DONE_NOTIFY'
+  | 'OVERDUE_NOTIFY'
+  | 'ASSIGNED_TODO_TO_IN_PROGRESS'
+
+export interface AutomationRuleResponse {
+  templateKey: AutomationTemplateKey
+  enabled: boolean
+  configured: boolean
+}

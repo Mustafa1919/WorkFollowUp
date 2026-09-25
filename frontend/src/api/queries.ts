@@ -5,6 +5,8 @@ import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
   AgingWipResponse,
+  AutomationRuleResponse,
+  AutomationTemplateKey,
   BulkOperation,
   Comment,
   CycleTimeResponse,
@@ -77,6 +79,8 @@ export const keys = {
   savedViews: (ws: string | null, projectId: string) => ['ws', ws, 'saved-views', projectId] as const,
   retro: (ws: string | null, sprintId: string) => ['ws', ws, 'retro', sprintId] as const,
   retroItems: (ws: string | null, sprintId: string) => ['ws', ws, 'retro-items', sprintId] as const,
+  automationRules: (ws: string | null, projectId: string) =>
+    ['ws', ws, 'automation-rules', projectId] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
 }
@@ -555,6 +559,33 @@ export function useRetroItemActions(sprintId: string) {
         invalidate()
         qc.invalidateQueries({ queryKey: ['ws', ws(), 'tasks'] })
       },
+    }),
+  }
+}
+
+/** Dalga 3.1 (ADR-0016) — proje bazinda otomasyon sablonu ac/kapa durumu. */
+export function useAutomationRules(projectId: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.automationRules(workspaceId, projectId),
+    queryFn: async () =>
+      (await api.get<AutomationRuleResponse[]>(`/api/v1/projects/${projectId}/automation-rules`)).data,
+    enabled: enabled && !!workspaceId && !!projectId,
+  })
+}
+
+export function useAutomationRuleActions(projectId: string) {
+  const qc = useQueryClient()
+  return {
+    setEnabled: useMutation({
+      mutationFn: async ({ templateKey, enabled }: { templateKey: AutomationTemplateKey; enabled: boolean }) =>
+        (
+          await api.put<AutomationRuleResponse>(
+            `/api/v1/projects/${projectId}/automation-rules/${templateKey}`,
+            { enabled },
+          )
+        ).data,
+      onSuccess: () => qc.invalidateQueries({ queryKey: keys.automationRules(ws(), projectId) }),
     }),
   }
 }

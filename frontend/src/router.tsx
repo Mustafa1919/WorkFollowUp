@@ -54,6 +54,12 @@ export const router = createBrowserRouter([
             path: '/projects/:projectId/retro',
             lazy: async () => ({ Component: (await import('@/features/retro/RetroPage')).RetroPage }),
           },
+          {
+            path: '/projects/:projectId/automation',
+            lazy: async () => ({
+              Component: (await import('@/features/automation/AutomationRulesPage')).AutomationRulesPage,
+            }),
+          },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },
