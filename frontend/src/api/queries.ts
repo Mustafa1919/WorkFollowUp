@@ -11,15 +11,18 @@ import type {
   Meeting,
   MeetingFrequency,
   MeetingOccurrence,
+  InvitationPreview,
   Notification,
   NotificationPreferences,
   Page,
   PeriodReport,
   Project,
+  SearchResponse,
   SlackIntegration,
   Sprint,
   Tag,
   Task,
+  TaskActivity,
   TaskDetail,
   TaskStatus,
   ThroughputResponse,
@@ -27,6 +30,7 @@ import type {
   WebhookIntegration,
   Weekday,
   Workspace,
+  WorkspaceInvitation,
   WorkspaceMember,
 } from '@/lib/types'
 
@@ -45,8 +49,10 @@ export const keys = {
   tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
   subtasks: (ws: string | null, taskId: string) => ['ws', ws, 'subtasks', taskId] as const,
   members: (ws: string | null) => ['ws', ws, 'members'] as const,
+  invitations: (ws: string | null) => ['ws', ws, 'invitations'] as const,
   taskDetail: (ws: string | null, taskId: string) => ['ws', ws, 'taskDetail', taskId] as const,
   comments: (ws: string | null, taskId: string) => ['ws', ws, 'comments', taskId] as const,
+  activity: (ws: string | null, taskId: string) => ['ws', ws, 'activity', taskId] as const,
   myTasks: (ws: string | null) => ['ws', ws, 'myTasks'] as const,
   notifications: (ws: string | null, unreadOnly: boolean) => ['ws', ws, 'notifications', unreadOnly] as const,
   unreadCount: (ws: string | null) => ['ws', ws, 'notifications', 'unread-count'] as const,
@@ -55,6 +61,7 @@ export const keys = {
     ['ws', ws, 'meetings', 'occurrences', from, to] as const,
   periodReport: (ws: string | null, year: number, quarter: number | null, projectIds: string[]) =>
     ['ws', ws, 'report', year, quarter, projectIds.join(',')] as const,
+  search: (ws: string | null, q: string) => ['ws', ws, 'search', q] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
 }
@@ -295,6 +302,25 @@ export function useCommentActions(taskId: string, projectId: string) {
   }
 }
 
+// ---------------------------------------------------------------- activity sekmesi (Dalga 1.5)
+
+/** Bir gorevin tarihcesi: keyset sayfalama, en yeni once ("en son ne oldu" listesi). */
+export function useActivity(taskId: string | undefined) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useInfiniteQuery({
+    queryKey: keys.activity(workspaceId, taskId ?? ''),
+    queryFn: async ({ pageParam }) =>
+      (
+        await api.get<Page<TaskActivity>>(`/api/v1/tasks/${taskId}/activity`, {
+          params: { limit: 20, cursor: pageParam ?? undefined },
+        })
+      ).data,
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.has_more ? last.next_cursor : null),
+    enabled: !!workspaceId && !!taskId,
+  })
+}
+
 /** "Benim islerim": aktif workspace'te bana atanmis, onaylanmamis gorevler (tum projeler). */
 export function useMyTasks() {
   const workspaceId = useSession((s) => s.workspaceId)
@@ -333,6 +359,7 @@ export function useProjectRealtime(projectId: string) {
       qc.invalidateQueries({ queryKey: keys.approved(workspaceId, projectId) })
       qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'taskDetail'] })
       qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'comments'] })
+      qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'activity'] })
       qc.invalidateQueries({ queryKey: keys.myTasks(workspaceId) })
     })
   }, [workspaceId, projectId, qc])
@@ -626,6 +653,22 @@ export function useAllTasks(projects: Project[]) {
   })
 }
 
+/**
+ * Dalga 1.6 — global arama (V26). `query` bosken ETKINLESTIRILMEZ (Command Palette caginin kendi
+ * debounce'u var, burada tekrar debounce etmiyoruz). `keepPreviousData` yerine `placeholderData`
+ * kullanilmiyor bilerek: sorgu degisince eski sonuc kisa an gorunmesin diye (arama sonuclari
+ * navigasyon icin, yanlis sonuca tiklamak gorev acar).
+ */
+export function useSearch(query: string) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  const trimmed = query.trim()
+  return useQuery({
+    queryKey: keys.search(workspaceId, trimmed),
+    queryFn: async () => (await api.get<SearchResponse>('/api/v1/search', { params: { q: trimmed, limit: 8 } })).data,
+    enabled: !!workspaceId && trimmed.length > 0,
+  })
+}
+
 export function useCurrentRole() {
   const { data } = useWorkspaces()
   const workspaceId = useSession((s) => s.workspaceId)
@@ -668,6 +711,53 @@ export function useMemberActions() {
       onSuccess: invalidate,
     }),
   }
+}
+
+// ---------------------------------------------------------------- workspace invitations (Dalga 1.4)
+
+export function useInvitations(enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.invitations(workspaceId),
+    queryFn: async () =>
+      (await api.get<WorkspaceInvitation[]>('/api/v1/workspaces/members/invitations')).data,
+    enabled: enabled && !!workspaceId,
+  })
+}
+
+export function useInvitationActions() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: keys.invitations(ws()) })
+  return {
+    invite: useMutation({
+      mutationFn: async (body: { email: string; role: string }) =>
+        (await api.post<WorkspaceInvitation>('/api/v1/workspaces/members/invitations', body)).data,
+      onSuccess: invalidate,
+    }),
+    revoke: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/workspaces/members/invitations/${id}`),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+/** Davet onizlemesi/kabulu — workspace secimi YOK, token'in kendisi kimligi tasir. */
+export function useInvitationPreview(token: string | null) {
+  return useQuery({
+    queryKey: ['invitation-preview', token],
+    queryFn: async () => (await api.get<InvitationPreview>(`/api/v1/invitations/${token}`)).data,
+    enabled: !!token,
+    retry: false,
+  })
+}
+
+export function useAcceptInvitation() {
+  return useMutation({
+    mutationFn: async (token: string) =>
+      (await api.post<{ workspaceId: string; workspaceName: string; role: string }>(
+        `/api/v1/invitations/${token}/accept`,
+      )).data,
+  })
 }
 
 // ---------------------------------------------------------------- notifications (Inbox)

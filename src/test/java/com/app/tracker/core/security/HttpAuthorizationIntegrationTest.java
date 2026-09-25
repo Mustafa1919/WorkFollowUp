@@ -200,6 +200,10 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/comments", "{\"body\":\"yorum\"}", WRITE),
         Endpoint.of(HttpMethod.PATCH, "/api/v1/comments/{id}", "{\"body\":\"yorum\"}", ALL_ROLES),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/comments/{id}", null, ALL_ROLES),
+        // Dalga 1.5: Activity sekmesi — okuma her uye (comments/subtasks ile AYNI desen).
+        Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/activity", null, ALL_ROLES),
+        // Dalga 1.6: global arama — okuma her uye, rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/search?q=deneme", null, ALL_ROLES),
         // Dilim 1.3: bildirim tercihleri — kullaniciya ait, workspace GEREKMEZ (me/tasks ile AYNI
         // desen), rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/me/notification-preferences", null, ALL_ROLES),
@@ -221,6 +225,22 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             "{\"role\":\"DEVELOPER\"}",
             ADMIN_ONLY),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/workspaces/members/{id}", null, ADMIN_ONLY),
+        // Dilim 1.4: token'li davet — olusturma/listeleme/iptal yalniz ADMIN (workspace daveti
+        // = disaridan birine uyelik yetkisi vermek, addMember ile AYNI gerekce). Kabul ({@code
+        // /invitations/{id}/accept}) rol siniri TASIMAZ (herhangi bir kimlik dogrulanmis kullanici
+        // cagirabilir, is kurali — token'in e-postayla eslesip eslesmedigi —
+        // WorkspaceInvitationService
+        // katmaninda); onizleme (GET, token'siz PUBLIC) SecurityConfig'te permitAll oldugu icin bu
+        // matrise DAHIL DEGIL (anonim/gecersiz-token testleri onun icin anlamsiz olurdu).
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/workspaces/members/invitations",
+            "{\"email\":\"someone@example.com\",\"role\":\"DEVELOPER\"}",
+            ADMIN_ONLY),
+        Endpoint.of(HttpMethod.GET, "/api/v1/workspaces/members/invitations", null, ADMIN_ONLY),
+        Endpoint.of(
+            HttpMethod.DELETE, "/api/v1/workspaces/members/invitations/{id}", null, ADMIN_ONLY),
+        Endpoint.of(HttpMethod.POST, "/api/v1/invitations/{id}/accept", null, ALL_ROLES),
         // Inbox bildirimleri: rol siniri yok (hep KENDI bildirimlerim, ownership
         // NotificationService
         // katmaninda), workspace uyeligi yeterli — TaskController/TagController'in GET uc

@@ -18,6 +18,24 @@ export interface WorkspaceMember {
   role: WorkspaceRole
 }
 
+/** Token'li davet (Dalga 1.4) — token ASLA doner, yalniz e-postada gider. */
+export interface WorkspaceInvitation {
+  id: string
+  email: string
+  role: WorkspaceRole
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'
+  expiresAt: string
+  createdAt: string
+}
+
+/** {@code GET /api/v1/invitations/:token} — public, workspace secilmeden/giris yapilmadan once. */
+export interface InvitationPreview {
+  workspaceName: string
+  email: string
+  role: WorkspaceRole
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'
+}
+
 export interface Project {
   id: string
   workspaceId: string
@@ -80,6 +98,21 @@ export interface Comment {
   deleted: boolean
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * Dalga 1.5 — Activity sekmesi satiri. `field`/`oldValue`/`newValue` ham degerlerdir; insan-okunur
+ * cumleyi (`activityLine`, board/TaskActivityPanel.tsx) frontend uretir.
+ */
+export interface TaskActivity {
+  id: string
+  actorId: string
+  actorName: string
+  eventType: string
+  field: string
+  oldValue: unknown
+  newValue: unknown
+  createdAt: string
 }
 
 /** Gorev detayi (V22): liste yanitlarinda tasinmayan aciklama + izleyiciler. */
@@ -290,4 +323,34 @@ export interface PeriodReport {
 export interface NotificationPreferences {
   emailOnAssign: boolean
   emailOnMention: boolean
+}
+
+/**
+ * Dalga 1.6 — global arama (V26). `snippet` icinde U+0001/U+0002 (ts_headline StartSel/StopSel)
+ * eslesen kelimeyi sarar; HTML DEGIL, frontend bunu React text node'lariyla vurgular (bkz.
+ * highlightSnippet in CommandPalette.tsx) — asla dangerouslySetInnerHTML kullanilmaz.
+ */
+export interface TaskSearchResult {
+  id: string
+  projectId: string
+  projectKey: string
+  taskNumber: number
+  title: string
+  status: TaskStatus
+  snippet: string | null
+}
+
+export interface CommentSearchResult {
+  id: string
+  taskId: string
+  projectId: string
+  projectKey: string
+  taskNumber: number
+  taskTitle: string
+  snippet: string | null
+}
+
+export interface SearchResponse {
+  tasks: TaskSearchResult[]
+  comments: CommentSearchResult[]
 }

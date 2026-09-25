@@ -147,9 +147,9 @@ DELETE /api/v1/tasks/{taskId}                           # yalnız ADMIN; soft de
 - Silme soft'tur (`deleted_at`); görev tüm okuma uçlarından düşer, tarihçe (`task_events`) korunur,
   sprint'teyse sprint'ten çıkarılır, `TASK_DELETED` olayı Cycle Time/Throughput read model'ini temizler.
 
-> **Bilinen kısıt:** E-postayla davet akışı henüz yok. ADMIN, **kayıtlı** bir kullanıcıyı
-> `POST /api/v1/workspaces/members` (`{"email","role"}`) ile ekleyebilir; kayıtlı olmayan
-> e-posta `404` döner.
+> ADMIN, **kayıtlı** bir kullanıcıyı `POST /api/v1/workspaces/members` (`{"email","role"}`) ile
+> anında ekleyebilir (kayıtlı olmayan e-posta `404` döner). Kayıtsız birini davet etmek için bkz.
+> §3.7 (token'li davet, Dalga 1.4).
 
 ### 3.3 Dönemsel rapor ve hedefler (V21)
 
@@ -235,6 +235,51 @@ PUT /api/v1/me/notification-preferences   # {"emailOnAssign": bool, "emailOnMent
 - Frontend: `POST /api/v1/auth/password-reset/request` → `/forgot-password` sayfası,
   `/reset-password?token=`, `/verify-email?token=` sayfaları; Ayarlar'da "Bildirim tercihleri".
 
+### 3.7 Token'li workspace daveti (V25, Dalga 1.4)
+
+```
+POST   /api/v1/workspaces/members/invitations           # ADMIN; {"email","role"}, 7 gün geçerli
+GET    /api/v1/workspaces/members/invitations            # ADMIN; bekleyen (PENDING) davetler
+DELETE /api/v1/workspaces/members/invitations/{id}       # ADMIN; iptal
+
+GET    /api/v1/invitations/{token}                        # public, kimlik/header GEREKMEZ
+POST   /api/v1/invitations/{token}/accept                 # kimlik ister, X-Workspace-Id GEREKMEZ
+```
+
+- `POST .../invitations` kayıtlı olsun olmasın herhangi bir e-postaya davet e-postası gönderir
+  (§3.6'daki `email.workspace_invite` şablonu; link `/invitations/{token}`). Aynı workspace+e-posta
+  için bekleyen bir davet varsa önce iptal edilir, sonra yenisi üretilir ("yeniden gönder" ayrı bir
+  uç değildir).
+- `GET /invitations/{token}` **public**: workspace adı, rol, e-posta ve durumu döner
+  (`PENDING`/`ACCEPTED`/`REVOKED`/`EXPIRED`) — henüz giriş yapmamış biri de davet sayfasını
+  görebilsin diye.
+- `POST /invitations/{token}/accept`: çağıran kullanıcının hesap e-postası davetteki e-postayla
+  (büyük/küçük harf duyarsız) **eşleşmezse `400`**. Kayıtsız biri önce normal `/register` ile hesap
+  açıp giriş yapmalı, sonra bu uca gelmelidir — ayrı bir "davetle kayıt" ucu yok, mevcut register
+  akışı yeniden kullanılır.
+- Ham token API yanıtlarının HİÇBİRİNDE dönmez (yalnız e-postadaki linkte); DB'de yalnız SHA-256
+  hash'i tutulur (`verification_tokens` ile aynı desen).
+
+### 3.8 Global arama (V26, Dalga 1.6, ADR-0011)
+
+```
+GET /api/v1/search?q=<metin>&limit=<1-50, varsayılan 10>
+```
+
+- Rol sınırı yok (workspace üyeliği yeterli). `q` zorunludur, boşsa/verilmezse `400`.
+- Yanıt: `{ "tasks": [...], "comments": [...] }`.
+  - Görev satırı: `id, projectId, projectKey, taskNumber, title, status, snippet`. `snippet`
+    açıklamadan çıkarılan kısa bağlam (eşleşme yoksa `null`).
+  - Yorum satırı: `id, taskId, projectId, projectKey, taskNumber, taskTitle, snippet`.
+- Arama başlık (ağırlık A) + açıklama (ağırlık B) üzerinden `tsvector`/`ts_rank` ile yapılır;
+  `simple` + `unaccent` konfigürasyonu kullanılır (Türkçe ek/çekim eşleşmesi yok, bilinen sınır).
+- `PRJ-12` gibi proje anahtarı + görev numarası biçimindeki sorgular (büyük/küçük harf duyarsız)
+  doğrudan eşleşerek sonucun başına konur.
+- Silinmiş görev/yorumlar sonuçlarda görünmez; onaylı görevler görünür (onay yalnız Kanban'dan
+  kaldırır, aramayı etkilemez).
+- `snippet` içindeki eşleşen kelime U+0001/U+0002 kontrol karakterleriyle işaretlenir — HTML
+  DEĞİLDİR, istemci bunu kendi vurgu elemanına çevirir (frontend `CommandPalette.tsx#highlightSnippet`).
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
@@ -247,6 +292,7 @@ PUT /api/v1/me/notification-preferences   # {"emailOnAssign": bool, "emailOnMent
 | `GET` uçları (liste, analitik, rapor) | tüm roller (VIEWER dahil) |
 | Dönem hedefi yönetimi (`/api/v1/goals`) | ADMIN, MANAGER |
 | Webhook/Slack entegrasyon yönetimi | yalnız ADMIN |
+| Üye ekleme/davet gönderme/davet iptali | yalnız ADMIN |
 | Kafka DLT replay | yalnız SYSTEM_ADMIN (global rol, `SYSTEM_ADMIN_EMAILS` env'i ile atanır) |
 
 ## 5. Uçtan Uca Örnek Akış

@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as RD from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { BarChart3, CalendarClock, CircleUserRound, CornerDownLeft, Home, Keyboard, LogOut, Moon, Search, Settings, Sun } from 'lucide-react'
-import { useAllTasks, useProjects } from '@/api/queries'
+import { useProjects, useSearch } from '@/api/queries'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { onCommandPaletteOpenRequested } from '@/lib/commandPalette'
 import { openShortcuts } from '@/lib/shortcuts'
-import { taskKey } from '@/lib/status'
 import { useSession } from '@/stores/session'
 import { useTheme } from '@/stores/theme'
 import { StatusDot } from '@/components/ui/misc'
@@ -19,8 +18,37 @@ interface Item {
   group: 'Git' | 'Görevler' | 'Eylemler'
   label: string
   sublabel?: string
+  /** Sadece sunucu arama sonuclarinda: eslesen kelime(ler) etrafinda baglam (bkz. highlightSnippet). */
+  snippet?: React.ReactNode
   icon: React.ReactNode
   onSelect: () => void
+}
+
+/** `ts_headline`'in \u0001/\u0002 isaretleyicilerini React text node'lariyla vurgular — HTML PARSE
+ * EDILMEZ (dangerouslySetInnerHTML yok), gorev/yorum govdesindeki kullanici metni her zaman duz
+ * metin olarak basilir. */
+function highlightSnippet(snippet: string) {
+  // eslint-disable-next-line no-control-regex -- backend isaretleyicileri bilerek kontrol karakteri (ts_headline StartSel/StopSel)
+  const parts = snippet.split(/[\u0001\u0002]/)
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <mark key={i} className="rounded-sm bg-accent-soft text-accent">
+        {part}
+      </mark>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  )
+}
+
+/** Debounce: her tuş vuruşunda sunucuya istek atmamak icin (Dalga 1.6, ADR referansi yok — küçük bir yardımcı). */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs)
+    return () => clearTimeout(id)
+  }, [value, delayMs])
+  return debounced
 }
 
 /**
@@ -37,8 +65,9 @@ export function CommandPalette() {
   const qc = useQueryClient()
   const { theme, setTheme } = useTheme()
   const { data: projects } = useProjects()
-  // Sadece palet acikken cek: kapaliyken workspace'teki tum projelerin gorevlerini bosuna yuklemeyelim.
-  const { data: allTasks } = useAllTasks(open ? (projects ?? []) : [])
+  const debouncedQuery = useDebouncedValue(query, 200)
+  // Sadece palet acikken sorgula: kapaliyken/bos sorguda sunucuya istek atilmaz (useSearch enabled).
+  const { data: searchResults } = useSearch(open ? debouncedQuery : '')
 
   const openRef = useRef(open)
   useEffect(() => {
@@ -120,24 +149,23 @@ export function CommandPalette() {
 
     const matchedNav = nav.filter((i) => i.label.toLocaleLowerCase('tr-TR').includes(q) || i.sublabel?.toLocaleLowerCase('tr-TR').includes(q))
     const matchedActions = actions.filter((i) => i.label.toLocaleLowerCase('tr-TR').includes(q))
-    const projectById = new Map((projects ?? []).map((p) => [p.id, p]))
-    const matchedTasks: Item[] = (allTasks ?? [])
-      .filter((t) => {
-        const key = taskKey(projectById.get(t.projectId)?.key, t.taskNumber).toLocaleLowerCase('tr-TR')
-        return t.title.toLocaleLowerCase('tr-TR').includes(q) || key.includes(q)
-      })
-      .slice(0, 8)
-      .map((t) => ({
-        id: `task-${t.id}`,
-        group: 'Görevler' as const,
-        label: t.title,
-        sublabel: taskKey(projectById.get(t.projectId)?.key, t.taskNumber),
-        icon: <StatusDot status={t.status} />,
-        onSelect: () => navigate(`/projects/${t.projectId}?task=${t.id}`),
-      }))
+    // Sunucu arama sonucu debounce'lu istekten gelir — yazdikca `q` degisir ama `searchResults`
+    // bir onceki sorgunun cevabi olabilir; kisa bir titreme kabul edilir (200ms), ayrica filtrelemek
+    // (istemci tarafinda tekrar q ile karsilastirmak) titreşimi gizlemez, sadece yanlis pozitif
+    // uretir (sunucu 'simple'+unaccent normalize ediyor, istemcideki basit substring farkli sonuc
+    // verebilir) — bu yuzden sunucunun donduğu sirayla, oldugu gibi gosterilir.
+    const matchedTasks: Item[] = (searchResults?.tasks ?? []).slice(0, 8).map((t) => ({
+      id: `task-${t.id}`,
+      group: 'Görevler' as const,
+      label: t.title,
+      sublabel: `${t.projectKey}-${t.taskNumber}`,
+      snippet: t.snippet ? highlightSnippet(t.snippet) : undefined,
+      icon: <StatusDot status={t.status} />,
+      onSelect: () => navigate(`/projects/${t.projectId}?task=${t.id}`),
+    }))
 
     return [...matchedNav, ...matchedTasks, ...matchedActions]
-  }, [query, projects, allTasks, theme, navigate, setTheme, logout])
+  }, [query, projects, searchResults, theme, navigate, setTheme, logout])
 
   function runActive() {
     const item = items[active]
@@ -225,8 +253,13 @@ export function CommandPalette() {
                                 )}
                               >
                                 <span className="shrink-0">{item.icon}</span>
-                                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                                {item.sublabel && <span className="shrink-0 font-mono text-xs text-muted">{item.sublabel}</span>}
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-center gap-2">
+                                    <span className="truncate">{item.label}</span>
+                                    {item.sublabel && <span className="shrink-0 font-mono text-xs text-muted">{item.sublabel}</span>}
+                                  </span>
+                                  {item.snippet && <span className="block truncate text-xs text-muted">{item.snippet}</span>}
+                                </span>
                                 {isActive && <CornerDownLeft size={13} className="shrink-0" />}
                               </button>
                             )
