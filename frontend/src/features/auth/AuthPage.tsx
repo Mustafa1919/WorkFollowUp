@@ -129,6 +129,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                   placeholder={isLogin ? undefined : 'En az 12 karakter'}
                 />
               </Field>
+              {isLogin && (
+                <p className="-mt-2 text-right text-xs">
+                  <Link to="/forgot-password" className="text-muted hover:text-accent hover:underline">
+                    Parolanı mı unuttun?
+                  </Link>
+                </p>
+              )}
               <Button type="submit" loading={loading} className="w-full justify-center">
                 {isLogin ? 'Giriş yap' : 'Kayıt ol'} <ArrowRight size={16} />
               </Button>

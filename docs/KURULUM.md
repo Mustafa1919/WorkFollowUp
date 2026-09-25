@@ -95,6 +95,10 @@ Varsayılan (`application.yml`) profil, hiçbir env değişkeni vermeseniz de lo
 | `WEBHOOK_SECRET_MASTER_KEY` | dev placeholder | staging/prod'da 32+ karakter ve `dev-webhook-` önekli olmayan bir değer zorunlu |
 | `SYSTEM_ADMIN_EMAILS` | boş | virgülle ayrılmış e-postalar ilk girişte SYSTEM_ADMIN işaretlenir (Kafka DLT replay için gerekir) |
 | `CORS_ALLOWED_ORIGINS` | boş | bir frontend'den çağıracaksanız origin'i buraya ekleyin |
+| `SMTP_HOST` / `SMTP_PORT` | `localhost` / `1025` | yerelde Mailpit (`docker compose up -d` ile gelir) |
+| `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_AUTH` / `SMTP_STARTTLS` | boş / boş / `false` / `false` | Mailpit kimlik doğrulama istemez; gerçek bir SMTP sağlayıcısına geçince doldurulur |
+| `SMTP_FROM` | `no-reply@tracker.local` | |
+| `APP_PUBLIC_URL` | `http://localhost:5173` | e-postadaki doğrulama/sıfırlama/görev linklerinin temeli; staging/prod'da boş veya `localhost` içeriyorsa açılış REDDEDİLİR (ADR-0010) |
 
 Uygulama `http://localhost:8080` üzerinde ayağa kalkar. Log'un sonunda `Started
 TrackerApplication in Ns` satırını görmelisiniz.
@@ -111,6 +115,9 @@ Tarayıcıda: **http://localhost:8080/swagger-ui.html**
 Buradan `POST /api/v1/auth/register` → `POST /api/v1/auth/login` ile bir access token alıp
 Swagger'ın sağ üstündeki **Authorize** ile girin; artık tüm korumalı endpoint'leri UI'dan
 deneyebilirsiniz. Ayrıntılı akış için `docs/API_KULLANIM.md`.
+
+Kayıt, parola sıfırlama vb. gönderilen e-postaları görmek için Mailpit web arayüzü:
+**http://localhost:8025** (gerçek bir SMTP sunucusuna hiç çıkmaz, yalnız yerel/CI için).
 
 ## 6.1 Frontend (React)
 

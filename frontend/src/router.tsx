@@ -2,6 +2,9 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { AuthGate, GuestOnly } from '@/features/auth/AuthGate'
 import { AuthPage } from '@/features/auth/AuthPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { BoardPage } from '@/features/board/BoardPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -15,8 +18,13 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <AuthPage mode="login" /> },
       { path: '/register', element: <AuthPage mode="register" /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
     ],
   },
+  // Token'li: oturum durumundan bagimsiz calismali (eski bir e-postadaki linke giren, halihazirda
+  // giris yapmis birini de kapsar) — GuestOnly/AuthGate'in DISINDA.
+  { path: '/reset-password', element: <ResetPasswordPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
   {
     element: <AuthGate />,
     children: [

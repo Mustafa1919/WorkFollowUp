@@ -12,6 +12,7 @@ import type {
   MeetingFrequency,
   MeetingOccurrence,
   Notification,
+  NotificationPreferences,
   Page,
   PeriodReport,
   Project,
@@ -54,6 +55,8 @@ export const keys = {
     ['ws', ws, 'meetings', 'occurrences', from, to] as const,
   periodReport: (ws: string | null, year: number, quarter: number | null, projectIds: string[]) =>
     ['ws', ws, 'report', year, quarter, projectIds.join(',')] as const,
+  // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
+  notificationPreferences: ['notification-preferences'] as const,
 }
 
 const ws = () => useSession.getState().workspaceId
@@ -849,6 +852,26 @@ export function useGoalActions(year: number, quarter: number | null) {
         await api.delete(`/api/v1/goals/${id}`)
       },
       onSuccess: invalidate,
+    }),
+  }
+}
+
+// ---------------------------------------------------------------- bildirim tercihleri (kullanici)
+
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: keys.notificationPreferences,
+    queryFn: async () => (await api.get<NotificationPreferences>('/api/v1/me/notification-preferences')).data,
+  })
+}
+
+export function useNotificationPreferencesActions() {
+  const qc = useQueryClient()
+  return {
+    update: useMutation({
+      mutationFn: async (body: NotificationPreferences) =>
+        (await api.put<NotificationPreferences>('/api/v1/me/notification-preferences', body)).data,
+      onSuccess: (data) => qc.setQueryData(keys.notificationPreferences, data),
     }),
   }
 }

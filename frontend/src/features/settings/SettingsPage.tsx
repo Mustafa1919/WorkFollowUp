@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Bell, Copy, GitBranch, Lock, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
+import { Bell, Copy, GitBranch, Lock, Mail, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useSlack,
@@ -12,6 +12,8 @@ import {
   useTagActions,
   useMembers,
   useMemberActions,
+  useNotificationPreferences,
+  useNotificationPreferencesActions,
 } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -42,6 +44,9 @@ export function SettingsPage() {
         </Section>
         <Section title="Üyeler" text="Workspace'e önceden kayıtlı bir kullanıcıyı e-posta ile ekle." icon={<Users size={18} />}>
           <MemberSettings isAdmin={isAdmin} />
+        </Section>
+        <Section title="Bildirim tercihleri" text="Hangi olaylar için e-posta almak istediğini seç." icon={<Mail size={18} />}>
+          <NotificationPreferencesSettings />
         </Section>
         {canManageTags && (
           <Section title="Etiketler" text="Görevleri sınıflandırmak için workspace genelinde etiketler." icon={<TagIcon size={18} />}>
@@ -222,6 +227,61 @@ function MemberSettings({ isAdmin }: { isAdmin: boolean }) {
         gönderilmiyor.
       </p>
     </div>
+  )
+}
+
+function NotificationPreferencesSettings() {
+  const { data, isLoading } = useNotificationPreferences()
+  const { update } = useNotificationPreferencesActions()
+  const onError = (err: unknown) => toast.error(errorMessage(err))
+
+  function toggle(field: 'emailOnAssign' | 'emailOnMention') {
+    if (!data) return
+    update.mutate({ ...data, [field]: !data[field] }, { onError })
+  }
+
+  if (isLoading || !data) return null
+  return (
+    <div className="space-y-3">
+      <Toggle
+        label="Bir görev bana atandığında e-posta gönder"
+        checked={data.emailOnAssign}
+        onChange={() => toggle('emailOnAssign')}
+      />
+      <Toggle
+        label="Bir yorumda etiketlendiğimde e-posta gönder"
+        checked={data.emailOnMention}
+        onChange={() => toggle('emailOnMention')}
+      />
+      <p className="text-xs text-muted">
+        Doğrulama, parola sıfırlama ve güvenlik uyarısı e-postaları bu tercihlerden bağımsız her zaman gönderilir.
+      </p>
+    </div>
+  )
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl bg-surface-2 p-3 text-left text-sm"
+    >
+      <span>{label}</span>
+      <span
+        className={cn(
+          'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+          checked ? 'bg-accent' : 'bg-border',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+            checked ? 'translate-x-5' : 'translate-x-0.5',
+          )}
+        />
+      </span>
+    </button>
   )
 }
 

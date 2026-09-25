@@ -21,6 +21,10 @@ configMapGenerator:
       - REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
       - SPRING_PROFILES_ACTIVE=dev
+      - APP_PUBLIC_URL=http://localhost:5173
+      - SMTP_HOST=host.docker.internal
+      - SMTP_PORT=1025
+      - SMTP_FROM=no-reply@tracker.local
 
 # Secret degerleri git'e girmez. .env.secret ve .env.migrator.secret
 # dosyalarini .env.secret.example / .env.migrator.secret.example'dan

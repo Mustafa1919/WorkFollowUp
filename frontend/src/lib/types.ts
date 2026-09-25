@@ -285,3 +285,9 @@ export interface PeriodReport {
   goals: GoalProgress[]
   projectFilterApplied: boolean
 }
+
+/** Dilim 1.3 — kullaniciya ait (workspace'e degil), guvenlik e-postalari (dogrulama/sifirlama) buna tabi degil. */
+export interface NotificationPreferences {
+  emailOnAssign: boolean
+  emailOnMention: boolean
+}

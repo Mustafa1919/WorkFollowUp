@@ -95,6 +95,19 @@ public class OutboxEventRepository {
   }
 
   /**
+   * ADR-0010 — {@code notification.email} satirlari (ham dogrulama/sifirlama token'i tasir) 7
+   * gunluk {@link #deleteProcessedBatch} donguesunu BEKLEMEZ, relay tarafindan basariyla
+   * gonderildikten HEMEN SONRA silinir: DB'de ve WAL'de duz metin token'in kaldigi sure minimize
+   * edilir. {@link #markProcessed} yerine kullanilir (ikisi birden gerekmez, satir zaten silinir).
+   */
+  public void delete(UUID id) {
+    entityManager
+        .createNativeQuery("DELETE FROM outbox_events WHERE id = ?1")
+        .setParameter(1, id)
+        .executeUpdate();
+  }
+
+  /**
    * PHASE_2_DETAILED_DESIGN.md Bolum 2, madde 4 — tek dev DELETE degil, 10.000'lik parcalar
    * halinde. Donen deger silinen satir sayisidir; caller sifir donene kadar dongude cagirir.
    */

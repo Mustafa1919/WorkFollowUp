@@ -47,5 +47,18 @@ services:
       timeout: 5s
       retries: 10
 
+  mailpit:
+    # Sabit surum etiketi (latest YASAK, bkz. Mimari.md Bolum 11). SMTP 1025 (uygulama buraya
+    # yazar), web arayuzu 8025 (gonderilen e-postalari gormek icin, bkz. KURULUM.md).
+    image: axllent/mailpit:v1.22.3
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:

@@ -200,6 +200,14 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/comments", "{\"body\":\"yorum\"}", WRITE),
         Endpoint.of(HttpMethod.PATCH, "/api/v1/comments/{id}", "{\"body\":\"yorum\"}", ALL_ROLES),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/comments/{id}", null, ALL_ROLES),
+        // Dilim 1.3: bildirim tercihleri — kullaniciya ait, workspace GEREKMEZ (me/tasks ile AYNI
+        // desen), rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/me/notification-preferences", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PUT,
+            "/api/v1/me/notification-preferences",
+            "{\"emailOnAssign\":true,\"emailOnMention\":true}",
+            ALL_ROLES),
         // Workspace uyeligi: ekleme/rol degistirme/cikarma yalniz ADMIN; listeleme her uye.
         Endpoint.of(
             HttpMethod.POST,

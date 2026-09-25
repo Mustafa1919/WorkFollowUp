@@ -44,10 +44,19 @@ public abstract class AbstractIntegrationTest {
   static final GenericContainer<?> REDIS =
       new GenericContainer<>(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379);
 
+  /**
+   * Dilim 1.3 — SMTP 1025 (uygulamanin yazdigi) + HTTP API 8025 (testlerin e-postayi okudugu, bkz.
+   * EmailDeliveryIntegrationTest). docker-compose.yml'deki AYNI sabit surum etiketi.
+   */
+  static final GenericContainer<?> MAILPIT =
+      new GenericContainer<>(DockerImageName.parse("axllent/mailpit:v1.22.3"))
+          .withExposedPorts(1025, 8025);
+
   static {
     POSTGRES.start();
     KAFKA.start();
     REDIS.start();
+    MAILPIT.start();
     provisionAppRuntimeRole();
     runMigrations();
   }
@@ -92,5 +101,15 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
     registry.add("spring.data.redis.host", REDIS::getHost);
     registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+    registry.add("spring.mail.host", MAILPIT::getHost);
+    registry.add("spring.mail.port", () -> MAILPIT.getMappedPort(1025));
+  }
+
+  /**
+   * Mailpit'in HTTP API'sine testlerin dogrudan erisebilmesi icin (bkz.
+   * EmailDeliveryIntegrationTest).
+   */
+  protected static String mailpitApiUrl(String path) {
+    return "http://" + MAILPIT.getHost() + ":" + MAILPIT.getMappedPort(8025) + path;
   }
 }

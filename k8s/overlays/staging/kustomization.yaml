@@ -23,6 +23,15 @@ configMapGenerator:
       - REDIS_PORT=6379
       - KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092
       - SPRING_PROFILES_ACTIVE=staging
+      # AppPublicUrlGuard staging/prod'da bos veya localhost iceren bir deger ile acilisi reddeder
+      # (bkz. ADR-0010) — gercek alan adiyla override edilmeli.
+      - APP_PUBLIC_URL=https://staging.example.com
+      - SMTP_HOST=host.docker.internal
+      - SMTP_PORT=1025
+      - SMTP_FROM=no-reply@tracker.local
+      # Gercek bir SMTP saglayicisina gecince: true + SMTP_USER/PASSWORD (core-api-secret).
+      - SMTP_AUTH=false
+      - SMTP_STARTTLS=false
 
 secretGenerator:
   - name: core-api-secret

@@ -49,13 +49,20 @@ public class OutboxRelay {
     this.objectMapper = objectMapper;
   }
 
+  /** ADR-0010 — ham token tasiyan satirlar 7 gunluk cleanup'i beklemeden hemen silinir. */
+  private static final String EMAIL_TOPIC = "notification.email";
+
   @Scheduled(fixedDelay = 1000)
   @Transactional
   public void relayBatch() {
     for (OutboxEventRepository.UnprocessedRow row :
         outboxEventRepository.findUnprocessedBatch(BATCH_SIZE)) {
       publish(row);
-      outboxEventRepository.markProcessed(row.id());
+      if (EMAIL_TOPIC.equals(row.topic())) {
+        outboxEventRepository.delete(row.id());
+      } else {
+        outboxEventRepository.markProcessed(row.id());
+      }
     }
   }
 

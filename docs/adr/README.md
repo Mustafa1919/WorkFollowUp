@@ -24,6 +24,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0007](0007-rapor-ve-hedef-modeli.md) | Rapor ve hedef modeli | Kabul edildi |
 | [0008](0008-izleyici-modeli-ve-inbox-alicilari.md) | İzleyici modeli ve Inbox alıcı tanımı | Kabul edildi |
 | [0009](0009-yorum-ve-mention-modeli.md) | Yorum ve mention modeli | Kabul edildi |
+| [0010](0010-e-posta-teslimi-ve-token-riski.md) | E-posta teslimi: devre kesici/offset, ham token riski, izin modeli | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

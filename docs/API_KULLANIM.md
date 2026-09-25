@@ -32,8 +32,9 @@ Content-Type: application/json
 }
 ```
 
-`201 Created`. E-posta doğrulama akışı (`verify-email`) mevcut ama login'i **engellemiyor**
-— e-posta doğrulanmamış kullanıcı da login olabilir (bilinen tasarım, bkz.
+`201 Created`. Kayıt, `notification.email` üzerinden gerçek bir doğrulama e-postası gönderir
+(Dilim 1.3 — bkz. §3.5); e-posta doğrulama akışı (`verify-email`) login'i **engellemiyor** —
+e-posta doğrulanmamış kullanıcı da login olabilir (bilinen tasarım, bkz.
 `SECURITY_AND_EXCEPTIONS_DESIGN.md`).
 
 ### 2.2 Giriş
@@ -218,6 +219,22 @@ DELETE /api/v1/comments/{commentId}                     # yazan veya workspace A
   Düzenleme `COMMENT_UPDATED`, silme `COMMENT_DELETED` yayınlar — yalnız canlı yenileme için,
   bildirim üretmezler.
 
+### 3.6 E-posta gönderimi ve bildirim tercihleri (V24, ADR-0010)
+
+```
+GET /api/v1/me/notification-preferences   # X-Workspace-Id GEREKMEZ, kullaniciya ait
+PUT /api/v1/me/notification-preferences   # {"emailOnAssign": bool, "emailOnMention": bool}
+```
+
+- Aşağıdaki olaylar gerçek bir e-posta gönderir (yerelde Mailpit, `http://localhost:8025`):
+  e-posta doğrulama (`/verify-email?token=`), parola sıfırlama (`/reset-password?token=`, 30dk
+  geçerli), güvenlik uyarısı (parola değişti / oturum ailesi iptal edildi), görev ataması
+  ("size atandı"), yorum @mention'ı. Şablonlar Türkçe, düz metin + basit HTML.
+- `emailOnAssign`/`emailOnMention` yalnız **atama/mention** e-postalarını kapsar. Doğrulama,
+  parola sıfırlama ve güvenlik uyarısı e-postaları koşulsuz gönderilir, kapatılamaz.
+- Frontend: `POST /api/v1/auth/password-reset/request` → `/forgot-password` sayfası,
+  `/reset-password?token=`, `/verify-email?token=` sayfaları; Ayarlar'da "Bildirim tercihleri".
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
@@ -283,3 +300,6 @@ Yerel/tek-kişilik testte ikisi de opsiyoneldir — atlanabilir.
   yerelde ayrı bir read replica yoksa (varsayılan) aynı DB'den okur, fark hissedilmez.
 - Cycle Time yalnız `task_events` tablosundaki event geçmişinden hesaplanır — bir görevi
   event akışı dışında (elle DB'de) değiştirirseniz metrikler tutarsız kalır.
+- Atama/mention e-postaları `auto.offset.reset=latest` ile tüketilir: uygulama ilk kez ayağa
+  kalktığında (yeni consumer group) o ana kadar oluşmuş atama/mention olayları e-postaya
+  DÖKÜLMEZ, yalnız bundan sonraki olaylar gönderilir (ADR-0010).

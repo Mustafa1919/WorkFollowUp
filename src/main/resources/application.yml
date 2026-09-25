@@ -16,6 +16,20 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          # Mailpit (yerel/CI) kimlik dogrulama/TLS istemiyor; gercek SMTP saglayicisi SMTP_USER/
+          # PASSWORD ile auth+STARTTLS bekler (bkz. KURULUM.md).
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -61,6 +75,18 @@ app:
     slack:
       connect-timeout: PT2S
       read-timeout: PT5S
+      sliding-window-size: 20
+      minimum-number-of-calls: 5
+      failure-rate-threshold: 50
+      open-state-duration: PT30S
+      permitted-calls-in-half-open-state: 3
+    # E-posta gonderimi (EmailProperties) — Slack ile AYNI devre kesici deseni (ADR-0006/ADR-0010).
+    email:
+      # DEV-ONLY (bkz. AppPublicUrlGuard): staging/prod bu degeri gercek alan adiyla override eder.
+      public-url: ${APP_PUBLIC_URL:http://localhost:5173}
+      from: ${SMTP_FROM:no-reply@tracker.local}
+      connect-timeout: PT5S
+      read-timeout: PT10S
       sliding-window-size: 20
       minimum-number-of-calls: 5
       failure-rate-threshold: 50

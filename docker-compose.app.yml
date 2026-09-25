@@ -7,6 +7,10 @@ x-backend-env: &backend-env
   DB_NAME: tracker
   REDIS_HOST: redis
   KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_FROM: no-reply@tracker.local
+  APP_PUBLIC_URL: http://localhost:3000
 
 services:
   migrate:
@@ -37,6 +41,8 @@ services:
       redis:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     restart: unless-stopped
 
