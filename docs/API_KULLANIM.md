@@ -266,7 +266,8 @@ POST   /api/v1/invitations/{token}/accept                 # kimlik ister, X-Work
 GET /api/v1/search?q=<metin>&limit=<1-50, varsayılan 10>
 ```
 
-- Rol sınırı yok (workspace üyeliği yeterli). `q` zorunludur, boşsa/verilmezse `400`.
+- Rol sınırı yok (workspace üyeliği yeterli). `q` parametresi zorunludur, hiç verilmezse `400`;
+  boş/yalnız boşluk bir `q` ise hata değil, boş sonuç (`{"tasks":[],"comments":[]}`) döner.
 - Yanıt: `{ "tasks": [...], "comments": [...] }`.
   - Görev satırı: `id, projectId, projectKey, taskNumber, title, status, snippet`. `snippet`
     açıklamadan çıkarılan kısa bağlam (eşleşme yoksa `null`).
