@@ -152,6 +152,7 @@ class MeetingOccurrenceCalculatorTest {
         until,
         count,
         null,
+        false,
         UUID.randomUUID());
   }
 }

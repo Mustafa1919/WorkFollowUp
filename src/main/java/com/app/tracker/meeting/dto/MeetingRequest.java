@@ -28,10 +28,18 @@ public record MeetingRequest(
     List<@Pattern(regexp = "MON|TUE|WED|THU|FRI|SAT|SUN") String> byWeekday,
     LocalDate untilDate,
     @Min(1) @Max(366) Integer occurrenceCount,
-    @Min(1) @Max(1440) Integer reminderMinutesBefore) {
+    @Min(1) @Max(1440) Integer reminderMinutesBefore,
+    Boolean standupEnabled) {
 
-  /** DependencySummary ile AYNI EI_EXPOSE_REP savunması: List.copyOf. */
+  /**
+   * DependencySummary ile AYNI EI_EXPOSE_REP savunması: List.copyOf. {@code standupEnabled}
+   * BİLEREK primitif {@code boolean} DEĞİL: bu alanı henüz göndermeyen eski bir istemci (veya
+   * onu hiç bilmeyen bir entegrasyon) {@code Jackson}'ın kayıp bir zorunlu constructor
+   * parametresi için 400 dönmesine yol açardı — diğer opsiyonel alanlar (occurrenceCount,
+   * reminderMinutesBefore) gibi null-güvenli tutulur.
+   */
   public MeetingRequest {
     byWeekday = byWeekday == null ? null : List.copyOf(byWeekday);
+    standupEnabled = standupEnabled != null && standupEnabled;
   }
 }

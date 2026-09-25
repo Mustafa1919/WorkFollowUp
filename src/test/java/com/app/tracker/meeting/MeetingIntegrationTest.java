@@ -76,6 +76,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                     null,
                     null,
                     15,
+                    false,
                     adminUserId));
     assertEquals("Standup", created.getTitle());
     assertEquals(1, inWorkspace(() -> meetingService.list()).size());
@@ -96,7 +97,8 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                     Set.of(DayOfWeek.MONDAY),
                     null,
                     null,
-                    null));
+                    null,
+                    false));
     assertEquals("Standup (guncel)", updated.getTitle());
     assertEquals(LocalTime.of(10, 0), updated.getStartTime());
 
@@ -129,6 +131,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                         null,
                         null,
                         null,
+                        false,
                         adminUserId)));
   }
 
@@ -153,6 +156,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                         null,
                         null,
                         null,
+                        false,
                         adminUserId)));
   }
 
@@ -177,6 +181,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                         start.plusDays(10),
                         5,
                         null,
+                        false,
                         adminUserId)));
   }
 
@@ -210,6 +215,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                 null,
                 null,
                 null,
+                false,
                 adminUserId));
     inWorkspace(
         () ->
@@ -226,6 +232,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                 null,
                 null,
                 null,
+                false,
                 adminUserId));
 
     List<Occurrence> occurrences =
@@ -260,6 +267,7 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
                 null,
                 null,
                 null,
+                false,
                 adminUserId));
 
     List<Meeting> visibleFromOther =

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { BarChart3, CalendarClock, Check, ChevronsUpDown, CircleUserRound, FolderKanban, Home, LogOut, Menu, Plus, Search, Settings, X } from 'lucide-react'
+import { BarChart3, CalendarClock, Check, ChevronsUpDown, CircleUserRound, FolderKanban, Home, LogOut, Menu, MessageCircleMore, Plus, Search, Settings, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateWorkspace, useCurrentRole, useNotificationRealtime, useProjects, useWorkspaces } from '@/api/queries'
 import { api, errorMessage } from '@/lib/api'
@@ -163,6 +163,14 @@ function Sidebar() {
             <>
               {isActive && <ActivePill />}
               <CalendarClock size={17} className="relative" /> <span className="relative">Toplantılar</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/standups" className={link}>
+          {({ isActive }) => (
+            <>
+              {isActive && <ActivePill />}
+              <MessageCircleMore size={17} className="relative" /> <span className="relative">Standup</span>
             </>
           )}
         </NavLink>

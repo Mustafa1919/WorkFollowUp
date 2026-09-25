@@ -71,6 +71,7 @@ public class MeetingController {
             request.untilDate(),
             request.occurrenceCount(),
             request.reminderMinutesBefore(),
+            request.standupEnabled(),
             CurrentUser.id());
     return ResponseEntity.status(HttpStatus.CREATED).body(MeetingResponse.from(meeting));
   }
@@ -111,7 +112,8 @@ public class MeetingController {
             weekdaySet(request.byWeekday()),
             request.untilDate(),
             request.occurrenceCount(),
-            request.reminderMinutesBefore());
+            request.reminderMinutesBefore(),
+            request.standupEnabled());
     return MeetingResponse.from(meeting);
   }
 

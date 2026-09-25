@@ -47,6 +47,7 @@ public class MeetingService {
       LocalDate untilDate,
       Integer occurrenceCount,
       Integer reminderMinutesBefore,
+      boolean standupEnabled,
       UUID actorId) {
     UUID workspaceId = requireWorkspace();
     validate(startDate, frequency, byWeekday, untilDate, occurrenceCount);
@@ -66,6 +67,7 @@ public class MeetingService {
             untilDate,
             occurrenceCount,
             reminderMinutesBefore,
+            standupEnabled,
             actorId);
     return meetingRepository.save(meeting);
   }
@@ -84,7 +86,8 @@ public class MeetingService {
       Set<DayOfWeek> byWeekday,
       LocalDate untilDate,
       Integer occurrenceCount,
-      Integer reminderMinutesBefore) {
+      Integer reminderMinutesBefore,
+      boolean standupEnabled) {
     Meeting meeting = requireMeeting(meetingId);
     validate(startDate, frequency, byWeekday, untilDate, occurrenceCount);
     meeting.apply(
@@ -99,7 +102,8 @@ public class MeetingService {
         csvOrNull(frequency, byWeekday),
         untilDate,
         occurrenceCount,
-        reminderMinutesBefore);
+        reminderMinutesBefore,
+        standupEnabled);
     return meetingRepository.save(meeting);
   }
 
@@ -123,6 +127,15 @@ public class MeetingService {
   @Transactional(readOnly = true)
   public List<Meeting> listWithReminders() {
     return meetingRepository.findAllByReminderMinutesBeforeIsNotNull();
+  }
+
+  /**
+   * {@link com.app.tracker.standup.service.StandupDigestJob} icin — {@code listWithReminders} ile
+   * AYNI gerekce (job repository'i dogrudan cagiramaz, transaction burada acilmali).
+   */
+  @Transactional(readOnly = true)
+  public List<Meeting> listWithStandupEnabled() {
+    return meetingRepository.findAllByStandupEnabledTrue();
   }
 
   /**

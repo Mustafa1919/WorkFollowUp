@@ -237,7 +237,33 @@ export interface Meeting {
   untilDate: string | null
   occurrenceCount: number | null
   reminderMinutesBefore: number | null
+  /** Dalga 2.3: acikken occurrence'tan 30 dk once standup ozeti uretilir. */
+  standupEnabled: boolean
   createdBy: string
+  createdAt: string
+}
+
+export interface StandupTaskRef {
+  taskId: string
+  projectKey: string
+  taskNumber: number
+  title: string
+}
+
+export interface StandupFacts {
+  completedYesterday: StandupTaskRef[]
+  progressedYesterday: StandupTaskRef[]
+  inProgress: StandupTaskRef[]
+  blocked: StandupTaskRef[]
+  aging: StandupTaskRef[]
+  githubActivity: StandupTaskRef[]
+}
+
+export interface StandupDigest {
+  userId: string
+  userName: string
+  facts: StandupFacts
+  note: string | null
   createdAt: string
 }
 

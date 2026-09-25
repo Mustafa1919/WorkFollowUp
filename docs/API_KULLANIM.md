@@ -340,6 +340,22 @@ GET /api/v1/sprints/{sprintId}/forecast
 - Yalnız görev SAYISINA dayanır (story point tabanlı tahmin ve hedef/goal bazlı olasılık bu
   dilimde YOK, bkz. ADR-0013).
 
+### 3.12 Toplantısız standup (Dalga 2.3, V29, ADR-0014)
+
+```
+GET /api/v1/standups?meetingId=&date=
+PUT /api/v1/standups/{meetingId}/{date}/note   {"note": "..."}
+```
+
+- `meetings.standupEnabled` açıksa `StandupDigestJob` occurrence başlamadan 30 dakika önce
+  ADMIN/MANAGER/DEVELOPER rolündeki her üye için bir özet üretir (Inbox + varsa Slack).
+- `GET`: rol sınırı yok. Yanıt her katılımcı için `userId, userName, facts, note, createdAt`;
+  `facts` altı kategori taşır: `completedYesterday, progressedYesterday, inProgress, blocked,
+  aging, githubActivity` (her biri `taskId, projectKey, taskNumber, title` listesi).
+- `PUT .../note`: yalnız KENDİ notunu güncelleyebilirsin (`WHERE user_id = giriş yapan kullanıcı`);
+  o tarih için özetin yoksa `404`.
+- "Dün" = önceki İŞ GÜNÜ (hafta sonu atlanır), iş saat diliminde hesaplanır.
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.

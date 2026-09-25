@@ -53,6 +53,9 @@ public class Meeting {
   /** {@code null} = hatirlatma yok. */
   private Integer reminderMinutesBefore;
 
+  /** Dalga 2.3: acikken {@code StandupDigestJob} her occurrence icin ozet uretir. */
+  private boolean standupEnabled;
+
   private UUID createdBy;
 
   private Instant createdAt;
@@ -72,6 +75,7 @@ public class Meeting {
       LocalDate untilDate,
       Integer occurrenceCount,
       Integer reminderMinutesBefore,
+      boolean standupEnabled,
       UUID createdBy) {
     Meeting meeting = new Meeting();
     meeting.id = id;
@@ -90,7 +94,8 @@ public class Meeting {
         byWeekday,
         untilDate,
         occurrenceCount,
-        reminderMinutesBefore);
+        reminderMinutesBefore,
+        standupEnabled);
     return meeting;
   }
 
@@ -106,7 +111,8 @@ public class Meeting {
       String byWeekday,
       LocalDate untilDate,
       Integer occurrenceCount,
-      Integer reminderMinutesBefore) {
+      Integer reminderMinutesBefore,
+      boolean standupEnabled) {
     this.title = title;
     this.description = description;
     this.meetingUrl = meetingUrl;
@@ -119,5 +125,6 @@ public class Meeting {
     this.untilDate = untilDate;
     this.occurrenceCount = occurrenceCount;
     this.reminderMinutesBefore = reminderMinutesBefore;
+    this.standupEnabled = standupEnabled;
   }
 }

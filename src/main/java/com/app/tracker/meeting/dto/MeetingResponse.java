@@ -22,6 +22,7 @@ public record MeetingResponse(
     LocalDate untilDate,
     Integer occurrenceCount,
     Integer reminderMinutesBefore,
+    boolean standupEnabled,
     UUID createdBy,
     Instant createdAt) {
 
@@ -45,6 +46,7 @@ public record MeetingResponse(
         meeting.getUntilDate(),
         meeting.getOccurrenceCount(),
         meeting.getReminderMinutesBefore(),
+        meeting.isStandupEnabled(),
         meeting.getCreatedBy(),
         meeting.getCreatedAt());
   }

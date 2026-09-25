@@ -72,6 +72,9 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
       "{\"name\":\"S\",\"startDate\":\"2099-01-01\",\"endDate\":\"2099-01-14\"}";
 
   // 2099: MeetingService de ayni gerekceyle gecmis baslangic tarihini reddediyor (bkz. yukarida).
+  // standupEnabled BILEREK gonderilmiyor: MeetingRequest bu alani opsiyonel (nullable Boolean)
+  // tutuyor, eksikse false'a duser (bkz. MeetingRequest javadoc'u) — eski bir istemcinin bu alani
+  // hic bilmemesi 400'e yol acmamali.
   private static final String MEETING_JSON =
       "{\"title\":\"M\",\"startDate\":\"2099-01-01\",\"startTime\":\"10:00:00\","
           + "\"durationMinutes\":30,\"frequency\":\"ONCE\",\"intervalCount\":1}";
@@ -283,6 +286,18 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             ALL_ROLES),
         Endpoint.of(HttpMethod.PUT, "/api/v1/meetings/{id}", MEETING_JSON, MANAGE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/meetings/{id}", null, MANAGE),
+        // Standup ozetleri (Dalga 2.3): okuma rol siniri yok; not guncelleme sahiplik servis
+        // katmaninda WHERE user_id ile saglanir (rol siniri yok, kendi notunu kim olsa girebilir).
+        Endpoint.of(
+            HttpMethod.GET,
+            "/api/v1/standups?meetingId=" + UUID.randomUUID() + "&date=2099-01-01",
+            null,
+            ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.PUT,
+            "/api/v1/standups/{id}/2099-01-01/note",
+            "{\"note\":\"bugun bunu yapacagim\"}",
+            ALL_ROLES),
         // Donemsel rapor: okuma rol siniri YOK (AnalyticsController ile ayni gerekce).
         Endpoint.of(HttpMethod.GET, "/api/v1/reports/period?year=2099", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/reports/period?year=2099&quarter=2", null, ALL_ROLES),

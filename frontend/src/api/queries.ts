@@ -24,6 +24,7 @@ import type {
   SearchResponse,
   SlackIntegration,
   Sprint,
+  StandupDigest,
   Tag,
   Task,
   TaskActivity,
@@ -63,6 +64,8 @@ export const keys = {
   notifications: (ws: string | null, unreadOnly: boolean) => ['ws', ws, 'notifications', unreadOnly] as const,
   unreadCount: (ws: string | null) => ['ws', ws, 'notifications', 'unread-count'] as const,
   meetings: (ws: string | null) => ['ws', ws, 'meetings'] as const,
+  standups: (ws: string | null, meetingId: string, date: string) =>
+    ['ws', ws, 'standups', meetingId, date] as const,
   meetingOccurrences: (ws: string | null, from: string, to: string) =>
     ['ws', ws, 'meetings', 'occurrences', from, to] as const,
   periodReport: (ws: string | null, year: number, quarter: number | null, projectIds: string[]) =>
@@ -877,6 +880,7 @@ export interface MeetingPayload {
   untilDate?: string | null
   occurrenceCount?: number | null
   reminderMinutesBefore?: number | null
+  standupEnabled?: boolean
 }
 
 /** Toplanti serilerinin tam listesi (yonetim paneli icin) — workspace geneli, proje siniri yok. */
@@ -921,6 +925,26 @@ export function useMeetingActions() {
   }
 }
 
+
+/** Dalga 2.3 — bir toplanti occurrence'inin standup ozetleri (tarih + toplanti secici). */
+export function useStandups(meetingId: string, date: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.standups(workspaceId, meetingId, date),
+    queryFn: async () =>
+      (await api.get<StandupDigest[]>('/api/v1/standups', { params: { meetingId, date } })).data,
+    enabled: enabled && !!workspaceId && !!meetingId && !!date,
+  })
+}
+
+export function useUpdateStandupNote(meetingId: string, date: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (note: string) =>
+      api.put(`/api/v1/standups/${meetingId}/${date}/note`, { note }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.standups(ws(), meetingId, date) }),
+  })
+}
 
 // ---------------------------------------------------------------- raporlama (donemsel)
 

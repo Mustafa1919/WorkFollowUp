@@ -74,6 +74,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
   const [untilDate, setUntilDate] = useState(meeting?.untilDate ?? '')
   const [occurrenceCount, setOccurrenceCount] = useState(meeting?.occurrenceCount ?? 10)
   const [reminder, setReminder] = useState(meeting?.reminderMinutesBefore?.toString() ?? '')
+  const [standupEnabled, setStandupEnabled] = useState(meeting?.standupEnabled ?? false)
 
   function toggleWeekday(day: Weekday) {
     setByWeekday((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
@@ -94,6 +95,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
       untilDate: endMode === 'until' ? untilDate : null,
       occurrenceCount: endMode === 'count' ? occurrenceCount : null,
       reminderMinutesBefore: reminder ? Number(reminder) : null,
+      standupEnabled,
     }
     try {
       if (editing) await update.mutateAsync({ id: meeting.id, ...payload })
@@ -248,6 +250,11 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
           ))}
         </select>
       </Field>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input type="checkbox" checked={standupEnabled} onChange={(e) => setStandupEnabled(e.target.checked)} />
+        Toplantısız standup özeti (occurrence'tan 30 dk önce katılımcılara özet gönderilsin)
+      </label>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
