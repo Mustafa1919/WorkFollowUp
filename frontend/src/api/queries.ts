@@ -20,6 +20,9 @@ import type {
   Page,
   PeriodReport,
   Project,
+  RetroItemKind,
+  RetroItemResponse,
+  RetroResponse,
   SavedView,
   SearchResponse,
   SlackIntegration,
@@ -72,6 +75,8 @@ export const keys = {
     ['ws', ws, 'report', year, quarter, projectIds.join(',')] as const,
   search: (ws: string | null, q: string) => ['ws', ws, 'search', q] as const,
   savedViews: (ws: string | null, projectId: string) => ['ws', ws, 'saved-views', projectId] as const,
+  retro: (ws: string | null, sprintId: string) => ['ws', ws, 'retro', sprintId] as const,
+  retroItems: (ws: string | null, sprintId: string) => ['ws', ws, 'retro-items', sprintId] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
 }
@@ -508,6 +513,50 @@ export function useProjectForecast(projectId: string, enabled: boolean) {
     enabled: enabled && !!workspaceId && !!projectId,
     staleTime: 5 * 60 * 1000,
   })
+}
+
+/** Dalga 2.4 — veriye dayali retro. Yalniz tamamlanmis sprint'ler icin anlamlidir. */
+export function useSprintRetro(sprintId: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.retro(workspaceId, sprintId),
+    queryFn: async () => (await api.get<RetroResponse>(`/api/v1/sprints/${sprintId}/retro`)).data,
+    enabled: enabled && !!workspaceId && !!sprintId,
+  })
+}
+
+export function useRetroItems(sprintId: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.retroItems(workspaceId, sprintId),
+    queryFn: async () =>
+      (await api.get<RetroItemResponse[]>(`/api/v1/sprints/${sprintId}/retro/items`)).data,
+    enabled: enabled && !!workspaceId && !!sprintId,
+  })
+}
+
+export function useRetroItemActions(sprintId: string) {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: keys.retroItems(ws(), sprintId) })
+  return {
+    create: useMutation({
+      mutationFn: async (body: { kind: RetroItemKind; body: string }) =>
+        (await api.post<RetroItemResponse>(`/api/v1/sprints/${sprintId}/retro/items`, body)).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/retro-items/${id}`),
+      onSuccess: invalidate,
+    }),
+    convertToTask: useMutation({
+      mutationFn: async (id: string) =>
+        (await api.post<Task>(`/api/v1/retro-items/${id}/convert-to-task`)).data,
+      onSuccess: () => {
+        invalidate()
+        qc.invalidateQueries({ queryKey: ['ws', ws(), 'tasks'] })
+      },
+    }),
+  }
 }
 
 // ---------------------------------------------------------------- integrations (ADMIN)

@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { toast } from 'sonner'
-import { BarChart3, BookmarkPlus, Bookmark, CalendarDays, Check, CheckCircle2, KanbanSquare, Plus, Tag as TagIcon, X } from 'lucide-react'
+import { BarChart3, BookmarkPlus, Bookmark, CalendarDays, Check, CheckCircle2, KanbanSquare, MessageSquareQuote, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { useMembers, useProjectRealtime, useProjects, useSavedViewActions, useSavedViews, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
 import { useCurrentUserId } from '@/stores/session'
 import { cn } from '@/lib/cn'
@@ -190,6 +190,11 @@ export function BoardPage() {
         <Link to={`/projects/${projectId}/analytics`}>
           <Button variant="outline" size="sm" className="h-9">
             <BarChart3 size={15} /> Analitik
+          </Button>
+        </Link>
+        <Link to={`/projects/${projectId}/retro`}>
+          <Button variant="outline" size="sm" className="h-9">
+            <MessageSquareQuote size={15} /> Retro
           </Button>
         </Link>
         {canWrite && (

@@ -50,6 +50,10 @@ export const router = createBrowserRouter([
             // recharts yalniz bu sayfada: ayri chunk olarak yuklenir.
             lazy: async () => ({ Component: (await import('@/features/analytics/AnalyticsPage')).AnalyticsPage }),
           },
+          {
+            path: '/projects/:projectId/retro',
+            lazy: async () => ({ Component: (await import('@/features/retro/RetroPage')).RetroPage }),
+          },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

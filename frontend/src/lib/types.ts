@@ -423,3 +423,56 @@ export interface BulkTaskRequest {
   assigneeId?: string | null
   tagId?: string
 }
+
+// ---------------------------------------------------------------- retro (Dalga 2.4)
+
+export interface RetroTaskRef {
+  taskId: string
+  projectKey: string
+  taskNumber: number
+  title: string
+}
+
+export interface CycleTimeOutlier {
+  task: RetroTaskRef
+  cycleTimeSeconds: number
+}
+
+export interface LongestOpenBlocker {
+  blockedTask: RetroTaskRef
+  blockingTask: RetroTaskRef
+  openSince: string
+}
+
+/**
+ * `planAvailable=false`: bu sprint V30'dan ONCE tamamlandigi icin "sprint basi" kesiti hic
+ * hesaplanmadi — `committedAtStart*`/`addedTasks`/`removedTasks`/`forecastProbabilityAtStart`
+ * bu durumda anlamsizdir.
+ */
+export interface RetroResponse {
+  planAvailable: boolean
+  committedAtStartTasks: number | null
+  committedAtStartPoints: number | null
+  committedTasks: number
+  committedPoints: number
+  completedTasks: number
+  completedPoints: number
+  addedTasks: RetroTaskRef[]
+  removedTasks: RetroTaskRef[]
+  spilloverTasks: RetroTaskRef[]
+  cycleTimeOutliers: CycleTimeOutlier[]
+  longestOpenBlocker: LongestOpenBlocker | null
+  forecastProbabilityAtStart: number | null
+}
+
+export type RetroItemKind = 'went_well' | 'improve' | 'action'
+
+export interface RetroItemResponse {
+  id: string
+  kind: RetroItemKind
+  body: string
+  authorId: string
+  authorName: string
+  taskId: string | null
+  createdAt: string
+}
