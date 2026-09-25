@@ -12,13 +12,15 @@ import {
   useTagActions,
   useMembers,
   useMemberActions,
+  useInvitations,
+  useInvitationActions,
   useNotificationPreferences,
   useNotificationPreferencesActions,
 } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/dates'
-import type { Tag, WorkspaceMember, WorkspaceRole } from '@/lib/types'
+import type { Tag, WorkspaceInvitation, WorkspaceMember, WorkspaceRole } from '@/lib/types'
 import { useTheme } from '@/stores/theme'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -42,7 +44,7 @@ export function SettingsPage() {
         <Section title="Görünüm" text="Tercihin bu tarayıcıda saklanır.">
           <ThemePicker />
         </Section>
-        <Section title="Üyeler" text="Workspace'e önceden kayıtlı bir kullanıcıyı e-posta ile ekle." icon={<Users size={18} />}>
+        <Section title="Üyeler" text="Workspace'e kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
           <MemberSettings isAdmin={isAdmin} />
         </Section>
         <Section title="Bildirim tercihleri" text="Hangi olaylar için e-posta almak istediğini seç." icon={<Mail size={18} />}>
@@ -223,9 +225,76 @@ function MemberSettings({ isAdmin }: { isAdmin: boolean }) {
         </form>
       )}
       <p className="text-xs text-muted">
-        Kullanıcı önceden <code className="rounded bg-surface-2 px-1">/register</code> ile kendi hesabını açmış olmalı — davet e-postası
-        gönderilmiyor.
+        Yalnızca zaten <code className="rounded bg-surface-2 px-1">/register</code> ile kendi hesabını açmış kullanıcılar için — davet
+        e-postası gönderilmez, aynı anda üye olur.
       </p>
+      {isAdmin && <InvitationSettings />}
+    </div>
+  )
+}
+
+function InvitationSettings() {
+  const { data: invitations } = useInvitations(true)
+  const { invite, revoke } = useInvitationActions()
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<WorkspaceRole>('DEVELOPER')
+  const onError = (err: unknown) => toast.error(errorMessage(err))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      await invite.mutateAsync({ email, role })
+      setEmail('')
+      setRole('DEVELOPER')
+      toast.success('Davet e-postası gönderildi')
+    } catch (err) {
+      onError(err)
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-3 border-t border-border pt-4">
+      <p className="text-xs font-medium text-muted">Kayıtlı olmayan biri için davet e-postası gönder (7 gün geçerli)</p>
+      {invitations?.map((inv: WorkspaceInvitation) => (
+        <div key={inv.id} className="flex items-center gap-3 rounded-xl bg-surface-2 p-3 text-sm">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+            <Mail size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{inv.email}</div>
+            <div className="truncate text-xs text-muted">
+              {ROLE_LABEL[inv.role]} · gönderildi {fmt(inv.createdAt, 'd MMM yyyy')} · son {fmt(inv.expiresAt, 'd MMM yyyy')}
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" title="Daveti iptal et" onClick={() => revoke.mutate(inv.id, { onError })}>
+            <Trash2 size={14} />
+          </Button>
+        </div>
+      ))}
+      {invitations?.length === 0 && <p className="text-xs text-muted">Bekleyen davet yok.</p>}
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          type="email"
+          required
+          placeholder="kayitsiz-biri@sirket.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value as WorkspaceRole)}
+          className="h-10 cursor-pointer rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-accent"
+        >
+          {ROLE_OPTIONS.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABEL[r]}
+            </option>
+          ))}
+        </select>
+        <Button type="submit" loading={invite.isPending} variant="outline" className="shrink-0">
+          <Mail size={14} /> Davet et
+        </Button>
+      </form>
     </div>
   )
 }

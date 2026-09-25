@@ -20,8 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Workspace uyeligi yonetimi (RAKIP_ANALIZI.md acik notu: davet ucusu yoktu). Email altyapisi
- * olmadigi icin davet YOK: ADMIN, ONCEDEN kayitli bir kullaniciyi e-postasindan bulup ekler.
+ * Workspace uyeligi yonetimi — ADMIN, ONCEDEN kayitli bir kullaniciyi e-postasindan bulup ANINDA
+ * ekler (kabul beklemez). Dalga 1.4'ten itibaren KAYITSIZ e-postalar icin token'li bir davet
+ * alternatifi de var (bkz. {@link WorkspaceInvitationService}); bu iki yol birbirini DISLAMAZ —
+ * ADMIN zaten kayitli bir tanidigini beklemeden eklemek isterse bunu, kayitsiz/bilinmeyen birini
+ * davet etmek isterse onu kullanir.
  *
  * <p>{@code workspace_users} VE {@code users} RLS'e TABI DEGILDIR (V2 notu — workspace secimi
  * tenant context kurulmadan once bu tablolar uzerinden yapilir); bu yuzden her sorguda {@code

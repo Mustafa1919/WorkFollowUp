@@ -101,6 +101,41 @@ public final class EmailTemplates {
     return new EmailContent(subject, text, html);
   }
 
+  public static EmailContent workspaceInviteEmail(
+      String publicUrl, String workspaceName, String role, String rawToken) {
+    String link = publicUrl + "/invitations/" + urlEncode(rawToken);
+    String safeWorkspace = escape(truncate(workspaceName));
+    String roleLabel = roleLabel(role);
+    String subject = safeWorkspace + " workspace'ine davet edildin";
+    String text =
+        safeWorkspace
+            + " workspace'ine "
+            + roleLabel
+            + " rolüyle davet edildin (7 gün geçerli): "
+            + link;
+    String html =
+        wrap(
+            "Bir workspace davetin var",
+            "<strong>"
+                + safeWorkspace
+                + "</strong> workspace'ine <strong>"
+                + roleLabel
+                + "</strong> rolüyle davet edildin. Bağlantı 7 gün geçerlidir.",
+            link,
+            "Daveti görüntüle");
+    return new EmailContent(subject, text, html);
+  }
+
+  private static String roleLabel(String role) {
+    return switch (role) {
+      case "WORKSPACE_ADMIN" -> "Yönetici";
+      case "MANAGER" -> "Yönetmen";
+      case "DEVELOPER" -> "Geliştirici";
+      case "VIEWER" -> "İzleyici";
+      default -> role;
+    };
+  }
+
   private static String taskLink(String publicUrl, UUID projectId, UUID taskId) {
     return publicUrl + "/projects/" + projectId + "?task=" + taskId;
   }

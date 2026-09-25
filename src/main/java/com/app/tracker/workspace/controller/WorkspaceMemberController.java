@@ -2,8 +2,11 @@ package com.app.tracker.workspace.controller;
 
 import com.app.tracker.workspace.dto.AddWorkspaceMemberRequest;
 import com.app.tracker.workspace.dto.ChangeWorkspaceMemberRoleRequest;
+import com.app.tracker.workspace.dto.InviteWorkspaceMemberRequest;
+import com.app.tracker.workspace.dto.WorkspaceInvitationResponse;
 import com.app.tracker.workspace.dto.WorkspaceMemberResponse;
 import com.app.tracker.workspace.model.WorkspaceRole;
+import com.app.tracker.workspace.service.WorkspaceInvitationService;
 import com.app.tracker.workspace.service.WorkspaceMemberService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -33,9 +36,12 @@ public class WorkspaceMemberController {
       "@securityGuard.hasCurrentWorkspaceRole('" + WorkspaceRole.ADMIN + "')";
 
   private final WorkspaceMemberService memberService;
+  private final WorkspaceInvitationService invitationService;
 
-  public WorkspaceMemberController(WorkspaceMemberService memberService) {
+  public WorkspaceMemberController(
+      WorkspaceMemberService memberService, WorkspaceInvitationService invitationService) {
     this.memberService = memberService;
+    this.invitationService = invitationService;
   }
 
   @PostMapping
@@ -62,6 +68,27 @@ public class WorkspaceMemberController {
   @PreAuthorize(ADMIN_ONLY)
   public ResponseEntity<Void> remove(@PathVariable UUID userId) {
     memberService.removeMember(userId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/invitations")
+  @PreAuthorize(ADMIN_ONLY)
+  public ResponseEntity<WorkspaceInvitationResponse> invite(
+      @Valid @RequestBody InviteWorkspaceMemberRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(invitationService.invite(request.email(), request.role()));
+  }
+
+  @GetMapping("/invitations")
+  @PreAuthorize(ADMIN_ONLY)
+  public List<WorkspaceInvitationResponse> pendingInvitations() {
+    return invitationService.listPending();
+  }
+
+  @DeleteMapping("/invitations/{invitationId}")
+  @PreAuthorize(ADMIN_ONLY)
+  public ResponseEntity<Void> revokeInvitation(@PathVariable UUID invitationId) {
+    invitationService.revoke(invitationId);
     return ResponseEntity.noContent().build();
   }
 }

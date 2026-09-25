@@ -3,6 +3,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { AuthGate, GuestOnly } from '@/features/auth/AuthGate'
 import { AuthPage } from '@/features/auth/AuthPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { InvitationAcceptPage } from '@/features/auth/InvitationAcceptPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
   // giris yapmis birini de kapsar) — GuestOnly/AuthGate'in DISINDA.
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
+  { path: '/invitations/:token', element: <InvitationAcceptPage /> },
   {
     element: <AuthGate />,
     children: [

@@ -10,10 +10,11 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * {@code notification.email} topic'inin is mantigi ({@code EmailNotificationPublisher}'in ürettiği
- * {@code email.email_verification} / {@code email.password_reset} / {@code email.security_alert}
- * olaylari). Guvenlik/hesap e-postalari kullanici tercihinden BAGIMSIZDIR (yalniz gorev kaynakli
- * atama/mention e-postalari {@code NotificationPreferencesService} ile kapida, bkz.
- * EmailTaskEventService) — bir kullanici parola sifirlamayi "kapatamaz".
+ * {@code email.email_verification} / {@code email.password_reset} / {@code email.security_alert} /
+ * {@code email.workspace_invite} olaylari). Guvenlik/hesap e-postalari kullanici tercihinden
+ * BAGIMSIZDIR (yalniz gorev kaynakli atama/mention e-postalari {@code
+ * NotificationPreferencesService} ile kapida, bkz. EmailTaskEventService) — bir kullanici parola
+ * sifirlamayi "kapatamaz".
  *
  * <p>Akis SlackNotificationService ile AYNI: (1) daha once islendi mi? (kisa tx) (2) alici adresi
  * (kisa tx) (3) SMTP cagrisi — DB baglantisi TUTULMAZ (4) isaretle (kisa tx). At-least-once: 3 ile
@@ -54,8 +55,7 @@ public class EmailDeliveryService {
     if (content.isEmpty()) {
       return Outcome.SKIPPED;
     }
-    UUID userId = uuid(payload, "userId");
-    Optional<String> email = store.findUserEmail(userId);
+    Optional<String> email = resolveRecipient(eventType, payload);
     if (email.isEmpty()) {
       return Outcome.UNKNOWN_USER;
     }
@@ -77,8 +77,28 @@ public class EmailDeliveryService {
           Optional.of(EmailTemplates.passwordResetEmail(properties.getPublicUrl(), token(payload)));
       case "email.security_alert" ->
           Optional.of(EmailTemplates.securityAlertEmail(payload.path("reason").asString("")));
+      case "email.workspace_invite" ->
+          Optional.of(
+              EmailTemplates.workspaceInviteEmail(
+                  properties.getPublicUrl(),
+                  payload.path("workspaceName").asString(""),
+                  payload.path("role").asString(""),
+                  token(payload)));
       default -> Optional.empty();
     };
+  }
+
+  /**
+   * {@code email.workspace_invite} istisna: davet edilen henuz kayitli OLMAYABILIR, {@code userId}
+   * yok — alici adresi payload'daki {@code email} alanindan DOGRUDAN alinir (store'a bakilmaz).
+   * Diger tum turler {@code userId} tasir, alici adresi kayitli kullanicidan cozulur.
+   */
+  private Optional<String> resolveRecipient(String eventType, JsonNode payload) {
+    if ("email.workspace_invite".equals(eventType)) {
+      String email = payload.path("email").asString(null);
+      return email == null || email.isBlank() ? Optional.empty() : Optional.of(email);
+    }
+    return store.findUserEmail(uuid(payload, "userId"));
   }
 
   private static String token(JsonNode payload) {

@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -68,6 +69,10 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**")
+                    .permitAll()
+                    // Davet onizlemesi: giris yapmamis biri de linke tiklayip workspace/rol
+                    // gorebilmeli. Kabul (POST .../accept) BURAYA dahil DEGIL, kimlik ister.
+                    .requestMatchers(HttpMethod.GET, "/api/v1/invitations/*")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

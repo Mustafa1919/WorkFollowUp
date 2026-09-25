@@ -42,6 +42,20 @@ public class EmailNotificationPublisher {
     publish("email.security_alert", userId, Map.of("userId", userId.toString(), "reason", reason));
   }
 
+  /**
+   * Workspace daveti — davet edilen henuz kayitli OLMAYABILIR, bu yuzden alici {@code userId} ile
+   * degil dogrudan {@code email} ile tasinir (bkz. EmailDeliveryService#resolveRecipient).
+   */
+  public void publishWorkspaceInvite(
+      UUID invitationId, String email, String workspaceName, String role, String rawToken) {
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("email", email);
+    payload.put("workspaceName", workspaceName);
+    payload.put("role", role);
+    payload.put("token", rawToken);
+    publish("email.workspace_invite", invitationId, payload);
+  }
+
   private void publish(String eventType, UUID aggregateId, Map<String, Object> payload) {
     outboxEventRepository.write(
         TOPIC, eventType, aggregateId, null, objectMapper.writeValueAsString(payload));
