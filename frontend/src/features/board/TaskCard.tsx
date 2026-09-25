@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { Ban, CalendarDays, Check, ListChecks, MessageSquare } from 'lucide-react'
+import { Ban, CalendarDays, Check, Flame, ListChecks, MessageSquare } from 'lucide-react'
 import { differenceInCalendarDays, startOfToday } from 'date-fns'
 import type { Task } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -18,10 +18,12 @@ interface TaskCardProps extends HTMLAttributes<HTMLDivElement> {
   selectable?: boolean
   selected?: boolean
   onToggleSelect?: (e: React.MouseEvent) => void
+  /** Dalga 2.1 — Aging WIP: 0 (normal, rozet yok), 1 (p85'i asmis), 2 (2xp85'i asmis). */
+  agingLevel?: 0 | 1 | 2
 }
 
 export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskCard(
-  { task, projectKey, dragging, overlay, selectable, selected, onToggleSelect, className, ...props },
+  { task, projectKey, dragging, overlay, selectable, selected, onToggleSelect, agingLevel, className, ...props },
   ref,
 ) {
   const diff = task.dueDate ? differenceInCalendarDays(fromIso(task.dueDate), startOfToday()) : null
@@ -91,6 +93,14 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
         {openBlockers > 0 && (
           <span className="inline-flex items-center gap-0.5 text-danger" title={`${openBlockers} açık bağımlılık tarafından bloklanıyor`}>
             <Ban size={12} />
+          </span>
+        )}
+        {!!agingLevel && (
+          <span
+            className={cn('inline-flex items-center gap-0.5', agingLevel >= 2 ? 'text-danger' : 'text-st-review')}
+            title={agingLevel >= 2 ? 'Normal sürenin 2 katından uzun süredir açık' : 'Normal süreden uzun süredir açık'}
+          >
+            <Flame size={12} />
           </span>
         )}
         {task.commentCount > 0 && (

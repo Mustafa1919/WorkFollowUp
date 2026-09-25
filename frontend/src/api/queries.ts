@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
+  AgingWipResponse,
   BulkOperation,
   Comment,
   CycleTimeResponse,
@@ -46,6 +47,7 @@ export const keys = {
     ['ws', ws, 'tasks', projectId, 'calendar', from, to] as const,
   sprints: (ws: string | null, projectId: string) => ['ws', ws, 'sprints', projectId] as const,
   analytics: (ws: string | null, projectId: string, kind: string) => ['ws', ws, 'analytics', projectId, kind] as const,
+  agingWip: (ws: string | null, projectId: string) => ['ws', ws, 'aging-wip', projectId] as const,
   slack: (ws: string | null) => ['ws', ws, 'slack'] as const,
   webhooks: (ws: string | null) => ['ws', ws, 'webhooks'] as const,
   tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
@@ -465,6 +467,18 @@ export function useAnalytics(projectId: string) {
       enabled,
     }),
   }
+}
+
+/** Dalga 2.1 — Aging WIP rozetleri. 5 dk'da bir tazelenir, saatlik job'in gerisinde kalmasi sorun degil. */
+export function useAgingWip(projectId: string) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.agingWip(workspaceId, projectId),
+    queryFn: async () =>
+      (await api.get<AgingWipResponse>(`/api/v1/projects/${projectId}/flow/aging`)).data,
+    enabled: !!workspaceId && !!projectId,
+    staleTime: 5 * 60 * 1000,
+  })
 }
 
 // ---------------------------------------------------------------- integrations (ADMIN)

@@ -146,6 +146,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/velocity", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/throughput", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/analytics/cycle-time", null, ALL_ROLES),
+        // Aging WIP (Dalga 2.1): analitik okuma ile AYNI ilke, rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/flow/aging", null, ALL_ROLES),
         // Webhook entegrasyonlari: dis bir sisteme gorev durumu degistirme yetkisi veren kimlik
         // bilgisi; yalniz workspace ADMIN (MANAGER bile degil).
         Endpoint.of(HttpMethod.POST, "/api/v1/integrations/webhooks", null, ADMIN_ONLY),

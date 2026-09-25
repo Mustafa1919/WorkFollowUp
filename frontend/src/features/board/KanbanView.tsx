@@ -13,7 +13,16 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
 import { CheckCircle2, X } from 'lucide-react'
-import { useBulkTaskAction, useCurrentRole, useMembers, useTags, useSprints, useTaskLifecycle, useUpdateTask } from '@/api/queries'
+import {
+  useAgingWip,
+  useBulkTaskAction,
+  useCurrentRole,
+  useMembers,
+  useTags,
+  useSprints,
+  useTaskLifecycle,
+  useUpdateTask,
+} from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { TASK_STATUSES, type BulkOperation, type Task, type TaskStatus } from '@/lib/types'
@@ -58,6 +67,14 @@ export function KanbanView({ projectId, projectKey, tasks, canWrite, onOpen }: P
   }
   const selectedTasks = useMemo(() => tasks.filter((t) => selected.has(t.id)), [tasks, selected])
 
+  // Dalga 2.1: Aging WIP rozetleri (saatlik job'un ta kendisi degil, sadece rozet icin okuma ucu).
+  const { data: aging } = useAgingWip(projectId)
+  const agingLevels = useMemo(() => {
+    const map = new Map<string, 0 | 1 | 2>()
+    for (const item of aging?.items ?? []) map.set(item.taskId, item.level)
+    return map
+  }, [aging])
+
   function onDragEnd(e: DragEndEvent) {
     setActive(null)
     const task = tasks.find((t) => t.id === e.active.id)
@@ -88,11 +105,14 @@ export function KanbanView({ projectId, projectKey, tasks, canWrite, onOpen }: P
             onApprove={status === 'Done' && canApprove ? onApprove : undefined}
             selected={selected}
             onToggleSelect={toggleSelect}
+            agingLevels={agingLevels}
           />
         ))}
       </div>
       <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
-        {active && <TaskCard task={active} projectKey={projectKey} overlay />}
+        {active && (
+          <TaskCard task={active} projectKey={projectKey} overlay agingLevel={agingLevels.get(active.id)} />
+        )}
       </DragOverlay>
       {canWrite && (
         <BulkActionBar
@@ -113,6 +133,7 @@ function Column({
   onApprove,
   selected,
   onToggleSelect,
+  agingLevels,
 }: {
   status: TaskStatus
   tasks: Task[]
@@ -123,6 +144,7 @@ function Column({
   onApprove?: (t: Task) => void
   selected: Set<string>
   onToggleSelect: (taskId: string) => void
+  agingLevels: Map<string, 0 | 1 | 2>
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
   return (
@@ -157,6 +179,7 @@ function Column({
                 selectable={canWrite}
                 selected={selected.has(t.id)}
                 onToggleSelect={onToggleSelect}
+                agingLevel={agingLevels.get(t.id)}
               />
               {onApprove && (
                 <button
@@ -187,6 +210,7 @@ function DraggableCard({
   selectable,
   selected,
   onToggleSelect,
+  agingLevel,
 }: {
   task: Task
   projectKey?: string
@@ -195,6 +219,7 @@ function DraggableCard({
   selectable: boolean
   selected: boolean
   onToggleSelect: (taskId: string) => void
+  agingLevel?: 0 | 1 | 2
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, disabled })
   return (
@@ -206,6 +231,7 @@ function DraggableCard({
       selectable={selectable}
       selected={selected}
       onToggleSelect={() => onToggleSelect(task.id)}
+      agingLevel={agingLevel}
       onClick={(e) => {
         if (e.ctrlKey || e.metaKey || e.shiftKey) {
           e.preventDefault()

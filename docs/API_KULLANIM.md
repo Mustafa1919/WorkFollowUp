@@ -303,6 +303,23 @@ POST   /api/v1/tasks/bulk
   (ör. bulunamayan `taskId`, onaylı görev) TÜMÜ geri alınır — kısmi uygulama yok. Yanıt güncellenmiş
   görevlerin listesidir.
 
+### 3.10 Aging WIP — takılan iş uyarısı (V28, Dalga 2.1, ADR-0012)
+
+```
+GET /api/v1/projects/{projectId}/flow/aging
+```
+
+- Rol sınırı yok (analitik okuma ile aynı ilke). Projenin en az 10 tamamlanmış görevi yoksa
+  `{"thresholdAvailable": false, "p85Seconds": null, "items": []}` döner — az örneklemde eşik
+  anlamsız kabul edilir, rozet/bildirim hiç üretilmez.
+- Eşik projenin kendi p85 cycle time'ıdır (sabit bir gün sayısı değil). Yanıttaki `items` şu an
+  "açık" (en az bir kez In Progress'e girmiş, henüz Done olmamış) görevleri en yaşlıdan gence
+  sıralar: `taskId, taskNumber, title, ageSeconds, level`. `level`: `0` normal, `1` p85'i aşmış,
+  `2` 2×p85'i aşmış.
+- Ayrı bir `AgingWipJob` saatlik çalışır ve seviye YÜKSELDİĞİNDE (0→1, 1→2) atanana ve
+  izleyicilere Inbox bildirimi gönderir; aynı seviyede tekrar tekrar bildirim gitmez
+  (`task_aging_alerts`). Bu uç yalnız OKUMA yapar, bildirim tetiklemez.
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.

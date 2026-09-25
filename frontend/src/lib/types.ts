@@ -179,6 +179,18 @@ export interface CycleTimeResponse {
   p95Seconds: number | null
 }
 
+export interface AgingWipResponse {
+  thresholdAvailable: boolean
+  p85Seconds: number | null
+  items: {
+    taskId: string
+    taskNumber: number
+    title: string
+    ageSeconds: number
+    level: 0 | 1 | 2
+  }[]
+}
+
 export interface WebhookIntegration {
   id: string
   provider: string
