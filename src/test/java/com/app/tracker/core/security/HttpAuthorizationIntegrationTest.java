@@ -304,6 +304,18 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         // Hedefler: tanim ve elle ilerleme ADMIN/MANAGER (Tags/Meetings ile ayni gerekce),
         // listeleme her uye.
         Endpoint.of(HttpMethod.GET, "/api/v1/goals?year=2099", null, ALL_ROLES),
+        // Veriye dayali retro (Dalga 2.4): okuma rol siniri yok; madde ekleme/goreve donusturme
+        // diger gorev mutasyonlariyla AYNI (WRITE); silme sahiplik servis katmaninda (SavedView
+        // ile AYNI desen) — bu yuzden ALL_ROLES.
+        Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/retro", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/retro/items", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/sprints/{id}/retro/items",
+            "{\"kind\":\"went_well\",\"body\":\"Iyi gitti\"}",
+            WRITE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/retro-items/{id}", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.POST, "/api/v1/retro-items/{id}/convert-to-task", null, WRITE),
         Endpoint.of(HttpMethod.POST, "/api/v1/goals", GOAL_JSON, MANAGE),
         Endpoint.of(
             HttpMethod.PUT, "/api/v1/goals/{id}", "{\"title\":\"H\",\"targetValue\":5}", MANAGE),

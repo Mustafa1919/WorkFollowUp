@@ -211,7 +211,7 @@ class AnalyticsQueryServiceIntegrationTest extends AbstractIntegrationTest {
   private void saveSprint(String name, Instant completedAt, SprintSnapshot snapshot) {
     SprintAnalytics analytics =
         SprintAnalytics.create(UUID.randomUUID(), workspaceId, project.getId());
-    analytics.recalculate(name, completedAt, snapshot, Instant.now());
+    analytics.recalculate(name, completedAt, snapshot, null, Instant.now());
     inTenant(workspaceId, () -> sprintAnalyticsRepository.save(analytics));
   }
 

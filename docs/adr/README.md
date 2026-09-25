@@ -29,6 +29,7 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0012](0012-aging-wip-esik-modeli.md) | Aging WIP eşik modeli: proje-göreli p85/2×p85, paylaşılan hesap | Kabul edildi |
 | [0013](0013-monte-carlo-tahmin-modeli.md) | Monte Carlo tahmin modeli: bootstrap resampling, Redis cache-aside | Kabul edildi |
 | [0014](0014-standup-ozeti-modeli.md) | Toplantısız standup: olgu kategorileri, idempotency, "dün" tanımı | Kabul edildi |
+| [0015](0015-retro-ilk-taahhut-kesiti.md) | Retro: ilk taahhüt kesiti, geriye dönük tahmin, retro panosu | Kabul edildi |
 
 ## Çapraz risk: tek master key
 

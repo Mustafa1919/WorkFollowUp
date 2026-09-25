@@ -32,11 +32,11 @@ public record MeetingRequest(
     Boolean standupEnabled) {
 
   /**
-   * DependencySummary ile AYNI EI_EXPOSE_REP savunması: List.copyOf. {@code standupEnabled}
-   * BİLEREK primitif {@code boolean} DEĞİL: bu alanı henüz göndermeyen eski bir istemci (veya
-   * onu hiç bilmeyen bir entegrasyon) {@code Jackson}'ın kayıp bir zorunlu constructor
-   * parametresi için 400 dönmesine yol açardı — diğer opsiyonel alanlar (occurrenceCount,
-   * reminderMinutesBefore) gibi null-güvenli tutulur.
+   * DependencySummary ile AYNI EI_EXPOSE_REP savunması: List.copyOf. {@code standupEnabled} BİLEREK
+   * primitif {@code boolean} DEĞİL: bu alanı henüz göndermeyen eski bir istemci (veya onu hiç
+   * bilmeyen bir entegrasyon) {@code Jackson}'ın kayıp bir zorunlu constructor parametresi için 400
+   * dönmesine yol açardı — diğer opsiyonel alanlar (occurrenceCount, reminderMinutesBefore) gibi
+   * null-güvenli tutulur.
    */
   public MeetingRequest {
     byWeekday = byWeekday == null ? null : List.copyOf(byWeekday);

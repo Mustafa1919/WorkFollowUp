@@ -4,6 +4,7 @@ import com.app.tracker.analytics.model.SprintSnapshot;
 import com.app.tracker.task.model.TaskStatus;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
@@ -69,10 +70,40 @@ public class SprintSnapshotRepository {
       FROM snapshot
       """;
 
+  private static final String MEMBERS_SQL =
+      """
+      SELECT latest.task_id
+      FROM (
+        SELECT DISTINCT ON (e.task_id) e.task_id, e.new_value ->> 'sprintId' AS sprint_id
+        FROM task_events e
+        JOIN tasks t ON t.id = e.task_id
+        WHERE t.project_id = ?1
+          AND e.event_type = 'sprint_changed'
+          AND e.created_at <= ?2
+        ORDER BY e.task_id, e.created_at DESC, e.id DESC
+      ) latest
+      WHERE latest.sprint_id = ?3
+      """;
+
   private final EntityManager entityManager;
 
   public SprintSnapshotRepository(EntityManager entityManager) {
     this.entityManager = entityManager;
+  }
+
+  /**
+   * Dalga 2.4 (retro) — {@code snapshotAt}'in "members" CTE'siyle AYNI sorgu, ama AGREGE degil
+   * GOREV KIMLIKLERI doner: iki farkli kesitteki (baslangic/bitis) uyelik kumesini KARSILASTIRMAK
+   * icin (eklenen/cikarilan gorevler).
+   */
+  @SuppressWarnings("unchecked")
+  public List<UUID> membersAt(UUID projectId, UUID sprintId, Instant cutoff) {
+    return entityManager
+        .createNativeQuery(MEMBERS_SQL)
+        .setParameter(1, projectId)
+        .setParameter(2, cutoff)
+        .setParameter(3, sprintId.toString())
+        .getResultList();
   }
 
   public SprintSnapshot snapshotAt(UUID projectId, UUID sprintId, Instant cutoff) {

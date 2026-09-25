@@ -7,6 +7,7 @@ import com.app.tracker.analytics.repository.SprintSnapshotRepository;
 import com.app.tracker.core.idempotency.ProcessedEventStore;
 import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.model.SprintStatus;
+import com.app.tracker.sprint.repository.SprintRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,14 +30,17 @@ public class VelocityProjector {
   private final ProcessedEventStore processedEventStore;
   private final SprintSnapshotRepository snapshotRepository;
   private final SprintAnalyticsRepository sprintAnalyticsRepository;
+  private final SprintRepository sprintRepository;
 
   public VelocityProjector(
       ProcessedEventStore processedEventStore,
       SprintSnapshotRepository snapshotRepository,
-      SprintAnalyticsRepository sprintAnalyticsRepository) {
+      SprintAnalyticsRepository sprintAnalyticsRepository,
+      SprintRepository sprintRepository) {
     this.processedEventStore = processedEventStore;
     this.snapshotRepository = snapshotRepository;
     this.sprintAnalyticsRepository = sprintAnalyticsRepository;
+    this.sprintRepository = sprintRepository;
   }
 
   /**
@@ -79,11 +83,20 @@ public class VelocityProjector {
   private void recalculate(
       UUID sprintId, UUID workspaceId, UUID projectId, String sprintName, Instant completedAt) {
     SprintSnapshot snapshot = snapshotRepository.snapshotAt(projectId, sprintId, completedAt);
+    // Dalga 2.4 (ADR-0015): sprint BASLADIGI andaki uyelik de ayrica hesaplanir. Sprint entity'si
+    // RLS'e tabi ayni tenant baglaminda zaten erisilebilir; olay/job payload'ina yeni bir alan
+    // eklemek yerine mevcut satirdan okunur.
+    SprintSnapshot atStartSnapshot =
+        sprintRepository
+            .findById(sprintId)
+            .map(Sprint::getStartedAt)
+            .map(startedAt -> snapshotRepository.snapshotAt(projectId, sprintId, startedAt))
+            .orElse(null);
     SprintAnalytics analytics =
         sprintAnalyticsRepository
             .findById(sprintId)
             .orElseGet(() -> SprintAnalytics.create(sprintId, workspaceId, projectId));
-    analytics.recalculate(sprintName, completedAt, snapshot, Instant.now());
+    analytics.recalculate(sprintName, completedAt, snapshot, atStartSnapshot, Instant.now());
     sprintAnalyticsRepository.save(analytics);
   }
 }

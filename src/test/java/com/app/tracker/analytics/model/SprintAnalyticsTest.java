@@ -16,7 +16,7 @@ class SprintAnalyticsTest {
   private static SprintAnalytics recalculated(SprintSnapshot snapshot) {
     SprintAnalytics analytics =
         SprintAnalytics.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
-    analytics.recalculate("S1", T, snapshot, T.plusSeconds(60));
+    analytics.recalculate("S1", T, snapshot, null, T.plusSeconds(60));
     return analytics;
   }
 
@@ -60,10 +60,32 @@ class SprintAnalyticsTest {
   @Test
   void recalculatingOverwritesPreviousValues() {
     SprintAnalytics a = recalculated(new SprintSnapshot(4, 3, 16, 13));
-    a.recalculate("Renamed", T, new SprintSnapshot(1, 1, 5, 5), T.plusSeconds(120));
+    a.recalculate("Renamed", T, new SprintSnapshot(1, 1, 5, 5), null, T.plusSeconds(120));
 
     assertEquals("Renamed", a.getSprintName());
     assertEquals(5L, a.getCommittedPoints());
     assertEquals(T.plusSeconds(120), a.getCalculatedAt());
+  }
+
+  @Test
+  void committedAtStartIsNullWhenStartSnapshotIsUnavailable() {
+    SprintAnalytics a = recalculated(new SprintSnapshot(4, 3, 16, 13));
+
+    assertNull(a.getCommittedAtStartTasks());
+    assertNull(a.getCommittedAtStartPoints());
+  }
+
+  @Test
+  void committedAtStartTracksTheSeparateStartSnapshot() {
+    SprintAnalytics analytics =
+        SprintAnalytics.create(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    analytics.recalculate(
+        "S1", T, new SprintSnapshot(5, 3, 20, 13), new SprintSnapshot(3, 0, 12, 0), T);
+
+    assertEquals(3, analytics.getCommittedAtStartTasks());
+    assertEquals(12L, analytics.getCommittedAtStartPoints());
+    // Kapanis kesiti (committedTasks/Points) etkilenmez — iki ayri kesit.
+    assertEquals(5, analytics.getCommittedTasks());
+    assertEquals(20L, analytics.getCommittedPoints());
   }
 }

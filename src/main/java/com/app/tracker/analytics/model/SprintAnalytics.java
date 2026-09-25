@@ -55,6 +55,11 @@ public class SprintAnalytics {
 
   private long completedPoints;
 
+  /** Dalga 2.4 — sprint BASLADIGI andaki uyelik (ADR-0015). Eski kayitlarda {@code null}. */
+  private Integer committedAtStartTasks;
+
+  private Long committedAtStartPoints;
+
   private BigDecimal spilloverRate;
 
   private Instant calculatedAt;
@@ -68,13 +73,20 @@ public class SprintAnalytics {
   }
 
   public void recalculate(
-      String sprintName, Instant completedAt, SprintSnapshot snapshot, Instant now) {
+      String sprintName,
+      Instant completedAt,
+      SprintSnapshot snapshot,
+      SprintSnapshot atStartSnapshot,
+      Instant now) {
     this.sprintName = sprintName;
     this.completedAt = completedAt;
     this.committedTasks = snapshot.committedTasks();
     this.completedTasks = snapshot.completedTasks();
     this.committedPoints = snapshot.committedPoints();
     this.completedPoints = snapshot.completedPoints();
+    this.committedAtStartTasks = atStartSnapshot == null ? null : atStartSnapshot.committedTasks();
+    this.committedAtStartPoints =
+        atStartSnapshot == null ? null : atStartSnapshot.committedPoints();
     this.spilloverRate =
         committedPoints == 0
             ? null
