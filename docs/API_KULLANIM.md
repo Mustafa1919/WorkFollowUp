@@ -281,6 +281,28 @@ GET /api/v1/search?q=<metin>&limit=<1-50, varsayılan 10>
 - `snippet` içindeki eşleşen kelime U+0001/U+0002 kontrol karakterleriyle işaretlenir — HTML
   DEĞİLDİR, istemci bunu kendi vurgu elemanına çevirir (frontend `CommandPalette.tsx#highlightSnippet`).
 
+### 3.9 Kayıtlı görünümler + toplu işlem (V27, Dalga 1.7)
+
+```
+POST   /api/v1/projects/{projectId}/saved-views   {"name": "...", "query": "<opak JSON metni>"}
+GET    /api/v1/projects/{projectId}/saved-views
+DELETE /api/v1/saved-views/{viewId}
+POST   /api/v1/tasks/bulk
+```
+
+- Kayıtlı görünümler **kişiseldir** (Tags/Meetings'in aksine workspace geneli paylaşılan bir yapı
+  DEĞİL): rol sınırı yok, ama liste yalnız kendi görünümlerini döner, silme yalnız sahibine açıktır
+  (başkasının görünümünü silme denemesi `403`). `query` sunucuda hiç yorumlanmaz — Kanban'ın URL
+  filtre durumunun (`sprint`/`tags`/`assignee`) opak bir JSON kopyasıdır, istemci kaydeder ve geri
+  uygular.
+- Toplu işlem (`POST /tasks/bulk`) yazma rolleriyle AYNI (ADMIN/MANAGER/DEVELOPER). Gövde:
+  `{"taskIds": [...en fazla 100...], "operation": "STATUS|SPRINT|ASSIGNEE|ADD_TAG|REMOVE_TAG", ...}`.
+  Operasyona göre ek alan: `STATUS` → `status`, `SPRINT` → `sprintId` (`null` backlog'a alır),
+  `ASSIGNEE` → `assigneeId` (`null` atamayı kaldırır), `ADD_TAG`/`REMOVE_TAG` → `tagId`. Her görev
+  `TaskService`/`TagService` üzerinden **tek transaction** içinde işlenir: bir görevde hata olursa
+  (ör. bulunamayan `taskId`, onaylı görev) TÜMÜ geri alınır — kısmi uygulama yok. Yanıt güncellenmiş
+  görevlerin listesidir.
+
 ## 4. Roller
 
 `workspace_users.role`: `WORKSPACE_ADMIN`, `MANAGER`, `DEVELOPER`, `VIEWER`.
@@ -294,6 +316,8 @@ GET /api/v1/search?q=<metin>&limit=<1-50, varsayılan 10>
 | Dönem hedefi yönetimi (`/api/v1/goals`) | ADMIN, MANAGER |
 | Webhook/Slack entegrasyon yönetimi | yalnız ADMIN |
 | Üye ekleme/davet gönderme/davet iptali | yalnız ADMIN |
+| Toplu görev işlemi (`POST /tasks/bulk`) | ADMIN, MANAGER, DEVELOPER |
+| Kayıtlı görünüm oluştur/listele/sil | tüm roller (kişisel, VIEWER dahil) |
 | Kafka DLT replay | yalnız SYSTEM_ADMIN (global rol, `SYSTEM_ADMIN_EMAILS` env'i ile atanır) |
 
 ## 5. Uçtan Uca Örnek Akış

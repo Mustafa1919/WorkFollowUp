@@ -354,3 +354,23 @@ export interface SearchResponse {
   tasks: TaskSearchResult[]
   comments: CommentSearchResult[]
 }
+
+/** Dalga 1.7 — kisisel kayitli Kanban gorunumu. `query` opak JSON (bkz. BoardPage.tsx#viewQuery). */
+export interface SavedView {
+  id: string
+  projectId: string
+  name: string
+  query: string
+  createdAt: string
+}
+
+export type BulkOperation = 'STATUS' | 'SPRINT' | 'ASSIGNEE' | 'ADD_TAG' | 'REMOVE_TAG'
+
+export interface BulkTaskRequest {
+  taskIds: string[]
+  operation: BulkOperation
+  status?: TaskStatus
+  sprintId?: string | null
+  assigneeId?: string | null
+  tagId?: string
+}

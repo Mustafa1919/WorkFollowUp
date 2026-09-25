@@ -348,6 +348,14 @@ public class TaskService {
     return new TaskDetail(task, taskWatcherRepository.findWatcherIds(taskId));
   }
 
+  /**
+   * Dalga 1.7: toplu islem sonrasi guncel satirlar — {@code @SQLRestriction} silinenleri filtreler.
+   */
+  @Transactional(readOnly = true)
+  public List<Task> findByIds(List<UUID> taskIds) {
+    return taskRepository.findAllById(taskIds);
+  }
+
   /** "Benim islerim": projeler arasi, onaylanmamis atanmis gorevler (keyset). */
   @Transactional(readOnly = true)
   public PageResponse<Task> listAssignedTo(UUID userId, int limit, String cursor) {

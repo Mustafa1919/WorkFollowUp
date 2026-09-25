@@ -38,6 +38,12 @@
         <Class name="com.app.tracker.core.web.PageResponse"/>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>
+    <!-- BulkTaskRequest: compact constructor List.copyOf ile immutable kopya donduruyor (PageResponse
+         ile AYNI desen), spotbugs bunu goremiyor. -->
+    <Match>
+        <Class name="com.app.tracker.task.dto.BulkTaskRequest"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
     <!-- TokenHasher.generateRawToken PARTAGED bir static SecureRandom kullanir (SECURE_RANDOM
          alani) — SpotBugs'in DMI_RANDOM_USED_ONLY_ONCE tespiti, paylasilan orneğin metot basina
          tek cagrilmasini "her cagrida yeni Random olusturuluyor" ile ayirt edemiyor. -->

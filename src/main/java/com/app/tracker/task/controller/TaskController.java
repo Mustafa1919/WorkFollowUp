@@ -9,6 +9,7 @@ import com.app.tracker.dependency.service.TaskDependencyService.DependencySummar
 import com.app.tracker.tag.dto.TagResponse;
 import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.dto.AssignSprintRequest;
+import com.app.tracker.task.dto.BulkTaskRequest;
 import com.app.tracker.task.dto.CreateTaskRequest;
 import com.app.tracker.task.dto.TaskActivityResponse;
 import com.app.tracker.task.dto.TaskDetailResponse;
@@ -20,6 +21,7 @@ import com.app.tracker.task.dto.UpdateStoryPointRequest;
 import com.app.tracker.task.dto.UpdateTaskStatusRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskCustomFieldRepository;
+import com.app.tracker.task.service.BulkTaskService;
 import com.app.tracker.task.service.TaskActivityService;
 import com.app.tracker.task.service.TaskService;
 import com.app.tracker.workspace.model.WorkspaceRole;
@@ -56,6 +58,7 @@ public class TaskController {
   private final TaskCustomFieldRepository taskCustomFieldRepository;
   private final CommentService commentService;
   private final TaskActivityService taskActivityService;
+  private final BulkTaskService bulkTaskService;
 
   public TaskController(
       TaskService taskService,
@@ -63,13 +66,15 @@ public class TaskController {
       TaskDependencyService taskDependencyService,
       TaskCustomFieldRepository taskCustomFieldRepository,
       CommentService commentService,
-      TaskActivityService taskActivityService) {
+      TaskActivityService taskActivityService,
+      BulkTaskService bulkTaskService) {
     this.taskService = taskService;
     this.tagService = tagService;
     this.taskDependencyService = taskDependencyService;
     this.taskCustomFieldRepository = taskCustomFieldRepository;
     this.commentService = commentService;
     this.taskActivityService = taskActivityService;
+    this.bulkTaskService = bulkTaskService;
   }
 
   @PostMapping("/api/v1/projects/{projectId}/tasks")
@@ -392,6 +397,32 @@ public class TaskController {
       @RequestParam(required = false) String cursor) {
     int boundedLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
     return taskActivityService.listActivity(taskId, boundedLimit, cursor);
+  }
+
+  /**
+   * Dalga 1.7 — Kanban coklu-secim toplu islem. Yetki diger gorev mutasyonlariyla AYNI (ADMIN/
+   * MANAGER/DEVELOPER); en fazla 100 gorev {@code BulkTaskRequest} DTO'sunda sinirlanir.
+   */
+  @PostMapping("/api/v1/tasks/bulk")
+  @PreAuthorize(
+      "@securityGuard.hasCurrentWorkspaceRole('"
+          + WorkspaceRole.ADMIN
+          + "', '"
+          + WorkspaceRole.MANAGER
+          + "', '"
+          + WorkspaceRole.DEVELOPER
+          + "')")
+  public List<TaskResponse> bulk(@Valid @RequestBody BulkTaskRequest request) {
+    List<Task> tasks =
+        bulkTaskService.apply(
+            request.taskIds(),
+            request.operation(),
+            request.status(),
+            request.sprintId(),
+            request.assigneeId(),
+            request.tagId(),
+            CurrentUser.id());
+    return toResponses(tasks);
   }
 
   private TaskResponse toResponse(Task task) {

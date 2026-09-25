@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
+  BulkOperation,
   Comment,
   CycleTimeResponse,
   Goal,
@@ -17,6 +18,7 @@ import type {
   Page,
   PeriodReport,
   Project,
+  SavedView,
   SearchResponse,
   SlackIntegration,
   Sprint,
@@ -62,6 +64,7 @@ export const keys = {
   periodReport: (ws: string | null, year: number, quarter: number | null, projectIds: string[]) =>
     ['ws', ws, 'report', year, quarter, projectIds.join(',')] as const,
   search: (ws: string | null, q: string) => ['ws', ws, 'search', q] as const,
+  savedViews: (ws: string | null, projectId: string) => ['ws', ws, 'saved-views', projectId] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
 }
@@ -964,4 +967,51 @@ export function useNotificationPreferencesActions() {
       onSuccess: (data) => qc.setQueryData(keys.notificationPreferences, data),
     }),
   }
+}
+
+// ---------------------------------------------------------------- Dalga 1.7: kayitli gorunum + toplu islem
+
+export function useSavedViews(projectId: string) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.savedViews(workspaceId, projectId),
+    queryFn: async () => (await api.get<SavedView[]>(`/api/v1/projects/${projectId}/saved-views`)).data,
+    enabled: !!workspaceId && !!projectId,
+  })
+}
+
+export function useSavedViewActions(projectId: string) {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: keys.savedViews(ws(), projectId) })
+  return {
+    create: useMutation({
+      mutationFn: async (body: { name: string; query: string }) =>
+        (await api.post<SavedView>(`/api/v1/projects/${projectId}/saved-views`, body)).data,
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/saved-views/${id}`),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+/**
+ * Kanban coklu-secim toplu islem — basari sonrasi WORKSPACE GENELINDE gecersiz kilinir
+ * (tags/dependency ile AYNI gerekce: ADD_TAG/REMOVE_TAG etiket embed kopyasini, SPRINT/ASSIGNEE
+ * baska sorgularin embed kopyalarini etkiler; tek tek yamamak yerine basit ve dogru olan budur).
+ */
+export function useBulkTaskAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: {
+      taskIds: string[]
+      operation: BulkOperation
+      status?: TaskStatus
+      sprintId?: string | null
+      assigneeId?: string | null
+      tagId?: string
+    }) => (await api.post<Task[]>('/api/v1/tasks/bulk', body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws()] }),
+  })
 }

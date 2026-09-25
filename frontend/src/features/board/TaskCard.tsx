@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { Ban, CalendarDays, ListChecks, MessageSquare } from 'lucide-react'
+import { Ban, CalendarDays, Check, ListChecks, MessageSquare } from 'lucide-react'
 import { differenceInCalendarDays, startOfToday } from 'date-fns'
 import type { Task } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -14,10 +14,14 @@ interface TaskCardProps extends HTMLAttributes<HTMLDivElement> {
   projectKey?: string
   dragging?: boolean
   overlay?: boolean
+  /** Dalga 1.7 — coklu-secim (Ctrl/Shift+tik). */
+  selectable?: boolean
+  selected?: boolean
+  onToggleSelect?: (e: React.MouseEvent) => void
 }
 
 export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskCard(
-  { task, projectKey, dragging, overlay, className, ...props },
+  { task, projectKey, dragging, overlay, selectable, selected, onToggleSelect, className, ...props },
   ref,
 ) {
   const diff = task.dueDate ? differenceInCalendarDays(fromIso(task.dueDate), startOfToday()) : null
@@ -31,14 +35,33 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
       ref={ref}
       {...props}
       className={cn(
-        'group cursor-grab touch-none rounded-xl border border-border bg-surface p-3 text-left select-none active:cursor-grabbing',
+        'group relative cursor-grab touch-none rounded-xl border border-border bg-surface p-3 text-left select-none active:cursor-grabbing',
         'transition-[box-shadow,border-color,opacity,transform] duration-200 hover:border-accent/40 hover:shadow-md hover:shadow-black/5',
         dragging && 'opacity-30',
         overlay && 'rotate-2 scale-[1.03] border-accent/60 shadow-2xl shadow-accent/20',
+        selected && 'border-accent ring-2 ring-accent/50',
         className,
       )}
     >
-      <div className={cn('text-sm leading-snug', task.status === 'Done' && 'text-muted line-through decoration-muted/50')}>
+      {selectable && (
+        <button
+          type="button"
+          title="Seç"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleSelect?.(e)
+          }}
+          className={cn(
+            'absolute top-2 right-2 z-10 grid h-4.5 w-4.5 cursor-pointer place-items-center rounded-md border transition-colors',
+            selected
+              ? 'border-accent bg-accent text-accent-fg opacity-100'
+              : 'border-border bg-surface text-transparent opacity-0 group-hover:opacity-100 hover:border-accent',
+          )}
+        >
+          <Check size={11} />
+        </button>
+      )}
+      <div className={cn('pr-5 text-sm leading-snug', task.status === 'Done' && 'text-muted line-through decoration-muted/50')}>
         {task.title}
       </div>
       {task.tags.length > 0 && (

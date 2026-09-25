@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
-import { BarChart3, CalendarDays, Check, CheckCircle2, KanbanSquare, Plus, Tag as TagIcon } from 'lucide-react'
-import { useMembers, useProjectRealtime, useProjects, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
+import { toast } from 'sonner'
+import { BarChart3, BookmarkPlus, Bookmark, CalendarDays, Check, CheckCircle2, KanbanSquare, Plus, Tag as TagIcon, X } from 'lucide-react'
+import { useMembers, useProjectRealtime, useProjects, useSavedViewActions, useSavedViews, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
 import { useCurrentUserId } from '@/stores/session'
 import { cn } from '@/lib/cn'
+import { errorMessage } from '@/lib/api'
 import type { Task } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Page, Skeleton } from '@/components/ui/misc'
@@ -14,6 +16,7 @@ import { CalendarView } from '@/features/calendar/CalendarView'
 import { TaskDialog } from './TaskDialog'
 import { NewTaskDialog } from './NewTaskDialog'
 import { SprintsDialog } from './SprintsDialog'
+import { SaveViewDialog } from './SaveViewDialog'
 
 type View = 'kanban' | 'calendar'
 
@@ -45,6 +48,37 @@ export function BoardPage() {
   const [selected, setSelected] = useState<Task | null>(null)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [sprintsOpen, setSprintsOpen] = useState(false)
+  const [saveViewOpen, setSaveViewOpen] = useState(false)
+
+  // Dalga 1.7: kayitli gorunum — sunucuda hic yorumlanmayan opak JSON (sadece bu 3 filtre).
+  const { data: savedViews } = useSavedViews(projectId)
+  const { remove: removeSavedView } = useSavedViewActions(projectId)
+  const currentViewQuery = useMemo(
+    () =>
+      JSON.stringify({
+        sprint: sprintFilter !== 'all' ? sprintFilter : undefined,
+        tags: tagFilter.length > 0 ? tagFilter : undefined,
+        assignee: assigneeFilter ?? undefined,
+      }),
+    [sprintFilter, tagFilter, assigneeFilter],
+  )
+  function applySavedView(query: string) {
+    let parsed: { sprint?: string; tags?: string[]; assignee?: string } = {}
+    try {
+      parsed = JSON.parse(query)
+    } catch {
+      toast.error('Görünüm bozuk, uygulanamadı')
+      return
+    }
+    const next = new URLSearchParams(params)
+    if (parsed.sprint) next.set('sprint', parsed.sprint)
+    else next.delete('sprint')
+    if (parsed.tags && parsed.tags.length > 0) next.set('tags', parsed.tags.join(','))
+    else next.delete('tags')
+    if (parsed.assignee) next.set('assignee', parsed.assignee)
+    else next.delete('assignee')
+    setParams(next, { replace: true })
+  }
 
   // Komut paletinden derin baglanti: `?task=<id>` ile gelinirse ilgili gorevi ac, sonra param'i
   // temizle (bir daha tasks yenilendiginde tekrar acilmasin).
@@ -139,6 +173,12 @@ export function BoardPage() {
             onChange={(ids) => set('tags', ids.length === 0 ? null : ids.join(','))}
           />
         )}
+        <SavedViewsMenu
+          views={savedViews ?? []}
+          onApply={applySavedView}
+          onSave={() => setSaveViewOpen(true)}
+          onDelete={(id) => removeSavedView.mutate(id, { onError: (err) => toast.error(errorMessage(err)) })}
+        />
         <Button variant="outline" size="sm" className="h-9" onClick={() => setSprintsOpen(true)}>
           Sprintler
         </Button>
@@ -201,7 +241,62 @@ export function BoardPage() {
       />
       <NewTaskDialog projectId={projectId} open={newTaskOpen} onOpenChange={setNewTaskOpen} />
       <SprintsDialog projectId={projectId} open={sprintsOpen} onOpenChange={setSprintsOpen} canManage={role === 'WORKSPACE_ADMIN' || role === 'MANAGER'} />
+      <SaveViewDialog projectId={projectId} query={currentViewQuery} open={saveViewOpen} onOpenChange={setSaveViewOpen} />
     </Page>
+  )
+}
+
+/** Dalga 1.7 — kisisel kayitli gorunumler: uygula/kaydet/sil. */
+function SavedViewsMenu({
+  views,
+  onApply,
+  onSave,
+  onDelete,
+}: {
+  views: { id: string; name: string; query: string }[]
+  onApply: (query: string) => void
+  onSave: () => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <DM.Root>
+      <DM.Trigger
+        className={cn(
+          'flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-sm text-fg outline-none transition-colors hover:bg-surface-2',
+        )}
+      >
+        <Bookmark size={14} /> Görünümler{views.length > 0 ? ` (${views.length})` : ''}
+      </DM.Trigger>
+      <DM.Portal>
+        <DM.Content align="start" sideOffset={6} className="z-50 max-h-80 w-64 overflow-y-auto rounded-xl border border-border bg-surface p-1.5 shadow-xl">
+          {views.length === 0 && <div className="px-2 py-2 text-xs text-muted">Henüz kayıtlı görünüm yok</div>}
+          {views.map((v) => (
+            <div
+              key={v.id}
+              className="group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm outline-none hover:bg-surface-2"
+            >
+              <button onClick={() => onApply(v.query)} className="flex-1 cursor-pointer truncate text-left">
+                {v.name}
+              </button>
+              <button
+                onClick={() => onDelete(v.id)}
+                className="cursor-pointer rounded-md p-1 text-muted opacity-0 hover:bg-surface hover:text-danger group-hover:opacity-100"
+                aria-label={`${v.name} görünümünü sil`}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          <DM.Separator className="my-1 h-px bg-border" />
+          <DM.Item
+            onSelect={onSave}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-accent outline-none data-[highlighted]:bg-surface-2"
+          >
+            <BookmarkPlus size={14} /> Şu anki görünümü kaydet
+          </DM.Item>
+        </DM.Content>
+      </DM.Portal>
+    </DM.Root>
   )
 }
 

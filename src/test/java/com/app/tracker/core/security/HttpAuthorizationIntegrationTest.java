@@ -204,6 +204,22 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/activity", null, ALL_ROLES),
         // Dalga 1.6: global arama — okuma her uye, rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/search?q=deneme", null, ALL_ROLES),
+        // Dalga 1.7: toplu islem diger gorev mutasyonlariyla AYNI (WRITE); kayitli gorunumler
+        // kisisel tercih, rol siniri yok (watch/notification-preferences ile AYNI desen).
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/tasks/bulk",
+            "{\"taskIds\":[\""
+                + UUID.randomUUID()
+                + "\"],\"operation\":\"STATUS\",\"status\":\"Done\"}",
+            WRITE),
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/projects/{id}/saved-views",
+            "{\"name\":\"Benimkiler\",\"query\":\"{}\"}",
+            ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/saved-views", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/saved-views/{id}", null, ALL_ROLES),
         // Dilim 1.3: bildirim tercihleri — kullaniciya ait, workspace GEREKMEZ (me/tasks ile AYNI
         // desen), rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/me/notification-preferences", null, ALL_ROLES),
