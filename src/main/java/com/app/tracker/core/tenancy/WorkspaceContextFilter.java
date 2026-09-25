@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * ONCE, workspace_users RLS'e tabi degildir) ve gecerliyse {@link TenantContext}'i kurar. Doc'ta
  * workspaceId JWT payload'ina KONMAZ (bkz. JwtService) — bu yuzden secim her istekte bu header ile
  * yapilir. Thread pool'da context sizmasini onlemek icin istek sonunda HER ZAMAN temizlenir.
+ *
+ * <p>Uye olmayan istege 403 yaniti DOGRUDAN yazilir, {@code sendError} KULLANILMAZ: sendError
+ * container'da {@code /error}'a ikinci bir dispatch baslatir; orada JWT kimligi yoktur ve
+ * SecurityConfig'in 401 entry point'i yaniti 401'e cevirirdi — frontend 401'de refresh deneyip
+ * oturumu kapatir (MockMvc error dispatch yapmadigi icin HTTP testleri bunu yakalamaz).
  */
 @Component
 public class WorkspaceContextFilter extends OncePerRequestFilter {
@@ -40,7 +46,7 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
         UUID workspaceId = UUID.fromString(header);
         UUID userId = (UUID) authentication.getPrincipal();
         if (membershipService.findRole(userId, workspaceId).isEmpty()) {
-          response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bu workspace'e uye degilsiniz.");
+          writeForbidden(response);
           return;
         }
         TenantContext.setWorkspaceId(workspaceId);
@@ -49,5 +55,16 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
     } finally {
       TenantContext.clear();
     }
+  }
+
+  private static void writeForbidden(HttpServletResponse response) throws IOException {
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    response.setContentType("application/problem+json");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response
+        .getWriter()
+        .write(
+            "{\"type\":\"https://api.app.com/errors/forbidden\",\"title\":\"Erisim Reddedildi\","
+                + "\"status\":403,\"detail\":\"Bu workspace'e uye degilsiniz.\"}");
   }
 }

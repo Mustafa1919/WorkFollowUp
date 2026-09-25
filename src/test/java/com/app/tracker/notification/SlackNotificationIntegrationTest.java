@@ -30,11 +30,15 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
@@ -45,6 +49,11 @@ import tools.jackson.databind.ObjectMapper;
  * {@link RecordingSlackSender} ile degistirilmistir (gercek Slack'e cikilmaz). Cogu test consumer'i
  * DOGRUDAN cagirir (Kafka zamanlamasindan bagimsiz, deterministik); tek uctan uca test outbox ->
  * Kafka -> consumer zincirini gercekten yurutur.
+ *
+ * <p>Dogrudan cagrilan testlerde GERCEK Slack listener'i DURDURULUR: aksi halde kurulumda yaratilan
+ * gorevlerin TASK_CREATED olaylari (partition atanmissa) ayni kanala da duser ve mesaj sayilari tam
+ * kosuda aralikli sasardi. Paylasilan Spring context'i bozmamak icin her testten sonra yeniden
+ * baslatilir; yalniz uctan uca test onu test sirasinda calistirir.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -67,6 +76,30 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
   @Autowired private EntityManager entityManager;
   @Autowired private TransactionTemplate transactionTemplate;
   @Autowired private SlackNotificationConsumer consumer;
+  @Autowired private KafkaListenerEndpointRegistry listenerRegistry;
+
+  @BeforeEach
+  void stopRealSlackListener() {
+    MessageListenerContainer container = slackListener();
+    if (container.isRunning()) {
+      container.stop();
+    }
+  }
+
+  @AfterEach
+  void restartRealSlackListener() {
+    MessageListenerContainer container = slackListener();
+    if (!container.isRunning()) {
+      container.start();
+    }
+  }
+
+  private MessageListenerContainer slackListener() {
+    return listenerRegistry.getListenerContainers().stream()
+        .filter(c -> SlackNotificationService.CONSUMER.equals(c.getGroupId()))
+        .findFirst()
+        .orElseThrow();
+  }
 
   // ---- yonetim API'si ---------------------------------------------------------------------------
 
@@ -313,6 +346,7 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void taskLifecycleReachesSlackThroughOutboxAndKafka() throws Exception {
+    slackListener().start();
     Tenant tenant = newTenant("ENG", 0);
     URI url = configureSlack(tenant);
 
