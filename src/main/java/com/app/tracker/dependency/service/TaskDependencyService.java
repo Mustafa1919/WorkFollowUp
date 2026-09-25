@@ -6,6 +6,7 @@ import com.app.tracker.core.outbox.OutboxEventRepository;
 import com.app.tracker.dependency.dto.TaskRefResponse;
 import com.app.tracker.dependency.repository.TaskDependencyRepository;
 import com.app.tracker.task.model.Task;
+import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,10 +19,11 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * RAKIP_ANALIZI.md Bolum 3 — Dependency (Blocked by/Blocking), Subtask'in yanindaki ikinci parca.
- * TagService ile AYNI desen: outbox-only (task_events'e YAZILMAZ — analitik worker'lar bu event
- * tipini tuketmiyor), idempotent link/unlink, batch N+1 onleme, approved-task kilidi. Kullanici
- * karariyla kapsam: sadece BILGILENDIRICI (durum gecisini engellemez), workspace icinde herhangi
- * proje arasinda kurulabilir (Subtask'in aksine proje siniri YOK).
+ * TagService ile AYNI desen: idempotent link/unlink, batch N+1 onleme, approved-task kilidi.
+ * Kullanici karariyla kapsam: sadece BILGILENDIRICI (durum gecisini engellemez), workspace icinde
+ * herhangi proje arasinda kurulabilir (Subtask'in aksine proje siniri YOK). {@code task_events}'e
+ * yazim Dalga 1.5 (Activity sekmesi) ile eklendi — analitik worker'lar hala bu event tipini
+ * tuketmiyor, yalniz Activity sekmesi okuyor.
  */
 @Service
 public class TaskDependencyService {
@@ -30,23 +32,26 @@ public class TaskDependencyService {
 
   private final TaskDependencyRepository taskDependencyRepository;
   private final TaskRepository taskRepository;
+  private final TaskEventRepository taskEventRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
 
   public TaskDependencyService(
       TaskDependencyRepository taskDependencyRepository,
       TaskRepository taskRepository,
+      TaskEventRepository taskEventRepository,
       OutboxEventRepository outboxEventRepository,
       ObjectMapper objectMapper) {
     this.taskDependencyRepository = taskDependencyRepository;
     this.taskRepository = taskRepository;
+    this.taskEventRepository = taskEventRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
   }
 
   /** {@code blockedTaskId}, {@code blockingTaskId} tarafindan bloklanir. */
   @Transactional
-  public Task link(UUID blockedTaskId, UUID blockingTaskId) {
+  public Task link(UUID blockedTaskId, UUID blockingTaskId, UUID actorId) {
     if (blockedTaskId.equals(blockingTaskId)) {
       throw new BusinessRuleException("Bir gorev kendisini bloklayamaz.");
     }
@@ -62,19 +67,21 @@ public class TaskDependencyService {
           "Bu iki gorev zaten ters yonde birbirini bloklu — dongu olusturulamaz.");
     }
     if (taskDependencyRepository.link(blockingTaskId, blockedTaskId, blocked.getWorkspaceId())) {
+      taskEventRepository.recordDependencyChanged(blockedTaskId, blockingTaskId, actorId, true);
       writeDependencyChanged(blocked, blocking, "TASK_DEPENDENCY_ADDED");
     }
     return blocked;
   }
 
-  /** Idempotent unlink; zaten baglanmamissa no-op (outbox'a yazilmaz). */
+  /** Idempotent unlink; zaten baglanmamissa no-op (outbox'a/tarihceye yazilmaz). */
   @Transactional
-  public Task unlink(UUID blockedTaskId, UUID blockingTaskId) {
+  public Task unlink(UUID blockedTaskId, UUID blockingTaskId, UUID actorId) {
     Task blocked = requireTask(blockedTaskId);
     Task blocking = requireTask(blockingTaskId);
     rejectIfApproved(blocked);
     rejectIfApproved(blocking);
     if (taskDependencyRepository.unlink(blockingTaskId, blockedTaskId)) {
+      taskEventRepository.recordDependencyChanged(blockedTaskId, blockingTaskId, actorId, false);
       writeDependencyChanged(blocked, blocking, "TASK_DEPENDENCY_REMOVED");
     }
     return blocked;

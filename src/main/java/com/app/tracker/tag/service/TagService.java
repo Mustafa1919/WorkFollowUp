@@ -9,6 +9,7 @@ import com.app.tracker.tag.model.Tag;
 import com.app.tracker.tag.repository.TagRepository;
 import com.app.tracker.tag.repository.TaskTagRepository;
 import com.app.tracker.task.model.Task;
+import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -34,6 +35,7 @@ public class TagService {
   private final TagRepository tagRepository;
   private final TaskTagRepository taskTagRepository;
   private final TaskRepository taskRepository;
+  private final TaskEventRepository taskEventRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
 
@@ -41,11 +43,13 @@ public class TagService {
       TagRepository tagRepository,
       TaskTagRepository taskTagRepository,
       TaskRepository taskRepository,
+      TaskEventRepository taskEventRepository,
       OutboxEventRepository outboxEventRepository,
       ObjectMapper objectMapper) {
     this.tagRepository = tagRepository;
     this.taskTagRepository = taskTagRepository;
     this.taskRepository = taskRepository;
+    this.taskEventRepository = taskEventRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
   }
@@ -91,33 +95,34 @@ public class TagService {
   }
 
   /**
-   * Etiketi goreve atar (idempotent — zaten atanmissa no-op, outbox'a yazilmaz). Bilerek {@code
-   * task_events}'e YAZILMAZ: Analitik worker'lar (Cycle Time/Velocity/Throughput,
-   * PHASE_3_DETAILED_DESIGN.md) yalniz {@code status_changed}/{@code sprint_changed}/{@code
-   * story_point_changed}/{@code due_date_changed} okur, etiket degisikligi bu hesaplarin hicbirini
-   * etkilemez — append-only tarihceye yazmak burada sadece hic tuketilmeyen veri biriktirirdi.
-   * Outbox'a (WebSocket fan-out + gelecekte in-app Inbox icin) {@code TASK_TAGS_CHANGED} yazilir;
-   * bu, diger tum task mutasyonlarinin izledigi outbox yoluyla tutarlidir. Onaylanmis gorev
-   * TaskService'teki diger tum alanlar (durum/tarih) gibi kilitlidir — etiket de istisna degil.
+   * Etiketi goreve atar (idempotent — zaten atanmissa no-op, outbox'a/tarihceye yazilmaz). Analitik
+   * worker'lar (Cycle Time/Velocity/Throughput, PHASE_3_DETAILED_DESIGN.md) yalniz {@code
+   * status_changed}/{@code sprint_changed}/{@code story_point_changed}/{@code due_date_changed}
+   * okur, etiket degisikligi bu hesaplarin hicbirini etkilemez — {@code task_events} yazimi (Dalga
+   * 1.5) yalniz Activity sekmesi icindir. Outbox'a (WebSocket fan-out + Inbox icin) {@code
+   * TASK_TAGS_CHANGED} yazilir. Onaylanmis gorev TaskService'teki diger tum alanlar (durum/tarih)
+   * gibi kilitlidir — etiket de istisna degil.
    */
   @Transactional
-  public Task assign(UUID taskId, UUID tagId) {
+  public Task assign(UUID taskId, UUID tagId, UUID actorId) {
     Task task = requireTask(taskId);
     rejectIfApproved(task);
     Tag tag = requireTag(tagId);
     if (taskTagRepository.assign(taskId, tagId, task.getWorkspaceId())) {
+      taskEventRepository.recordTagsChanged(taskId, actorId, tag.getName(), true);
       writeTaskTagsChanged(task, tag, "added");
     }
     return task;
   }
 
-  /** Zaten atanmamissa no-op (outbox'a yazilmaz) — idempotent unassign. */
+  /** Zaten atanmamissa no-op (outbox'a/tarihceye yazilmaz) — idempotent unassign. */
   @Transactional
-  public Task unassign(UUID taskId, UUID tagId) {
+  public Task unassign(UUID taskId, UUID tagId, UUID actorId) {
     Task task = requireTask(taskId);
     rejectIfApproved(task);
     Tag tag = requireTag(tagId);
     if (taskTagRepository.unassign(taskId, tagId)) {
+      taskEventRepository.recordTagsChanged(taskId, actorId, tag.getName(), false);
       writeTaskTagsChanged(task, tag, "removed");
     }
     return task;

@@ -66,10 +66,6 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
 
   return (
     <div>
-      <div className="mb-2 text-xs font-medium text-muted">
-        Yorumlar{task.commentCount > 0 && ` (${task.commentCount})`}
-      </div>
-
       {hasNextPage && (
         <button
           onClick={() => fetchNextPage()}

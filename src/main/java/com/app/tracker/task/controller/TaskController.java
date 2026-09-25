@@ -10,6 +10,7 @@ import com.app.tracker.tag.dto.TagResponse;
 import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.dto.AssignSprintRequest;
 import com.app.tracker.task.dto.CreateTaskRequest;
+import com.app.tracker.task.dto.TaskActivityResponse;
 import com.app.tracker.task.dto.TaskDetailResponse;
 import com.app.tracker.task.dto.TaskResponse;
 import com.app.tracker.task.dto.UpdateAssigneeRequest;
@@ -19,6 +20,7 @@ import com.app.tracker.task.dto.UpdateStoryPointRequest;
 import com.app.tracker.task.dto.UpdateTaskStatusRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskCustomFieldRepository;
+import com.app.tracker.task.service.TaskActivityService;
 import com.app.tracker.task.service.TaskService;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
@@ -53,18 +55,21 @@ public class TaskController {
   private final TaskDependencyService taskDependencyService;
   private final TaskCustomFieldRepository taskCustomFieldRepository;
   private final CommentService commentService;
+  private final TaskActivityService taskActivityService;
 
   public TaskController(
       TaskService taskService,
       TagService tagService,
       TaskDependencyService taskDependencyService,
       TaskCustomFieldRepository taskCustomFieldRepository,
-      CommentService commentService) {
+      CommentService commentService,
+      TaskActivityService taskActivityService) {
     this.taskService = taskService;
     this.tagService = tagService;
     this.taskDependencyService = taskDependencyService;
     this.taskCustomFieldRepository = taskCustomFieldRepository;
     this.commentService = commentService;
+    this.taskActivityService = taskActivityService;
   }
 
   @PostMapping("/api/v1/projects/{projectId}/tasks")
@@ -231,7 +236,7 @@ public class TaskController {
           + WorkspaceRole.DEVELOPER
           + "')")
   public TaskResponse assignTag(@PathVariable UUID taskId, @PathVariable UUID tagId) {
-    Task task = tagService.assign(taskId, tagId);
+    Task task = tagService.assign(taskId, tagId, CurrentUser.id());
     return toResponse(task);
   }
 
@@ -245,7 +250,7 @@ public class TaskController {
           + WorkspaceRole.DEVELOPER
           + "')")
   public TaskResponse unassignTag(@PathVariable UUID taskId, @PathVariable UUID tagId) {
-    Task task = tagService.unassign(taskId, tagId);
+    Task task = tagService.unassign(taskId, tagId, CurrentUser.id());
     return toResponse(task);
   }
 
@@ -300,7 +305,7 @@ public class TaskController {
           + WorkspaceRole.DEVELOPER
           + "')")
   public TaskResponse linkDependency(@PathVariable UUID taskId, @PathVariable UUID blockingTaskId) {
-    return toResponse(taskDependencyService.link(taskId, blockingTaskId));
+    return toResponse(taskDependencyService.link(taskId, blockingTaskId, CurrentUser.id()));
   }
 
   @DeleteMapping("/api/v1/tasks/{taskId}/dependencies/{blockingTaskId}")
@@ -314,7 +319,7 @@ public class TaskController {
           + "')")
   public TaskResponse unlinkDependency(
       @PathVariable UUID taskId, @PathVariable UUID blockingTaskId) {
-    return toResponse(taskDependencyService.unlink(taskId, blockingTaskId));
+    return toResponse(taskDependencyService.unlink(taskId, blockingTaskId, CurrentUser.id()));
   }
 
   /** V22: {@code assigneeId: null} atamayi kaldirir. Yetki diger gorev mutasyonlariyla AYNI. */
@@ -377,6 +382,16 @@ public class TaskController {
     int boundedLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
     PageResponse<Task> page = taskService.listAssignedTo(CurrentUser.id(), boundedLimit, cursor);
     return new PageResponse<>(toResponses(page.data()), page.nextCursor(), page.hasMore());
+  }
+
+  /** Dalga 1.5 — Activity sekmesi. Okuma rol sinirsiz (comments/subtasks ile AYNI desen). */
+  @GetMapping("/api/v1/tasks/{taskId}/activity")
+  public PageResponse<TaskActivityResponse> activity(
+      @PathVariable UUID taskId,
+      @RequestParam(defaultValue = "30") int limit,
+      @RequestParam(required = false) String cursor) {
+    int boundedLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
+    return taskActivityService.listActivity(taskId, boundedLimit, cursor);
   }
 
   private TaskResponse toResponse(Task task) {

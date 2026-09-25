@@ -68,7 +68,9 @@ class TagRlsIsolationTest extends AbstractIntegrationTest {
     assertThrows(
         ResourceNotFoundException.class,
         () ->
-            tenantExecutor.runAs(workspaceA, () -> tagService.assign(taskA.getId(), tagB.getId())));
+            tenantExecutor.runAs(
+                workspaceA,
+                () -> tagService.assign(taskA.getId(), tagB.getId(), UUID.randomUUID())));
 
     assertTrue(
         tenantExecutor.runAs(workspaceA, () -> tagService.tagsForTask(taskA.getId())).isEmpty());

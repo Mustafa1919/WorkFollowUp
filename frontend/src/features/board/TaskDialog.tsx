@@ -15,6 +15,7 @@ import { CommentPanel } from './CommentPanel'
 import { DependencyPanel } from './DependencyPanel'
 import { SubtaskPanel } from './SubtaskPanel'
 import { TagPicker } from './TagPicker'
+import { TaskActivityPanel } from './TaskActivityPanel'
 import { AssigneeField, DescriptionField, WatchButton } from './TaskPeoplePanel'
 
 interface Props {
@@ -182,8 +183,42 @@ function TaskFields({
       </div>
 
       <div className="border-t border-border pt-4">
-        <CommentPanel task={task} canWrite={canComment} />
+        <CommentsAndActivity task={task} sprints={sprints} canComment={canComment} />
       </div>
+    </div>
+  )
+}
+
+/** "Yorumlar | Aktivite" sekmeleri (Dalga 1.5) — TaskFields'in yeniden mount'undan (key={task.id}) faydalanir. */
+function CommentsAndActivity({ task, sprints, canComment }: { task: Task; sprints: Sprint[]; canComment: boolean }) {
+  const [tab, setTab] = useState<'comments' | 'activity'>('comments')
+  const tabs: { id: typeof tab; label: string }[] = [
+    { id: 'comments', label: `Yorumlar${task.commentCount > 0 ? ` (${task.commentCount})` : ''}` },
+    { id: 'activity', label: 'Aktivite' },
+  ]
+  return (
+    <div>
+      <div role="tablist" className="mb-3 flex gap-1 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              'cursor-pointer border-b-2 px-2 pb-2 text-xs font-medium transition-colors',
+              tab === t.id ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg',
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'comments' ? (
+        <CommentPanel task={task} canWrite={canComment} />
+      ) : (
+        <TaskActivityPanel task={task} sprints={sprints} />
+      )}
     </div>
   )
 }

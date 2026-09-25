@@ -151,15 +151,17 @@ class TagIntegrationTest extends AbstractIntegrationTest {
     Tag tag = inWorkspace(() -> tagService.createTag("Bug", "#FF0000"));
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T"));
 
-    inWorkspace(() -> tagService.assign(task.getId(), tag.getId()));
-    inWorkspace(() -> tagService.assign(task.getId(), tag.getId())); // ikinci cagri no-op
+    inWorkspace(() -> tagService.assign(task.getId(), tag.getId(), adminUserId));
+    inWorkspace(
+        () -> tagService.assign(task.getId(), tag.getId(), adminUserId)); // ikinci cagri no-op
 
     List<TagResponse> tags = inWorkspace(() -> tagService.tagsForTask(task.getId()));
     assertEquals(1, tags.size());
     assertEquals(tag.getId(), tags.get(0).id());
 
-    inWorkspace(() -> tagService.unassign(task.getId(), tag.getId()));
-    inWorkspace(() -> tagService.unassign(task.getId(), tag.getId())); // ikinci cagri no-op
+    inWorkspace(() -> tagService.unassign(task.getId(), tag.getId(), adminUserId));
+    inWorkspace(
+        () -> tagService.unassign(task.getId(), tag.getId(), adminUserId)); // ikinci cagri no-op
 
     assertTrue(inWorkspace(() -> tagService.tagsForTask(task.getId())).isEmpty());
   }
@@ -171,10 +173,10 @@ class TagIntegrationTest extends AbstractIntegrationTest {
 
     assertThrows(
         ResourceNotFoundException.class,
-        () -> inWorkspace(() -> tagService.assign(task.getId(), UUID.randomUUID())));
+        () -> inWorkspace(() -> tagService.assign(task.getId(), UUID.randomUUID(), adminUserId)));
     assertThrows(
         ResourceNotFoundException.class,
-        () -> inWorkspace(() -> tagService.assign(UUID.randomUUID(), tag.getId())));
+        () -> inWorkspace(() -> tagService.assign(UUID.randomUUID(), tag.getId(), adminUserId)));
   }
 
   @Test
@@ -186,23 +188,23 @@ class TagIntegrationTest extends AbstractIntegrationTest {
 
     assertThrows(
         BusinessRuleException.class,
-        () -> inWorkspace(() -> tagService.assign(task.getId(), tag.getId())));
+        () -> inWorkspace(() -> tagService.assign(task.getId(), tag.getId(), adminUserId)));
 
     // Onaydan ONCE atanmis bir etiketi de kaldiramaz (updateStatus/updateDueDate ile ayni kilit).
     Task task2 = inWorkspace(() -> taskService.createTask(project.getId(), "T2"));
-    inWorkspace(() -> tagService.assign(task2.getId(), tag.getId()));
+    inWorkspace(() -> tagService.assign(task2.getId(), tag.getId(), adminUserId));
     inWorkspace(() -> taskService.updateStatus(task2.getId(), TaskStatus.DONE, adminUserId));
     inWorkspace(() -> taskService.approve(task2.getId(), adminUserId));
     assertThrows(
         BusinessRuleException.class,
-        () -> inWorkspace(() -> tagService.unassign(task2.getId(), tag.getId())));
+        () -> inWorkspace(() -> tagService.unassign(task2.getId(), tag.getId(), adminUserId)));
   }
 
   @Test
   void deletingTagCascadesTaskAssociation() {
     Tag tag = inWorkspace(() -> tagService.createTag("Bug", "#FF0000"));
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T"));
-    inWorkspace(() -> tagService.assign(task.getId(), tag.getId()));
+    inWorkspace(() -> tagService.assign(task.getId(), tag.getId(), adminUserId));
     assertEquals(1, inWorkspace(() -> tagService.tagsForTask(task.getId())).size());
 
     inWorkspace(
@@ -220,8 +222,8 @@ class TagIntegrationTest extends AbstractIntegrationTest {
     Tag feature = inWorkspace(() -> tagService.createTag("Feature", "#00FF00"));
     Task withTags = inWorkspace(() -> taskService.createTask(project.getId(), "with-tags"));
     Task withoutTags = inWorkspace(() -> taskService.createTask(project.getId(), "without-tags"));
-    inWorkspace(() -> tagService.assign(withTags.getId(), bug.getId()));
-    inWorkspace(() -> tagService.assign(withTags.getId(), feature.getId()));
+    inWorkspace(() -> tagService.assign(withTags.getId(), bug.getId(), adminUserId));
+    inWorkspace(() -> tagService.assign(withTags.getId(), feature.getId(), adminUserId));
 
     Map<UUID, List<TagResponse>> batch =
         inWorkspace(() -> tagService.tagsForTasks(List.of(withTags.getId(), withoutTags.getId())));
@@ -236,7 +238,7 @@ class TagIntegrationTest extends AbstractIntegrationTest {
   void taskResponseIncludesAssignedTagsOverHttp() throws Exception {
     Tag tag = inWorkspace(() -> tagService.createTag("Bug", "#FF0000"));
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T"));
-    inWorkspace(() -> tagService.assign(task.getId(), tag.getId()));
+    inWorkspace(() -> tagService.assign(task.getId(), tag.getId(), adminUserId));
 
     String body =
         mockMvc

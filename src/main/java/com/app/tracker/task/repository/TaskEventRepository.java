@@ -1,8 +1,10 @@
 package com.app.tracker.task.repository;
 
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -11,14 +13,20 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * DATABASE_SCHEMA.md 2.8 — task_events append-only audit tablosu. Tam bir JPA entity + JSONB type
- * converter kurmak yerine (bu artimda okuma ihtiyaci yok, sadece Faz3 analitik icin biriktirme var)
- * dogrudan native INSERT ile yaziliyor — TaskCounterRepository ile ayni desen.
+ * converter kurmak yerine dogrudan native INSERT/SELECT ile yaziliyor/okunuyor —
+ * TaskCounterRepository ile ayni desen.
  *
  * <p>Event tipleri ({@code event_type}): {@code status_changed}, {@code sprint_changed}, {@code
  * story_point_changed}, {@code due_date_changed}, {@code assignee_changed}, {@code
- * description_changed} (V22), {@code comment_added} (V23). Analitik Worker (Faz 3) sprint uyeligini
- * ve story point'i bu tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak
- * zorundadir.
+ * description_changed} (V22), {@code comment_added} (V23), {@code tags_changed}, {@code
+ * dependency_changed} (Dalga 1.5). Analitik Worker (Faz 3) sprint uyeligini ve story point'i bu
+ * tarihceden yeniden kurar, bu yuzden ilgili her degisiklik BURAYA da yazilmak zorundadir.
+ *
+ * <p><b>Dalga 1.5 — Activity sekmesi:</b> onceki javadoc'un "bu artimda okuma ihtiyaci yok" notu
+ * gecersiz; {@link #findFirstPage} / {@link #findNextPage} ile keyset sayfali okunur (V17/V19'un
+ * tags/dependency icin "okuyucusu yok, tarihceye yazmaya gerek yok" gerekcesi de bu yuzden
+ * kapandi). Eski (bu dilimden ONCEKI) tag/dependency degisiklikleri icin geri doldurma YAPILMADI —
+ * bilinen sinir, eski tarihce bu iki tur icin bos gorunur.
  */
 @Repository
 public class TaskEventRepository {
@@ -100,6 +108,96 @@ public class TaskEventRepository {
    */
   public void recordCommentAdded(UUID taskId, UUID actorId, UUID commentId) {
     record(taskId, actorId, "comment_added", "commentId", null, commentId.toString());
+  }
+
+  /**
+   * Dalga 1.5: V17'nin "okuyucusu yok" gerekcesi Activity sekmesiyle kapandi — etiket
+   * atama/kaldirma da artik tarihceye yazilir. {@code assignee_changed} ile AYNI once/sonra deseni:
+   * eklemede {@code null -> tagName}, kaldirmada {@code tagName -> null}.
+   */
+  public void recordTagsChanged(UUID taskId, UUID actorId, String tagName, boolean added) {
+    record(taskId, actorId, "tags_changed", "tag", added ? null : tagName, added ? tagName : null);
+  }
+
+  /**
+   * Dalga 1.5: V19'un "okuyucusu yok" gerekcesi kapandi. Bagimlilik iki gorevi ilgilendirdigi icin
+   * IKI ayri satir yazilir: bloklanan gorevde {@code blockedBy} alani (kimin tarafindan
+   * bloklandigi), bloklayan gorevde {@code blocks} alani (kimi blokladigi) — boylece her iki
+   * gorevin Activity sekmesi de kendi acisindan okunabilir bir satir gosterir.
+   */
+  public void recordDependencyChanged(
+      UUID blockedTaskId, UUID blockingTaskId, UUID actorId, boolean added) {
+    record(
+        blockedTaskId,
+        actorId,
+        "dependency_changed",
+        "blockedBy",
+        added ? null : blockingTaskId.toString(),
+        added ? blockingTaskId.toString() : null);
+    record(
+        blockingTaskId,
+        actorId,
+        "dependency_changed",
+        "blocks",
+        added ? null : blockedTaskId.toString(),
+        added ? blockedTaskId.toString() : null);
+  }
+
+  /** Activity sekmesi satiri; field/oldValue/newValue old_value/new_value JSON'undan cikarilir. */
+  public record ActivityEntry(
+      UUID id,
+      UUID actorId,
+      String eventType,
+      String field,
+      Object oldValue,
+      Object newValue,
+      Instant createdAt) {}
+
+  public List<ActivityEntry> findFirstPage(UUID taskId, int limit) {
+    return mapActivityRows(
+        entityManager
+            .createNativeQuery(
+                "SELECT id, actor_id, event_type, old_value::text, new_value::text, created_at "
+                    + "FROM task_events WHERE task_id = ?1 ORDER BY created_at DESC, id DESC LIMIT ?2")
+            .setParameter(1, taskId)
+            .setParameter(2, limit)
+            .getResultList());
+  }
+
+  public List<ActivityEntry> findNextPage(
+      UUID taskId, Instant cursorCreatedAt, UUID cursorId, int limit) {
+    return mapActivityRows(
+        entityManager
+            .createNativeQuery(
+                "SELECT id, actor_id, event_type, old_value::text, new_value::text, created_at "
+                    + "FROM task_events WHERE task_id = ?1 "
+                    + "AND (created_at < ?2 OR (created_at = ?2 AND id < ?3)) "
+                    + "ORDER BY created_at DESC, id DESC LIMIT ?4")
+            .setParameter(1, taskId)
+            .setParameter(2, cursorCreatedAt)
+            .setParameter(3, cursorId)
+            .setParameter(4, limit)
+            .getResultList());
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<ActivityEntry> mapActivityRows(List<Object[]> rows) {
+    return rows.stream().map(this::toActivityEntry).toList();
+  }
+
+  @SuppressWarnings("unchecked")
+  private ActivityEntry toActivityEntry(Object[] row) {
+    Map<String, Object> oldMap = objectMapper.readValue((String) row[3], Map.class);
+    Map<String, Object> newMap = objectMapper.readValue((String) row[4], Map.class);
+    Map.Entry<String, Object> newEntry = newMap.entrySet().iterator().next();
+    return new ActivityEntry(
+        (UUID) row[0],
+        (UUID) row[1],
+        (String) row[2],
+        newEntry.getKey(),
+        oldMap.get(newEntry.getKey()),
+        newEntry.getValue(),
+        (Instant) row[5]);
   }
 
   /**

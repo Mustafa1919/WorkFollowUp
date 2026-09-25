@@ -171,8 +171,9 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     Task blocked = inWorkspace(() -> taskService.createTask(project.getId(), "Blocked"));
     Task blocking = inWorkspace(() -> taskService.createTask(project.getId(), "Blocking"));
 
-    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId()));
-    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId())); // no-op
+    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId));
+    inWorkspace(
+        () -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId)); // no-op
 
     DependencySummary summary =
         inWorkspace(() -> taskDependencyService.dependenciesForTask(blocked.getId()));
@@ -184,8 +185,10 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     assertEquals(1, blockingSummary.blocking().size());
     assertEquals(blocked.getId(), blockingSummary.blocking().get(0).id());
 
-    inWorkspace(() -> taskDependencyService.unlink(blocked.getId(), blocking.getId()));
-    inWorkspace(() -> taskDependencyService.unlink(blocked.getId(), blocking.getId())); // no-op
+    inWorkspace(() -> taskDependencyService.unlink(blocked.getId(), blocking.getId(), adminUserId));
+    inWorkspace(
+        () ->
+            taskDependencyService.unlink(blocked.getId(), blocking.getId(), adminUserId)); // no-op
     assertTrue(
         inWorkspace(() -> taskDependencyService.dependenciesForTask(blocked.getId()))
             .blockedBy()
@@ -197,18 +200,21 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T"));
     assertThrows(
         BusinessRuleException.class,
-        () -> inWorkspace(() -> taskDependencyService.link(task.getId(), task.getId())));
+        () ->
+            inWorkspace(() -> taskDependencyService.link(task.getId(), task.getId(), adminUserId)));
   }
 
   @Test
   void reversePairIsRejected() {
     Task a = inWorkspace(() -> taskService.createTask(project.getId(), "A"));
     Task b = inWorkspace(() -> taskService.createTask(project.getId(), "B"));
-    inWorkspace(() -> taskDependencyService.link(a.getId(), b.getId())); // b blocks a
+    inWorkspace(() -> taskDependencyService.link(a.getId(), b.getId(), adminUserId)); // b blocks a
 
     assertThrows(
         BusinessRuleException.class,
-        () -> inWorkspace(() -> taskDependencyService.link(b.getId(), a.getId()))); // a blocks b
+        () ->
+            inWorkspace(
+                () -> taskDependencyService.link(b.getId(), a.getId(), adminUserId))); // a blocks b
   }
 
   @Test
@@ -217,7 +223,7 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     Task blocked = inWorkspace(() -> taskService.createTask(project.getId(), "Blocked"));
     Task blocking = inWorkspace(() -> taskService.createTask(other.getId(), "Blocking"));
 
-    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId()));
+    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId));
     List<TaskRefResponse> blockedBy =
         inWorkspace(() -> taskDependencyService.dependenciesForTask(blocked.getId())).blockedBy();
     assertEquals(1, blockedBy.size());
@@ -228,7 +234,9 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     Task task = inWorkspace(() -> taskService.createTask(project.getId(), "T"));
     assertThrows(
         ResourceNotFoundException.class,
-        () -> inWorkspace(() -> taskDependencyService.link(task.getId(), UUID.randomUUID())));
+        () ->
+            inWorkspace(
+                () -> taskDependencyService.link(task.getId(), UUID.randomUUID(), adminUserId)));
   }
 
   @Test
@@ -240,7 +248,9 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
 
     assertThrows(
         BusinessRuleException.class,
-        () -> inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId())));
+        () ->
+            inWorkspace(
+                () -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId)));
   }
 
   @Test
@@ -248,7 +258,7 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     // Kullanici karari: dependency sadece bilgilendirici, durum gecisini engellemez.
     Task blocked = inWorkspace(() -> taskService.createTask(project.getId(), "Blocked"));
     Task blocking = inWorkspace(() -> taskService.createTask(project.getId(), "Blocking"));
-    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId()));
+    inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId));
 
     Task done =
         inWorkspace(() -> taskService.updateStatus(blocked.getId(), TaskStatus.DONE, adminUserId));
