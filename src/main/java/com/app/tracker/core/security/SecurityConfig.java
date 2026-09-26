@@ -32,16 +32,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final PatAuthenticationFilter patAuthenticationFilter;
   private final WorkspaceContextFilter workspaceContextFilter;
   private final IdempotencyFilter idempotencyFilter;
   private final CorsProperties corsProperties;
 
   public SecurityConfig(
       JwtAuthenticationFilter jwtAuthenticationFilter,
+      PatAuthenticationFilter patAuthenticationFilter,
       WorkspaceContextFilter workspaceContextFilter,
       IdempotencyFilter idempotencyFilter,
       CorsProperties corsProperties) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    this.patAuthenticationFilter = patAuthenticationFilter;
     this.workspaceContextFilter = workspaceContextFilter;
     this.idempotencyFilter = idempotencyFilter;
     this.corsProperties = corsProperties;
@@ -77,7 +80,8 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(workspaceContextFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(patAuthenticationFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(workspaceContextFilter, PatAuthenticationFilter.class)
         .addFilterAfter(idempotencyFilter, WorkspaceContextFilter.class);
     return http.build();
   }

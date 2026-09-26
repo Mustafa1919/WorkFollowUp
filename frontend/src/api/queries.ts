@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
+  AccessToken,
   AgingWipResponse,
   AutomationRuleResponse,
   AutomationTemplateKey,
@@ -59,6 +60,7 @@ export const keys = {
   forecast: (ws: string | null, scope: string, id: string) => ['ws', ws, 'forecast', scope, id] as const,
   slack: (ws: string | null) => ['ws', ws, 'slack'] as const,
   webhooks: (ws: string | null) => ['ws', ws, 'webhooks'] as const,
+  accessTokens: ['accessTokens'] as const,
   tags: (ws: string | null) => ['ws', ws, 'tags'] as const,
   subtasks: (ws: string | null, taskId: string) => ['ws', ws, 'subtasks', taskId] as const,
   members: (ws: string | null) => ['ws', ws, 'members'] as const,
@@ -664,6 +666,32 @@ export function useWebhookActions() {
     }),
     remove: useMutation({
       mutationFn: async (id: string) => api.delete(`/api/v1/integrations/webhooks/${id}`),
+      onSuccess: invalidate,
+    }),
+  }
+}
+
+// ---------------------------------------------------------------- access tokens (PAT)
+
+/** Kullaniciya bagli, workspace'e bagli DEGIL -- webhooks/slack'in aksine `ws` parametresi yok. */
+export function useAccessTokens() {
+  return useQuery({
+    queryKey: keys.accessTokens,
+    queryFn: async () => (await api.get<AccessToken[]>('/api/v1/access-tokens')).data,
+  })
+}
+
+export function useAccessTokenActions() {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: keys.accessTokens })
+  return {
+    create: useMutation({
+      mutationFn: async (input: { name: string; expiresInDays: number | null }) =>
+        (await api.post<{ token: AccessToken; rawToken: string }>('/api/v1/access-tokens', input)).data,
+      onSuccess: invalidate,
+    }),
+    revoke: useMutation({
+      mutationFn: async (id: string) => api.delete(`/api/v1/access-tokens/${id}`),
       onSuccess: invalidate,
     }),
   }

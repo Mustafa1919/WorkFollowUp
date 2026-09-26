@@ -210,6 +210,16 @@ export interface WebhookIntegration {
   webhookPath: string
 }
 
+export interface AccessToken {
+  id: string
+  name: string
+  tokenPreview: string
+  lastUsedAt: string | null
+  expiresAt: string | null
+  createdAt: string
+  revoked: boolean
+}
+
 export interface SlackIntegration {
   enabled: boolean
   createdAt: string

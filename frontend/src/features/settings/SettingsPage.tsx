@@ -1,8 +1,10 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Bell, Copy, GitBranch, Lock, Mail, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
+import { Bell, Copy, GitBranch, KeyRound, Lock, Mail, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  useAccessTokens,
+  useAccessTokenActions,
   useSlack,
   useSlackActions,
   useWebhookActions,
@@ -49,6 +51,13 @@ export function SettingsPage() {
         </Section>
         <Section title="Bildirim tercihleri" text="Hangi olaylar için e-posta almak istediğini seç." icon={<Mail size={18} />}>
           <NotificationPreferencesSettings />
+        </Section>
+        <Section
+          title="Kişisel erişim token'ları"
+          text="Kendi script/otomasyonlarından API'ye giriş yapmadan erişmek için kullan. Her token dakikada sınırlı sayıda isteğe tabidir."
+          icon={<KeyRound size={18} />}
+        >
+          <AccessTokenSettings />
         </Section>
         {canManageTags && (
           <Section title="Etiketler" text="Görevleri sınıflandırmak için workspace genelinde etiketler." icon={<TagIcon size={18} />}>
@@ -451,6 +460,79 @@ function EditTagRow({
       <Button size="sm" variant="ghost" onClick={onCancel}>
         <X size={14} />
       </Button>
+    </div>
+  )
+}
+
+function AccessTokenSettings() {
+  const { data: tokens } = useAccessTokens()
+  const { create, revoke } = useAccessTokenActions()
+  const [name, setName] = useState('')
+  const [expiresInDays, setExpiresInDays] = useState('')
+  const [revealed, setRevealed] = useState<string | null>(null)
+  const onError = (err: unknown) => toast.error(errorMessage(err))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    try {
+      const result = await create.mutateAsync({
+        name,
+        expiresInDays: expiresInDays ? Number(expiresInDays) : null,
+      })
+      setRevealed(result.rawToken)
+      setName('')
+      setExpiresInDays('')
+    } catch (err) {
+      onError(err)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {revealed && (
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-st-review/40 bg-st-review/10 p-4 text-sm">
+          <p className="mb-2 font-medium">Bu token yalnızca şimdi gösteriliyor — güvenli bir yere kaydet.</p>
+          <CopyRow label="Token" value={revealed} />
+          <Button size="sm" variant="ghost" className="mt-2" onClick={() => setRevealed(null)}>
+            Kaydettim, gizle
+          </Button>
+        </motion.div>
+      )}
+      {tokens?.map((t) => (
+        <div key={t.id} className="flex items-center gap-3 rounded-xl bg-surface-2 p-3 text-sm">
+          <KeyRound size={16} className="text-muted" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{t.name}</div>
+            <div className="truncate font-mono text-xs text-muted">
+              {t.tokenPreview} · oluşturuldu {fmt(t.createdAt, 'd MMM yyyy')}
+              {t.lastUsedAt ? ` · son kullanım ${fmt(t.lastUsedAt, 'd MMM yyyy HH:mm')}` : ' · hiç kullanılmadı'}
+              {t.expiresAt ? ` · son gün ${fmt(t.expiresAt, 'd MMM yyyy')}` : ''}
+              {t.revoked ? ' · iptal edildi' : ''}
+            </div>
+          </div>
+          {!t.revoked && (
+            <Button size="sm" variant="ghost" title="İptal et" onClick={() => revoke.mutate(t.id, { onError })}>
+              <Trash2 size={14} />
+            </Button>
+          )}
+        </div>
+      ))}
+      {tokens?.length === 0 && <p className="text-xs text-muted">Henüz token yok.</p>}
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
+        <Input required maxLength={100} placeholder="Token adı (ör. CLI otomasyonu)" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input
+          type="number"
+          min={1}
+          max={365}
+          placeholder="Gün (boş = süresiz)"
+          value={expiresInDays}
+          onChange={(e) => setExpiresInDays(e.target.value)}
+          className="sm:w-40"
+        />
+        <Button type="submit" loading={create.isPending} className="shrink-0">
+          <KeyRound size={14} /> Oluştur
+        </Button>
+      </form>
     </div>
   )
 }

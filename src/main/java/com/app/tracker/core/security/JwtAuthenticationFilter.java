@@ -19,6 +19,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Authorization: Bearer} header'ini dogrular; jti Redis kara listesindeyse (logout veya
  * reuse-detection sonrasi aile iptali) istek reddedilir. Token yoksa veya gecersizse
  * SecurityContext bos birakilir — asagidaki authorizeHttpRequests kurali 401/403'e cevirir.
+ *
+ * <p>ADR-0018: {@code wf_pat_} onekli token'lar es gecilir -- PatAuthenticationFilter'in isidir.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -38,6 +40,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     String header = request.getHeader("Authorization");
     if (header != null && header.startsWith("Bearer ")) {
       String token = header.substring("Bearer ".length());
+      if (PatTokenFormat.matches(token)) {
+        filterChain.doFilter(request, response);
+        return;
+      }
       try {
         DecodedJwt decoded = jwtService.verify(token);
         if (Boolean.TRUE.equals(redisTemplate.hasKey("jwt:blacklist:" + decoded.jti()))) {
