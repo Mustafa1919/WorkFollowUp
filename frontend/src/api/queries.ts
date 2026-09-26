@@ -34,6 +34,7 @@ import type {
   Task,
   TaskActivity,
   TaskDetail,
+  TaskSnapshotResponse,
   TaskStatus,
   ThroughputResponse,
   VelocityResponse,
@@ -81,6 +82,8 @@ export const keys = {
   retroItems: (ws: string | null, sprintId: string) => ['ws', ws, 'retro-items', sprintId] as const,
   automationRules: (ws: string | null, projectId: string) =>
     ['ws', ws, 'automation-rules', projectId] as const,
+  boardSnapshot: (ws: string | null, projectId: string, cutoff: string) =>
+    ['ws', ws, 'board-snapshot', projectId, cutoff] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
 }
@@ -588,6 +591,21 @@ export function useAutomationRuleActions(projectId: string) {
       onSuccess: () => qc.invalidateQueries({ queryKey: keys.automationRules(ws(), projectId) }),
     }),
   }
+}
+
+/** ADR-0017 — zaman makinesi: projenin `cutoff` anindaki board anlik goruntusu. */
+export function useBoardSnapshot(projectId: string, cutoff: string, enabled: boolean) {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.boardSnapshot(workspaceId, projectId, cutoff),
+    queryFn: async () =>
+      (
+        await api.get<TaskSnapshotResponse[]>(`/api/v1/projects/${projectId}/tasks/snapshot`, {
+          params: { cutoff },
+        })
+      ).data,
+    enabled: enabled && !!workspaceId && !!projectId && !!cutoff,
+  })
 }
 
 // ---------------------------------------------------------------- integrations (ADMIN)

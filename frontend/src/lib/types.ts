@@ -465,6 +465,21 @@ export interface RetroResponse {
   forecastProbabilityAtStart: number | null
 }
 
+/**
+ * ADR-0017 — Zaman makinesi: gecmis kesitteki tek gorev satiri. `Task`'in aksine tags/dependency/
+ * comment tasimaz (bilinen sinir); title/taskNumber ANLIK (guncel) degeridir.
+ */
+export interface TaskSnapshotResponse {
+  id: string
+  taskNumber: number
+  title: string
+  status: TaskStatus
+  sprintId: string | null
+  storyPoint: number | null
+  assigneeId: string | null
+  dueDate: string | null
+}
+
 export type RetroItemKind = 'went_well' | 'improve' | 'action'
 
 export interface RetroItemResponse {

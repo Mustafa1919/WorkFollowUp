@@ -60,6 +60,12 @@ export const router = createBrowserRouter([
               Component: (await import('@/features/automation/AutomationRulesPage')).AutomationRulesPage,
             }),
           },
+          {
+            path: '/projects/:projectId/time-machine',
+            lazy: async () => ({
+              Component: (await import('@/features/timemachine/TimeMachinePage')).TimeMachinePage,
+            }),
+          },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },
