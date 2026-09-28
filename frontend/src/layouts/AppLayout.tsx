@@ -20,6 +20,9 @@ import { Dialog } from '@/components/ui/Dialog'
 import { Aurora } from '@/components/Aurora'
 import { Logo } from '@/features/auth/AuthPage'
 import { CreateProjectDialog } from '@/features/dashboard/CreateProjectDialog'
+import { FeedbackWidget } from '@/components/FeedbackWidget'
+import { GuidedTour } from '@/components/GuidedTour'
+import { trackPageView } from '@/lib/telemetry'
 import { useQueryClient } from '@tanstack/react-query'
 
 export function AppLayout() {
@@ -49,6 +52,12 @@ export function AppLayout() {
 
   // Inbox push'u: workspace/proje'den bağımsız, oturum boyunca tek yerden abone olunur.
   useNotificationRealtime()
+
+  // Dalga 4 -- hangi ozelligin kullanildigini gormek icin sayfa yolu bazli kaba kullanim sinyali
+  // (buton bazli instrumentasyon yerine, dusuk maliyetli baslangic noktasi).
+  useEffect(() => {
+    trackPageView(location.pathname)
+  }, [location.pathname])
 
   if (isLoading) return null
   if (workspaces && workspaces.length === 0) return <Onboarding />
@@ -102,13 +111,16 @@ export function AppLayout() {
           <div className="flex-1" />
           <button
             onClick={openCommandPalette}
+            data-tour="tour-search"
             className="hidden cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs text-muted transition-colors hover:bg-surface-2 sm:flex"
             aria-label="Komut paleti (Ctrl+K)"
           >
             <Search size={13} /> Ara
             <kbd className="rounded border border-border px-1 py-px text-[10px]">Ctrl K</kbd>
           </button>
-          <NotificationBell />
+          <div data-tour="tour-notifications">
+            <NotificationBell />
+          </div>
           <ThemeToggle />
           <UserMenu />
         </header>
@@ -120,6 +132,8 @@ export function AppLayout() {
       </div>
       <CommandPalette />
       <ShortcutsDialog />
+      <FeedbackWidget />
+      <GuidedTour />
     </div>
   )
 }
@@ -141,7 +155,7 @@ function Sidebar() {
       <div className="px-2 pt-1 pb-6">
         <Logo />
       </div>
-      <nav className="space-y-1">
+      <nav className="space-y-1" data-tour="tour-nav">
         <NavLink to="/" end className={link}>
           {({ isActive }) => (
             <>
@@ -184,7 +198,7 @@ function Sidebar() {
         </NavLink>
       </nav>
 
-      <div className="mt-6 mb-2 flex items-center justify-between px-3">
+      <div className="mt-6 mb-2 flex items-center justify-between px-3" data-tour="tour-projects">
         <span className="text-xs font-medium tracking-wide text-muted uppercase">Projeler</span>
         {canCreate && (
           <button
@@ -213,7 +227,7 @@ function Sidebar() {
         {projects?.length === 0 && <p className="px-3 py-2 text-xs text-muted">Henüz proje yok.</p>}
       </nav>
 
-      <NavLink to="/settings" className={link}>
+      <NavLink to="/settings" className={link} data-tour="tour-settings">
         {({ isActive }) => (
           <>
             {isActive && <ActivePill />}

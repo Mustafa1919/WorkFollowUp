@@ -1,8 +1,14 @@
 package com.app.tracker.core.exception;
 
+import com.app.tracker.core.security.CurrentUser;
+import com.app.tracker.core.tenancy.TenantContext;
+import com.app.tracker.telemetry.TelemetryEventPublisher;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -21,11 +27,22 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * SECURITY_AND_EXCEPTIONS_DESIGN.md Bolum 2 — tum hatalar RFC 7807 (ProblemDetail) formatinda
  * disari verilir. Stack trace ASLA response body'sine konmaz; beklenmeyen hatalar sadece ic loglara
  * yazilir (Bolum "Detayli Hata Mesajlari vs. Guvenlik" trade-off'u).
+ *
+ * <p>Dalga 4 -- yalniz {@link #handleAllUncaughtException} telemetriye ({@code error_events})
+ * yazar. Diger handler'lar (BusinessRuleException, ResourceNotFoundException, validation, 403)
+ * BEKLENEN kontrol akisidir, gercek bir bug degildir -- telemetriye tasinirsa "hata" sinyali
+ * gurultuye boğulur.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+  private final TelemetryEventPublisher telemetryEventPublisher;
+
+  public GlobalExceptionHandler(TelemetryEventPublisher telemetryEventPublisher) {
+    this.telemetryEventPublisher = telemetryEventPublisher;
+  }
 
   @ExceptionHandler(BusinessRuleException.class)
   public ProblemDetail handleBusinessRuleException(BusinessRuleException ex) {
@@ -79,8 +96,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @ExceptionHandler(Exception.class)
-  public ProblemDetail handleAllUncaughtException(Exception ex) {
+  public ProblemDetail handleAllUncaughtException(Exception ex, HttpServletRequest request) {
     log.error("Beklenmeyen hata", ex);
+    reportToTelemetry(ex, request);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.INTERNAL_SERVER_ERROR,
@@ -88,5 +106,35 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problem.setType(URI.create("https://api.app.com/errors/internal-error"));
     problem.setTitle("Sunucu Hatasi");
     return problem;
+  }
+
+  /**
+   * Telemetri yayini asla bu handler'i patlatmamali -- zaten bir hata isleniyor, ikinci bir istisna
+   * response'u bozar. userId/workspaceId eksikse (kimliksiz istek) null gecilir, publisher
+   * null-safe'tir.
+   */
+  private void reportToTelemetry(Exception ex, HttpServletRequest request) {
+    try {
+      UUID workspaceId = TenantContext.getWorkspaceId();
+      UUID userId = currentUserIdOrNull();
+      telemetryEventPublisher.publishError(
+          workspaceId,
+          userId,
+          "backend",
+          ex.getClass().getSimpleName(),
+          ex.getMessage(),
+          request.getRequestURI(),
+          Instant.now());
+    } catch (RuntimeException telemetryFailure) {
+      log.warn("Hata telemetrisi gonderilemedi", telemetryFailure);
+    }
+  }
+
+  private static UUID currentUserIdOrNull() {
+    try {
+      return CurrentUser.id();
+    } catch (AccessDeniedException e) {
+      return null;
+    }
   }
 }

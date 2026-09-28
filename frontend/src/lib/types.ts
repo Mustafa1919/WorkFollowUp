@@ -515,3 +515,11 @@ export interface AutomationRuleResponse {
   enabled: boolean
   configured: boolean
 }
+
+/** Dalga 4 -- uygulama ici geri bildirim (V33). */
+export interface FeedbackResponse {
+  id: string
+  message: string
+  pagePath: string | null
+  createdAt: string
+}

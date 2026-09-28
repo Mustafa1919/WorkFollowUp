@@ -11,6 +11,7 @@ import type {
   BulkOperation,
   Comment,
   CycleTimeResponse,
+  FeedbackResponse,
   ForecastResponse,
   Goal,
   GoalMetricType,
@@ -88,6 +89,7 @@ export const keys = {
     ['ws', ws, 'board-snapshot', projectId, cutoff] as const,
   // Kullaniciya ait, workspace'e DEGIL — anahtar 'ws' tasimaz.
   notificationPreferences: ['notification-preferences'] as const,
+  feedback: (ws: string | null) => ['ws', ws, 'feedback'] as const,
 }
 
 const ws = () => useSession.getState().workspaceId
@@ -1203,5 +1205,22 @@ export function useBulkTaskAction() {
       tagId?: string
     }) => (await api.post<Task[]>('/api/v1/tasks/bulk', body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['ws', ws()] }),
+  })
+}
+
+/** Dalga 4 -- yalniz ADMIN/MANAGER icin anlamli (backend 403 doner, sayfa role'e gore gizler). */
+export function useFeedbackList() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.feedback(workspaceId),
+    queryFn: async () => (await api.get<FeedbackResponse[]>('/api/v1/feedback')).data,
+    enabled: !!workspaceId,
+  })
+}
+
+export function useSubmitFeedback() {
+  return useMutation({
+    mutationFn: async (input: { message: string; pagePath: string }) =>
+      (await api.post<FeedbackResponse>('/api/v1/feedback', input)).data,
   })
 }

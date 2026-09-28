@@ -50,6 +50,11 @@
         <Class name="com.app.tracker.standup.StandupFacts"/>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>
+    <!-- UsageBatchRequest: BulkTaskRequest ile AYNI desen — compact constructor List.copyOf. -->
+    <Match>
+        <Class name="com.app.tracker.telemetry.dto.UsageBatchRequest"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
     <!-- TokenHasher.generateRawToken PARTAGED bir static SecureRandom kullanir (SECURE_RANDOM
          alani) — SpotBugs'in DMI_RANDOM_USED_ONLY_ONCE tespiti, paylasilan orneğin metot basina
          tek cagrilmasini "her cagrida yeni Random olusturuluyor" ile ayirt edemiyor. -->

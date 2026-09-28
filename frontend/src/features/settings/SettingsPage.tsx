@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Bell, Copy, GitBranch, KeyRound, Lock, Mail, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
+import { Bell, Compass, Copy, GitBranch, KeyRound, Lock, Mail, MessageSquare, Monitor, Moon, Pencil, RefreshCw, Sun, Tag as TagIcon, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useAccessTokens,
@@ -18,12 +18,14 @@ import {
   useInvitationActions,
   useNotificationPreferences,
   useNotificationPreferencesActions,
+  useFeedbackList,
 } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/dates'
 import type { Tag, WorkspaceInvitation, WorkspaceMember, WorkspaceRole } from '@/lib/types'
 import { useTheme } from '@/stores/theme'
+import { openGuidedTour } from '@/lib/guidedTour'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Page } from '@/components/ui/misc'
@@ -46,6 +48,11 @@ export function SettingsPage() {
         <Section title="Görünüm" text="Tercihin bu tarayıcıda saklanır.">
           <ThemePicker />
         </Section>
+        <Section title="Tanıtım turu" text="Uygulamadaki temel alanları kısa bir turla tekrar gör." icon={<Compass size={18} />}>
+          <Button variant="outline" size="sm" onClick={openGuidedTour}>
+            <Compass size={14} /> Turu başlat
+          </Button>
+        </Section>
         <Section title="Üyeler" text="Workspace'e kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
           <MemberSettings isAdmin={isAdmin} />
         </Section>
@@ -62,6 +69,11 @@ export function SettingsPage() {
         {canManageTags && (
           <Section title="Etiketler" text="Görevleri sınıflandırmak için workspace genelinde etiketler." icon={<TagIcon size={18} />}>
             <TagSettings />
+          </Section>
+        )}
+        {canManageTags && (
+          <Section title="Geri bildirimler" text="Ekibin uygulama içinden gönderdiği geri bildirimler." icon={<MessageSquare size={18} />}>
+            <FeedbackSettings />
           </Section>
         )}
         {isAdmin ? (
@@ -360,6 +372,25 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         />
       </span>
     </button>
+  )
+}
+
+function FeedbackSettings() {
+  const { data: feedback, isLoading } = useFeedbackList()
+  if (isLoading) return <p className="text-xs text-muted">Yükleniyor…</p>
+  if (feedback?.length === 0) return <p className="text-xs text-muted">Henüz geri bildirim yok.</p>
+  return (
+    <div className="space-y-3">
+      {feedback?.map((f) => (
+        <div key={f.id} className="rounded-xl bg-surface-2 p-3 text-sm">
+          <p className="whitespace-pre-wrap">{f.message}</p>
+          <p className="mt-2 text-xs text-muted">
+            {fmt(f.createdAt, 'd MMM yyyy HH:mm')}
+            {f.pagePath ? ` · ${f.pagePath}` : ''}
+          </p>
+        </div>
+      ))}
+    </div>
   )
 }
 
