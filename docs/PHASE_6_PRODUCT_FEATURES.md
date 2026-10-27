@@ -140,3 +140,34 @@ RETURNING task_count;
 ```
 
 Sıfır satır dönerse kota dolmuştur ve transaction, hiçbir kaynak oluşturmadan `PlanLimitExceededException` ile geri alınır. Satır kilidi sayesinde iki eşzamanlı istekten yalnızca biri son slotu alabilir — race condition **fiziksel olarak** imkânsızdır. Aynı mimari problemin (atomik sayaç) sistemde üçüncü kez karşınıza çıktığına dikkat edin (task_number, idempotency, kota): iyi bir mimaride desen sayısı azalır, kullanım sayısı artar.
+
+---
+
+## 6. Web Push Bildirimleri (Dalga 5'ten ertelendi, 2026-10-26)
+
+Dalga 5 (`DALGA_5_KULLANILABILIRLIK.md` dilim 5.7) masaüstü bildirimini yalnız **Notification API**
+ile çözer: sekme açıkken (arka planda bile) çalışır, backend değişikliği gerektirmez. Bu bölüm, sekme
+veya tarayıcı **kapalıyken** de bildirim ulaştırmak için bir sonraki adımı tanımlar. Kullanıcı kararı:
+Faz 6'da uygulanacak.
+
+### 6.1. Bileşenler
+- **Service Worker** (`frontend/public/sw.js`): `push` olayında bildirimi gösterir,
+  `notificationclick` olayında ilgili göreve (`?task=` derin linki) açar/odaklar.
+- **VAPID anahtar çifti:** ortam sırrı olarak verilir (12-Factor). Dev anahtarla staging/prod
+  açılışı ADR-0003'teki fail-closed guard'a eklenir.
+- **Tablo: `push_subscriptions`** (`id`, `user_id`, `endpoint` UNIQUE, `p256dh`, `auth`,
+  `user_agent`, `created_at`, `last_success_at`). Kimlik verisi gibi kullanıcıya bağlıdır;
+  `personal_access_tokens` (ADR-0018) ile aynı gerekçeyle RLS'e tabi değildir.
+- **Tüketici:** e-posta tüketicisiyle (ADR-0006, ADR-0010) aynı desen. `task.events` → alıcı
+  hesabı (Inbox ile aynı kural) → push gönderimi. Gönderim transaction'ın **içinde değil arasında**
+  yapılır (at-least-once), geçici hatada devre kesici; `404/410` yanıtı veren abonelik silinir.
+
+### 6.2. Ön koşullar ve riskler
+- Tarayıcının **güvendiği** bir sertifika şarttır: Service Worker kaydı sertifika hatası olan bir
+  sayfada reddedilir. IP + kendinden imzalı sertifika ile çalışılıyorsa önce alan adı + Let's
+  Encrypt (`deploy/Caddyfile`) ya da cihazlara kurulu iç CA gerekir.
+- Notification API ile çift gösterim: sekme açıkken hem Service Worker hem sayfa bildirim
+  gösterebilir. Tek kaynak Service Worker olmalı (`clients.matchAll` ile odakta pencere varsa
+  göstermez), Dalga 5'teki sayfa içi gösterim kaldırılır.
+- KVKK: push uç noktası kişisel veriye bağlı bir tanımlayıcıdır; aydınlatma metnine eklenir,
+  hesap silme akışında abonelikler de silinir.

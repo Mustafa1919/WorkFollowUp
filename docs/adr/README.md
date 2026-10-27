@@ -31,6 +31,11 @@ ADR, reddedilen seçenekleri ve kabul edilen bedeli anlatır.
 | [0014](0014-standup-ozeti-modeli.md) | Toplantısız standup: olgu kategorileri, idempotency, "dün" tanımı | Kabul edildi |
 | [0015](0015-retro-ilk-taahhut-kesiti.md) | Retro: ilk taahhüt kesiti, geriye dönük tahmin, retro panosu | Kabul edildi |
 | [0016](0016-otomasyon-kurallari-modeli.md) | Otomasyon şablonları: sabit şablon, aktör-eşitliği döngü koruması | Kabul edildi |
+| [0017](0017-zaman-makinesi-board-anlik-goruntusu.md) | Zaman makinesi: board'un geçmişteki bir andaki anlık görüntüsü | Kabul edildi |
+| [0018](0018-kisisel-erisim-token-modeli.md) | Kişisel erişim token'ları (PAT) + açık API hız sınırı | Kabul edildi |
+| [0019](0019-izin-tabanli-yetki-modeli.md) | İzin tabanlı yetki modeli, geliştirici rolünün daraltılması | Kabul edildi (kod yok) |
+| [0020](0020-bagimlilik-tamamlanma-kurali.md) | Bağımlılık kuralı: bloklayan bitmeden bloklanan Done olamaz | Kabul edildi (kod yok) |
+| [0021](0021-alt-gorev-olusturma-ve-puan-kurali.md) | Alt görev sıfırdan oluşturulur; story point yalnız üst görevde | Kabul edildi (kod yok) |
 
 ## Çapraz risk: tek master key
 
