@@ -774,6 +774,19 @@ export function useSubtasks(taskId: string | undefined) {
   })
 }
 
+/** Sifirdan alt gorev olusturur (D07): sprint ve atanan ust gorevden turer, puan gonderilmez. */
+export function useCreateSubtask(parentId: string, projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (title: string) => (await api.post<Task>(`/api/v1/tasks/${parentId}/subtasks`, { title })).data,
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: keys.subtasks(ws(), parentId) }),
+        qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
+      ]),
+  })
+}
+
 /** Bir gorevin ust gorevini atar/kaldirir — TaskDialog'un "Alt Görevler" bolumu icin. */
 export function useTaskParentAssignment(projectId: string) {
   const qc = useQueryClient()

@@ -88,7 +88,7 @@ function TaskFields({
         <h2 className="text-lg font-semibold">{task.title}</h2>
         <DescriptionField task={task} canWrite={canWrite} />
         <div className="border-t border-border pt-4">
-          <SubtaskPanel task={task} canWrite={canPlan} />
+          <SubtaskPanel task={task} canPlan={canPlan} />
         </div>
         <div className="border-t border-border pt-4">
           <CommentsAndActivity task={task} sprints={sprints} canComment={canComment} />
@@ -172,7 +172,7 @@ function TaskFields({
         </div>
 
         {/* Puan: gorunur, TASK_PLAN yoksa salt-okunur. */}
-        {(canPlan || task.storyPoint != null) && (
+        {task.parentTaskId == null && (canPlan || task.storyPoint != null) && (
           <form
             className="flex items-end gap-2"
             onSubmit={(e) => {

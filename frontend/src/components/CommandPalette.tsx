@@ -4,8 +4,9 @@ import * as RD from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'motion/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { BarChart3, CalendarClock, CircleUserRound, CornerDownLeft, Home, Keyboard, LogOut, Moon, Search, Settings, Sun } from 'lucide-react'
-import { useProjects, useSearch } from '@/api/queries'
+import { useMemberMap, useProjects, useSearch } from '@/api/queries'
 import { api } from '@/lib/api'
+import { cleanSnippet } from '@/lib/mentions'
 import { cn } from '@/lib/cn'
 import { onCommandPaletteOpenRequested } from '@/lib/commandPalette'
 import { openShortcuts } from '@/lib/shortcuts'
@@ -65,6 +66,7 @@ export function CommandPalette() {
   const qc = useQueryClient()
   const { theme, setTheme } = useTheme()
   const { data: projects } = useProjects()
+  const memberMap = useMemberMap()
   const debouncedQuery = useDebouncedValue(query, 200)
   // Sadece palet acikken sorgula: kapaliyken/bos sorguda sunucuya istek atilmaz (useSearch enabled).
   const { data: searchResults } = useSearch(open ? debouncedQuery : '')
@@ -159,13 +161,13 @@ export function CommandPalette() {
       group: 'Görevler' as const,
       label: t.title,
       sublabel: `${t.projectKey}-${t.taskNumber}`,
-      snippet: t.snippet ? highlightSnippet(t.snippet) : undefined,
+      snippet: t.snippet ? highlightSnippet(cleanSnippet(t.snippet, (id) => memberMap.get(id)?.fullName)) : undefined,
       icon: <StatusDot status={t.status} />,
       onSelect: () => navigate(`/projects/${t.projectId}?task=${t.id}`),
     }))
 
     return [...matchedNav, ...matchedTasks, ...matchedActions]
-  }, [query, projects, searchResults, theme, navigate, setTheme, logout])
+  }, [query, projects, searchResults, memberMap, theme, navigate, setTheme, logout])
 
   function runActive() {
     const item = items[active]

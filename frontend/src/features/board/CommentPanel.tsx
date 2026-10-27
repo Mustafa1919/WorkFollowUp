@@ -8,22 +8,21 @@ import { useCommentActions, useComments, useMemberMap, useMembers } from '@/api/
 import { errorMessage } from '@/lib/api'
 import { fmt } from '@/lib/dates'
 import { cn } from '@/lib/cn'
+import { insertLabel, MENTION_TOKEN, mentionLabel, toEditable, toStorage, withMentionNames } from '@/lib/mentions'
 import type { Task, WorkspaceMember } from '@/lib/types'
 import { useCurrentUserId } from '@/stores/session'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { inputClass } from '@/components/ui/Input'
+import { MentionTextarea } from './MentionTextarea'
 
 const MAX_BODY = 10000
-const MENTION_TOKEN = /@\[([0-9a-fA-F-]{36})\]/g
 
 /**
- * `@[userId]` token'larini GORUNUM icin isme cevirir (kalin metin) — asil govde (backend'e giden
- * ve duzenlerken geri yuklenen deger) degismez, bu yalniz react-markdown'a verilen ARA metindir.
- * Backend, sunucu tarafinda AYNI regex ile (MentionParser) token'lari ayristirir.
+ * `@[userId]` token'larini GORUNUM icin isme cevirir (kalin metin) — asil govde degismez, bu yalniz
+ * react-markdown'a verilen ARA metindir. Backend AYNI regex ile (MentionParser) token'lari ayristirir.
  */
-function withMentionNames(body: string, memberMap: Map<string, WorkspaceMember>): string {
-  return body.replace(MENTION_TOKEN, (_match, id: string) => `**@${memberMap.get(id)?.fullName ?? 'Eski üye'}**`)
+function boldMentions(body: string, memberMap: Map<string, WorkspaceMember>): string {
+  return body.replace(MENTION_TOKEN, (token) => `**${withMentionNames(token, (id) => memberMap.get(id)?.fullName)}**`)
 }
 
 /** Gorev detayindaki yorum paneli: liste + Markdown yazma + `@` ile mention (ADR-0009). */
@@ -37,31 +36,38 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // Gorunur ad -> userId eslemeleri (gonderimde toStorage ile token'a cevrilir).
+  const [draftMap, setDraftMap] = useState(() => new Map<string, string>())
+  const [editMap, setEditMap] = useState(() => new Map<string, string>())
+  const memberList = members ?? []
   const onError = (err: unknown) => toast.error(errorMessage(err))
 
   const comments = data?.pages.flatMap((p) => p.data) ?? []
 
-  function insertMention(userId: string) {
-    const token = `@[${userId}] `
+  function insertMention(m: WorkspaceMember) {
+    const label = mentionLabel(m, memberList)
+    draftMap.set(label, m.userId)
     const el = textareaRef.current
-    if (!el) {
-      setDraft((d) => d + token)
-      return
-    }
-    const start = el.selectionStart ?? draft.length
-    const end = el.selectionEnd ?? draft.length
-    const next = draft.slice(0, start) + token + draft.slice(end)
+    const start = el?.selectionStart ?? draft.length
+    const end = el?.selectionEnd ?? draft.length
+    const { next, caret } = insertLabel(draft, start, end, label)
     setDraft(next)
     requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(start + token.length, start + token.length)
+      el?.focus()
+      el?.setSelectionRange(caret, caret)
     })
   }
 
   function submit() {
-    const body = draft.trim()
+    const body = toStorage(draft, draftMap).trim()
     if (body === '') return
-    add.mutate(body, { onError, onSuccess: () => setDraft('') })
+    add.mutate(body, {
+      onError,
+      onSuccess: () => {
+        setDraft('')
+        setDraftMap(new Map())
+      },
+    })
   }
 
   return (
@@ -96,8 +102,10 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                   {!c.deleted && mine && !editing && (
                     <button
                       onClick={() => {
+                        const { text, map } = toEditable(c.body, memberList)
                         setEditingId(c.id)
-                        setEditDraft(c.body)
+                        setEditDraft(text)
+                        setEditMap(map)
                       }}
                       className="ml-auto cursor-pointer text-muted hover:text-fg"
                       aria-label="Yorumu düzenle"
@@ -117,13 +125,13 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                 </div>
                 {editing ? (
                   <div className="mt-2 space-y-2">
-                    <textarea
+                    <MentionTextarea
                       autoFocus
                       value={editDraft}
+                      onChange={setEditDraft}
+                      members={memberList}
+                      map={editMap}
                       maxLength={MAX_BODY}
-                      onChange={(e) => setEditDraft(e.target.value)}
-                      rows={3}
-                      className={cn(inputClass, 'h-auto resize-y py-2 text-sm')}
                     />
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
@@ -134,7 +142,7 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                         loading={edit.isPending}
                         onClick={() =>
                           edit.mutate(
-                            { id: c.id, body: editDraft },
+                            { id: c.id, body: toStorage(editDraft, editMap) },
                             { onError, onSuccess: () => setEditingId(null) },
                           )
                         }
@@ -151,7 +159,7 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                         a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
                       }}
                     >
-                      {withMentionNames(c.body, memberMap)}
+                      {boldMentions(c.body, memberMap)}
                     </Markdown>
                   </div>
                 )}
@@ -163,17 +171,15 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
 
       {canWrite && (
         <div className="mt-3 space-y-2">
-          <textarea
-            ref={textareaRef}
+          <MentionTextarea
+            textareaRef={textareaRef}
             value={draft}
+            onChange={setDraft}
+            members={memberList}
+            map={draftMap}
             maxLength={MAX_BODY}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit()
-            }}
-            rows={3}
-            placeholder="Yorum yaz… (Ctrl+Enter gönderir)"
-            className={cn(inputClass, 'h-auto resize-y py-2 text-sm')}
+            onCtrlEnter={submit}
+            placeholder="Yorum yaz… (@ ile etiketle, Ctrl+Enter gönderir)"
           />
           <div className="flex items-center justify-between">
             <DM.Root>
@@ -186,13 +192,13 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                   sideOffset={6}
                   className="z-50 max-h-72 w-56 overflow-y-auto rounded-xl border border-border bg-surface p-1.5 shadow-xl"
                 >
-                  {(members ?? []).length === 0 ? (
+                  {memberList.length === 0 ? (
                     <div className="px-2 py-2 text-xs text-muted">Uye yok.</div>
                   ) : (
-                    (members ?? []).map((m) => (
+                    memberList.map((m) => (
                       <DM.Item
                         key={m.userId}
-                        onSelect={() => insertMention(m.userId)}
+                        onSelect={() => insertMention(m)}
                         className="flex cursor-pointer items-center gap-2 truncate rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-2"
                       >
                         <Avatar name={m.fullName} seed={m.userId} size={18} />
