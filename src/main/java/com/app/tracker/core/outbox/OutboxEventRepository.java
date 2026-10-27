@@ -12,7 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
  * (TaskEventRepository/TaskCounterRepository ile ayni desen). {@code write}, cagiranin ZATEN acik
  * bir {@code @Transactional} icinde olmasini varsayar: outbox INSERT'i is verisini degistiren
  * INSERT/ UPDATE ile AYNI transaction'da olmalidir, aksi halde Outbox Pattern'in dual-write'i
- * onleme garantisi gecersiz kalir.
+ * onleme garantisi gecersiz kalir. NOW() tx baslangicidir; ayni tx'teki olaylarin sirasi {@code
+ * seq} ile korunur (relay {@code ORDER BY seq}).
  */
 @Repository
 public class OutboxEventRepository {
@@ -69,7 +70,7 @@ public class OutboxEventRepository {
                 "SELECT id, topic, event_type, schema_version, aggregate_id, workspace_id, "
                     + "payload::text, created_at "
                     + "FROM outbox_events WHERE processed_at IS NULL "
-                    + "ORDER BY created_at ASC LIMIT ?1 FOR UPDATE SKIP LOCKED")
+                    + "ORDER BY seq ASC LIMIT ?1 FOR UPDATE SKIP LOCKED")
             .setParameter(1, limit)
             .getResultList();
     return rows.stream()

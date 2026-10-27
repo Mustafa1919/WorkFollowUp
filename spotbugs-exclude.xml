@@ -44,6 +44,11 @@
         <Class name="com.app.tracker.task.dto.BulkTaskRequest"/>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>
+    <!-- CreateTaskRequest (Dalga 5.4): BulkTaskRequest ile AYNI desen — compact constructor List.copyOf. -->
+    <Match>
+        <Class name="com.app.tracker.task.dto.CreateTaskRequest"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
     <!-- StandupFacts: PageResponse/BulkTaskRequest ile AYNI desen — compact constructor'da
          List.copyOf ile TUM alanlar immutable kopyalanir, SpotBugs bunu goremiyor. -->
     <Match>

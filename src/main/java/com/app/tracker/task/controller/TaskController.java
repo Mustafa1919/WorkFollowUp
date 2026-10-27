@@ -23,6 +23,7 @@ import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskCustomFieldRepository;
 import com.app.tracker.task.service.BulkTaskService;
 import com.app.tracker.task.service.TaskActivityService;
+import com.app.tracker.task.service.TaskCreationService;
 import com.app.tracker.task.service.TaskService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -58,6 +59,7 @@ public class TaskController {
   private final CommentService commentService;
   private final TaskActivityService taskActivityService;
   private final BulkTaskService bulkTaskService;
+  private final TaskCreationService taskCreationService;
 
   public TaskController(
       TaskService taskService,
@@ -66,7 +68,9 @@ public class TaskController {
       TaskCustomFieldRepository taskCustomFieldRepository,
       CommentService commentService,
       TaskActivityService taskActivityService,
-      BulkTaskService bulkTaskService) {
+      BulkTaskService bulkTaskService,
+      TaskCreationService taskCreationService) {
+    this.taskCreationService = taskCreationService;
     this.taskService = taskService;
     this.tagService = tagService;
     this.taskDependencyService = taskDependencyService;
@@ -80,12 +84,9 @@ public class TaskController {
   @PreAuthorize("@securityGuard.can('TASK_CREATE')")
   public ResponseEntity<TaskResponse> create(
       @PathVariable UUID projectId, @Valid @RequestBody CreateTaskRequest request) {
-    Task task =
-        taskService.createTask(projectId, request.title(), request.dueDate(), CurrentUser.id());
-    // Yeni gorevin hicbir etiketi/story point'i/alt gorevi/bagimliligi olamaz: DB'ye sorgu atmadan
-    // sabit deger (kucuk optimizasyon).
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(TaskResponse.from(task, List.of(), null, 0, 0, DependencySummary.empty(), 0));
+    Task task = taskCreationService.create(projectId, request, CurrentUser.id());
+    // Opsiyonel alanlar (etiket/puan/sprint/atanan) artik dolu olabilir: detay yolu ile kurulur.
+    return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(task));
   }
 
   /**
