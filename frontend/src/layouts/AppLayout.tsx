@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { BarChart3, CalendarClock, Check, ChevronsUpDown, CircleUserRound, FolderKanban, Home, LogOut, Menu, MessageCircleMore, Plus, Search, Settings, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateWorkspace, useCurrentRole, useNotificationRealtime, useProjects, useWorkspaces } from '@/api/queries'
+import { useCan, useCreateWorkspace, useMe, useNotificationRealtime, useProjects, useWorkspaces } from '@/api/queries'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { disconnectRealtime, ensureRealtimeConnected } from '@/lib/realtime'
@@ -141,8 +141,7 @@ export function AppLayout() {
 function Sidebar() {
   const { data: projects } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
-  const role = useCurrentRole()
-  const canCreate = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
+  const canCreate = useCan('PROJECT_CREATE')
 
   const link = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -303,6 +302,7 @@ function WorkspaceSwitcher() {
 
 function UserMenu() {
   const email = useSession((s) => s.email)
+  const fullName = useMe().data?.fullName?.trim()
   const qc = useQueryClient()
   const navigate = useNavigate()
 
@@ -323,10 +323,11 @@ function UserMenu() {
         className="grid h-8 w-8 cursor-pointer place-items-center rounded-full bg-surface-2 text-xs font-semibold uppercase ring-accent/40 outline-none hover:ring-2"
         aria-label="Kullanıcı menüsü"
       >
-        {email?.charAt(0) ?? 'U'}
+        {fullName?.charAt(0) || email?.charAt(0) || 'U'}
       </DM.Trigger>
       <DM.Portal>
         <DM.Content align="end" sideOffset={6} className="z-50 min-w-56 rounded-xl border border-border bg-surface p-1.5 shadow-xl">
+          {fullName && <div className="truncate px-2 pt-1.5 text-sm font-medium">{fullName}</div>}
           <div className="truncate px-2 py-1.5 text-xs text-muted">{email}</div>
           <DM.Separator className="my-1 h-px bg-border" />
           <DM.Item

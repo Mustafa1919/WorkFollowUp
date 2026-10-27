@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { addDays, differenceInCalendarDays, startOfToday, subDays } from 'date-fns'
 import { AlertTriangle, ArrowUpRight, CalendarClock, CheckCircle2, FolderKanban, Plus, Sparkles } from 'lucide-react'
-import { useCalendarTasksForProjects, useProjects, useCurrentRole } from '@/api/queries'
+import { useCalendarTasksForProjects, useCan, useMe, useProjects } from '@/api/queries'
 import { fmt, fromIso, iso } from '@/lib/dates'
-import { useSession } from '@/stores/session'
 import type { Project, Task } from '@/lib/types'
 import { Aurora } from '@/components/Aurora'
 import { Button } from '@/components/ui/Button'
@@ -29,8 +28,8 @@ const item = {
 
 export function DashboardPage() {
   const { data: projects, isLoading } = useProjects()
-  const email = useSession((s) => s.email)
-  const role = useCurrentRole()
+  const { data: me, isLoading: meLoading } = useMe()
+  const canCreateProject = useCan('PROJECT_CREATE')
   const [createOpen, setCreateOpen] = useState(false)
 
   // Son 30 gun + onumuzdeki 31 gun: gecikenler ve yaklasanlar (takvim endpoint'i en fazla 62 gun).
@@ -50,7 +49,7 @@ export function DashboardPage() {
     .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!))
   const doneRecently = tasks.filter((t) => t.status === 'Done').length
 
-  const name = email?.split('@')[0]
+  const name = me?.fullName?.trim() || undefined
 
   return (
     <Page>
@@ -78,11 +77,15 @@ export function DashboardPage() {
             className="text-3xl font-semibold tracking-tight sm:text-4xl"
           >
             {greeting()}
-            {name && (
-              <>
-                ,{' '}
-                <span className="bg-gradient-to-r from-accent to-fuchsia-500 bg-clip-text text-transparent">{name}</span>
-              </>
+            {meLoading ? (
+              <Skeleton className="ml-2 inline-block h-8 w-40 align-middle" />
+            ) : (
+              name && (
+                <>
+                  ,{' '}
+                  <span className="bg-gradient-to-r from-accent to-fuchsia-500 bg-clip-text text-transparent">{name}</span>
+                </>
+              )
             )}
           </motion.h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-2 text-muted">
@@ -108,7 +111,7 @@ export function DashboardPage() {
         <section>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Projeler</h2>
-            {(role === 'WORKSPACE_ADMIN' || role === 'MANAGER') && (
+            {canCreateProject && (
               <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
                 <Plus size={15} /> Yeni proje
               </Button>
@@ -132,7 +135,7 @@ export function DashboardPage() {
               title="Henüz proje yok"
               text="İlk projeni oluştur; görevlerini Kanban panosunda ya da takvimde yönet."
               action={
-                (role === 'WORKSPACE_ADMIN' || role === 'MANAGER') && (
+                canCreateProject && (
                   <Button onClick={() => setCreateOpen(true)}>
                     <Plus size={16} /> Proje oluştur
                   </Button>

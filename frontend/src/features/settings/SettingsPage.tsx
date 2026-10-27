@@ -9,7 +9,7 @@ import {
   useSlackActions,
   useWebhookActions,
   useWebhooks,
-  useCurrentRole,
+  useCan,
   useTags,
   useTagActions,
   useMembers,
@@ -38,9 +38,10 @@ const ROLE_LABEL: Record<WorkspaceRole, string> = {
 }
 
 export function SettingsPage() {
-  const role = useCurrentRole()
-  const isAdmin = role === 'WORKSPACE_ADMIN'
-  const canManageTags = isAdmin || role === 'MANAGER'
+  const canManageMembers = useCan('MEMBER_MANAGE')
+  const canManageIntegrations = useCan('INTEGRATION_MANAGE')
+  const canManageTags = useCan('TAG_MANAGE')
+  const canReadFeedback = useCan('FEEDBACK_READ')
   return (
     <Page className="max-w-3xl">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">Ayarlar</h1>
@@ -54,7 +55,7 @@ export function SettingsPage() {
           </Button>
         </Section>
         <Section title="Üyeler" text="Workspace'e kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
-          <MemberSettings isAdmin={isAdmin} />
+          <MemberSettings isAdmin={canManageMembers} />
         </Section>
         <Section title="Bildirim tercihleri" text="Hangi olaylar için e-posta almak istediğini seç." icon={<Mail size={18} />}>
           <NotificationPreferencesSettings />
@@ -71,12 +72,12 @@ export function SettingsPage() {
             <TagSettings />
           </Section>
         )}
-        {canManageTags && (
+        {canReadFeedback && (
           <Section title="Geri bildirimler" text="Ekibin uygulama içinden gönderdiği geri bildirimler." icon={<MessageSquare size={18} />}>
             <FeedbackSettings />
           </Section>
         )}
-        {isAdmin ? (
+        {canManageIntegrations ? (
           <>
             <Section title="Slack bildirimleri" text="Görev oluşturma ve durum değişiklikleri bir Slack kanalına gönderilir." icon={<Bell size={18} />}>
               <SlackSettings />

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { addDays, addMonths, format, isSameMonth, isToday, isWeekend, parse, startOfMonth, startOfWeek } from 'date-fns'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarClock, ChevronLeft, ChevronRight, Plus, Video } from 'lucide-react'
-import { useCurrentRole, useMeetingOccurrences, useMeetings } from '@/api/queries'
+import { useCan, useMeetingOccurrences, useMeetings } from '@/api/queries'
 import { cn } from '@/lib/cn'
 import { fmt, iso } from '@/lib/dates'
 import type { Meeting, MeetingOccurrence } from '@/lib/types'
@@ -25,8 +25,7 @@ const FREQUENCY_LABEL: Record<Meeting['frequency'], string> = {
 /** Workspace geneli toplantı takvimi — proje sınırına bağlı değil (bkz. Mimari.md kararı). */
 export function MeetingsPage() {
   const [params, setParams] = useSearchParams()
-  const role = useCurrentRole()
-  const canManage = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
+  const canManage = useCan('MEETING_MANAGE')
 
   const monthParam = params.get('month')
   const month = useMemo(() => {

@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft, Bot, GitMerge, ListTree, ShieldAlert, Timer, UserCheck } from 'lucide-react'
-import { useAutomationRuleActions, useAutomationRules, useCurrentRole, useProjects } from '@/api/queries'
+import { useAutomationRuleActions, useAutomationRules, useCan, useProjects } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import type { AutomationRuleResponse, AutomationTemplateKey } from '@/lib/types'
 import { EmptyState, Page, Skeleton } from '@/components/ui/misc'
@@ -51,8 +51,7 @@ export function AutomationRulesPage() {
   const { projectId = '' } = useParams()
   const { data: projects } = useProjects()
   const project = projects?.find((p) => p.id === projectId)
-  const role = useCurrentRole()
-  const canManage = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
+  const canManage = useCan('AUTOMATION_MANAGE')
 
   const { data: rules, isLoading } = useAutomationRules(projectId, true)
   const { setEnabled } = useAutomationRuleActions(projectId)

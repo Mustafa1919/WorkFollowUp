@@ -41,6 +41,9 @@ import type {
   ThroughputResponse,
   VelocityResponse,
   WebhookIntegration,
+  Me,
+  MyPermissions,
+  WorkspacePermission,
   Weekday,
   Workspace,
   WorkspaceInvitation,
@@ -50,6 +53,9 @@ import type {
 /** Tum sorgu anahtarlari workspace'e baglidir: workspace degisince cache karismaz. */
 export const keys = {
   workspaces: ['workspaces'] as const,
+  // Kullaniciya ait kimlik, workspace'e DEGIL.
+  me: ['me'] as const,
+  myPermissions: (ws: string | null) => ['ws', ws, 'my-permissions'] as const,
   projects: (ws: string | null) => ['ws', ws, 'projects'] as const,
   tasks: (ws: string | null, projectId: string) => ['ws', ws, 'tasks', projectId] as const,
   approved: (ws: string | null, projectId: string) => ['ws', ws, 'approved', projectId] as const,
@@ -843,10 +849,33 @@ export function useSearch(query: string) {
   })
 }
 
+/** Yalniz rol ETIKETI gostermek icin; yetki karari icin `useCan` kullanilir. */
 export function useCurrentRole() {
   const { data } = useWorkspaces()
   const workspaceId = useSession((s) => s.workspaceId)
   return data?.find((w) => w.id === workspaceId)?.role
+}
+
+export function useMe() {
+  return useQuery({
+    queryKey: keys.me,
+    queryFn: async () => (await api.get<Me>('/api/v1/me')).data,
+  })
+}
+
+export function useMyPermissions() {
+  const workspaceId = useSession((s) => s.workspaceId)
+  return useQuery({
+    queryKey: keys.myPermissions(workspaceId),
+    queryFn: async () => (await api.get<MyPermissions>('/api/v1/me/permissions')).data,
+    enabled: !!workspaceId,
+  })
+}
+
+/** Fail-closed: yuklenirken ve hata durumunda false. Asil kontrol backend'dedir. */
+export function useCan(permission: WorkspacePermission): boolean {
+  const { data, isError } = useMyPermissions()
+  return !isError && !!data?.permissions.includes(permission)
 }
 
 // ---------------------------------------------------------------- workspace members
@@ -868,7 +897,11 @@ export function useMemberMap(): Map<string, WorkspaceMember> {
 
 export function useMemberActions() {
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: keys.members(ws()) })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: keys.members(ws()) })
+    qc.invalidateQueries({ queryKey: keys.myPermissions(ws()) })
+    qc.invalidateQueries({ queryKey: keys.workspaces })
+  }
   return {
     add: useMutation({
       mutationFn: async (body: { email: string; role: string }) =>

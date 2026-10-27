@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowDown, ArrowUp, CheckCircle2, Gauge, Minus, Pencil, Plus, Target, Timer, Trash2 } from 'lucide-react'
-import { useCurrentRole, useGoalActions, usePeriodReport, useProjects } from '@/api/queries'
+import { useCan, useGoalActions, usePeriodReport, useProjects } from '@/api/queries'
 import { cn } from '@/lib/cn'
 import { fmt } from '@/lib/dates'
 import type { GoalProgress } from '@/lib/types'
@@ -37,8 +37,7 @@ function duration(seconds: number | null | undefined) {
  */
 export function ReportsPage() {
   const [params, setParams] = useSearchParams()
-  const role = useCurrentRole()
-  const canManage = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
+  const canManage = useCan('GOAL_MANAGE')
   const { data: projects } = useProjects()
 
   const now = new Date()

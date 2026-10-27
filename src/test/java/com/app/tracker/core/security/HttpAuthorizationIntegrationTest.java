@@ -121,6 +121,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
                     + UUID.randomUUID().toString().substring(0, 8)
                     + "\",\"name\":\"Proje\"}",
             MANAGE),
+        Endpoint.of(HttpMethod.GET, "/api/v1/me", null, ALL_ROLES),
+        Endpoint.of(HttpMethod.GET, "/api/v1/me/permissions", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects", null, ALL_ROLES),
         // Sprint yasam dongusu: yalniz ADMIN/MANAGER.
         Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/sprints", SPRINT_JSON, MANAGE),

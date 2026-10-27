@@ -3,7 +3,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Bell, BellOff, Pencil, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import { useMemberMap, useMembers, useTaskCollaboration, useTaskDetail } from '@/api/queries'
+import { useCan, useMemberMap, useMembers, useTaskCollaboration, useTaskDetail } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import type { Task } from '@/lib/types'
@@ -17,15 +17,42 @@ const MAX_DESCRIPTION = 20000
 const onError = (err: unknown) => toast.error(errorMessage(err))
 
 /** Atanan kisi: VIEWER atanamaz (backend kurali), bu yuzden listede gosterilmez. */
-export function AssigneeField({ task, canWrite }: { task: Task; canWrite: boolean }) {
+export function AssigneeField({ task, locked }: { task: Task; locked: boolean }) {
   const { data: members } = useMembers(true)
   const memberMap = useMemberMap()
   const me = useCurrentUserId()
+  const canPlan = useCan('TASK_PLAN') && !locked
+  const canSelfAssign = useCan('TASK_SELF_ASSIGN') && !locked
   const { assign } = useTaskCollaboration(task.projectId)
   const assignable = (members ?? []).filter((m) => m.role !== 'VIEWER')
   const current = task.assigneeId ? memberMap.get(task.assigneeId) : undefined
 
   const change = (assigneeId: string | null) => assign.mutate({ taskId: task.id, assigneeId }, { onError })
+
+  // TASK_PLAN yoksa kosullu kendini atama (backend TaskAccessPolicy ile ayni kural; asil kontrol orada).
+  if (!canPlan) {
+    const mine = !!me && task.assigneeId === me
+    const unassigned = !task.assigneeId
+    return (
+      <div>
+        <div className="mb-2 text-xs font-medium text-muted">Atanan</div>
+        <div className="flex items-center gap-2">
+          {current && <Avatar name={current.fullName} seed={current.userId} size={28} />}
+          <span className="text-sm">{task.assigneeId ? (current?.fullName ?? 'Eski üye') : 'Atanmamış'}</span>
+          {canSelfAssign && me && unassigned && (
+            <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => change(me)} loading={assign.isPending}>
+              <UserPlus size={15} /> Bana ata
+            </Button>
+          )}
+          {canSelfAssign && mine && (
+            <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => change(null)} loading={assign.isPending}>
+              Atamayı bırak
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -34,7 +61,7 @@ export function AssigneeField({ task, canWrite }: { task: Task; canWrite: boolea
         {current && <Avatar name={current.fullName} seed={current.userId} size={28} />}
         <select
           aria-label="Atanan kişi"
-          disabled={!canWrite || assign.isPending}
+          disabled={assign.isPending}
           value={task.assigneeId ?? ''}
           onChange={(e) => change(e.target.value || null)}
           className={cn(inputClass, 'cursor-pointer')}
@@ -49,7 +76,7 @@ export function AssigneeField({ task, canWrite }: { task: Task; canWrite: boolea
           {/* Uyeligi kalkmis bir atanan secenekte kaybolmasin. */}
           {task.assigneeId && !current && <option value={task.assigneeId}>Eski üye</option>}
         </select>
-        {canWrite && me && task.assigneeId !== me && assignable.some((m) => m.userId === me) && (
+        {me && task.assigneeId !== me && assignable.some((m) => m.userId === me) && (
           <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => change(me)} loading={assign.isPending}>
             <UserPlus size={15} /> Bana ata
           </Button>

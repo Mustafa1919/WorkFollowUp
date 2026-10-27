@@ -4,6 +4,39 @@ export const TASK_STATUSES: TaskStatus[] = ['To Do', 'In Progress', 'Review', 'D
 /** Backend `WorkspaceRole` sabitleri (ADMIN'in degeri WORKSPACE_ADMIN). */
 export type WorkspaceRole = 'WORKSPACE_ADMIN' | 'MANAGER' | 'DEVELOPER' | 'VIEWER'
 
+/** Backend `WorkspacePermission` enum'u ile ayni 19 deger (ADR-0019). */
+export type WorkspacePermission =
+  | 'TASK_CREATE'
+  | 'TASK_EDIT'
+  | 'TASK_PLAN'
+  | 'TASK_SELF_ASSIGN'
+  | 'SUBTASK_CREATE_OWN'
+  | 'TASK_APPROVE'
+  | 'TASK_DELETE'
+  | 'COMMENT_WRITE'
+  | 'COMMENT_MODERATE'
+  | 'RETRO_ITEM_WRITE'
+  | 'PROJECT_CREATE'
+  | 'SPRINT_MANAGE'
+  | 'TAG_MANAGE'
+  | 'MEETING_MANAGE'
+  | 'GOAL_MANAGE'
+  | 'AUTOMATION_MANAGE'
+  | 'FEEDBACK_READ'
+  | 'MEMBER_MANAGE'
+  | 'INTEGRATION_MANAGE'
+
+export interface Me {
+  id: string
+  email: string
+  fullName: string | null
+}
+
+export interface MyPermissions {
+  role: WorkspaceRole
+  permissions: WorkspacePermission[]
+}
+
 export interface Workspace {
   id: string
   name: string

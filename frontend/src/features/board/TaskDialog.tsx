@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCurrentRole, useTaskLifecycle, useTaskTagAssignment, useUpdateStoryPoint, useUpdateTask } from '@/api/queries'
+import { useCan, useTaskLifecycle, useTaskTagAssignment, useUpdateStoryPoint, useUpdateTask } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { fmt, todayIso } from '@/lib/dates'
 import { cn } from '@/lib/cn'
@@ -43,7 +43,8 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
             sprints={sprints}
             canWrite={canWrite && !task.approvedAt}
             // Yorum yazmak is verisini degistirmez; onayli gorevde de acik kalir (ADR-0009 madde 8).
-            canComment={canWrite}
+            // Yorum izni COMMENT_WRITE'tan gelir (TaskFields icinde), TASK_EDIT'ten degil.
+            locked={!!task.approvedAt}
           />
           <TaskLifecycle key={`lc-${task.id}`} task={task} onClosed={() => onOpenChange(false)} />
         </>
@@ -56,13 +57,18 @@ function TaskFields({
   task,
   sprints,
   canWrite,
-  canComment,
+  locked,
 }: {
   task: Task
   sprints: Sprint[]
+  /** TASK_EDIT && onaysiz gorev. */
   canWrite: boolean
-  canComment: boolean
+  /** Onayli gorev: planlama/atama alanlari kilitli. */
+  locked: boolean
 }) {
+  const canComment = useCan('COMMENT_WRITE')
+  // Puan / son tarih / sprint / ust-alt gorev baglama: TASK_PLAN yoksa salt-okunur (gorunur kalir).
+  const canPlan = useCan('TASK_PLAN') && canWrite
   const update = useUpdateTask(task.projectId)
   const storyPoint = useUpdateStoryPoint(task.projectId)
   const { unassign } = useTaskTagAssignment(task.projectId)
@@ -77,7 +83,7 @@ function TaskFields({
     <div className="space-y-5">
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
-          <AssigneeField task={task} canWrite={canWrite} />
+          <AssigneeField task={task} locked={locked} />
         </div>
         <WatchButton task={task} />
       </div>
@@ -123,11 +129,11 @@ function TaskFields({
               id="t-due"
               type="date"
               min={todayIso()}
-              disabled={!canWrite}
+              disabled={!canPlan}
               value={task.dueDate ?? ''}
               onChange={(e) => update.mutate({ id: task.id, patch: { dueDate: e.target.value || null } }, { onError })}
             />
-            {task.dueDate && canWrite && (
+            {task.dueDate && canPlan && (
               <Button variant="ghost" size="sm" className="h-10" onClick={() => update.mutate({ id: task.id, patch: { dueDate: null } }, { onError })}>
                 Kaldır
               </Button>
@@ -137,7 +143,7 @@ function TaskFields({
         <Field label="Sprint" id="t-sprint">
           <select
             id="t-sprint"
-            disabled={!canWrite}
+            disabled={!canPlan}
             value={task.sprintId ?? ''}
             onChange={(e) => update.mutate({ id: task.id, patch: { sprintId: e.target.value || null } }, { onError })}
             className={cn(inputClass, 'cursor-pointer')}
@@ -152,7 +158,8 @@ function TaskFields({
         </Field>
       </div>
 
-      {canWrite && (
+      {/* Puan: gorunur, TASK_PLAN yoksa salt-okunur. */}
+      {(canPlan || task.storyPoint != null) && (
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -165,17 +172,19 @@ function TaskFields({
         >
           <div className="flex-1">
             <Field label="Story point (boş = kaldır)" id="t-sp">
-              <Input id="t-sp" type="number" min={0} max={100} value={sp} onChange={(e) => setSp(e.target.value)} placeholder="ör. 3" />
+              <Input id="t-sp" type="number" min={0} max={100} value={sp} onChange={(e) => setSp(e.target.value)} placeholder="ör. 3" disabled={!canPlan} />
             </Field>
           </div>
-          <Button type="submit" variant="outline" loading={storyPoint.isPending}>
-            Kaydet
-          </Button>
+          {canPlan && (
+            <Button type="submit" variant="outline" loading={storyPoint.isPending}>
+              Kaydet
+            </Button>
+          )}
         </form>
       )}
 
       <div className="border-t border-border pt-4">
-        <SubtaskPanel task={task} canWrite={canWrite} />
+        <SubtaskPanel task={task} canWrite={canPlan} />
       </div>
 
       <div className="border-t border-border pt-4">
@@ -224,15 +233,14 @@ function CommentsAndActivity({ task, sprints, canComment }: { task: Task; sprint
 }
 
 /**
- * Onay (ADMIN/MANAGER, yalniz Done) ve silme (yalniz ADMIN). Butonlar yalniz UI kolayligi; asil
+ * Onay (TASK_APPROVE, yalniz Done) ve silme (TASK_DELETE). Butonlar yalniz UI kolayligi; asil
  * yetki kontrolu backend'de.
  */
 function TaskLifecycle({ task, onClosed }: { task: Task; onClosed: () => void }) {
-  const role = useCurrentRole()
   const { approve, revoke, remove } = useTaskLifecycle(task.projectId)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const canApprove = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
-  const canDelete = role === 'WORKSPACE_ADMIN'
+  const canApprove = useCan('TASK_APPROVE')
+  const canDelete = useCan('TASK_DELETE')
   const onError = (err: unknown) => toast.error(errorMessage(err))
 
   if (!canApprove && !canDelete && !task.approvedAt) return null

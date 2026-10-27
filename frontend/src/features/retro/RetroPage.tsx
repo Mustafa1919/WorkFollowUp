@@ -14,7 +14,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
-  useCurrentRole,
+  useCan,
   useProjects,
   useRetroItemActions,
   useRetroItems,
@@ -239,8 +239,7 @@ function TaskRefCard({
 function RetroBoard({ sprintId, sprintName }: { sprintId: string; sprintName: string | undefined }) {
   const { data: items } = useRetroItems(sprintId, !!sprintId)
   const currentUserId = useCurrentUserId()
-  const role = useCurrentRole()
-  const canWrite = role !== undefined && role !== 'VIEWER'
+  const canWrite = useCan('RETRO_ITEM_WRITE')
 
   return (
     <div>
@@ -284,6 +283,7 @@ function RetroColumn({
   canWrite: boolean
 }) {
   const actions = useRetroItemActions(sprintId)
+  const canConvert = useCan('TASK_CREATE')
   const [draft, setDraft] = useState('')
 
   async function submit() {
@@ -330,7 +330,7 @@ function RetroColumn({
                 {it.authorName}
               </div>
               <div className="flex items-center gap-1">
-                {kind === 'action' && canWrite && !it.taskId && (
+                {kind === 'action' && canConvert && !it.taskId && (
                   <Button size="sm" variant="outline" className="h-6 px-1.5 text-xs" onClick={() => convert(it.id)} title="Göreve dönüştür">
                     Göreve dönüştür
                   </Button>

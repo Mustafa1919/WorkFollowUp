@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { toast } from 'sonner'
 import { BarChart3, Bot, BookmarkPlus, Bookmark, CalendarDays, Check, CheckCircle2, History, KanbanSquare, MessageSquareQuote, Plus, Tag as TagIcon, X } from 'lucide-react'
-import { useMembers, useProjectRealtime, useProjects, useSavedViewActions, useSavedViews, useSprints, useTags, useTasks, useCurrentRole } from '@/api/queries'
+import { useMembers, useProjectRealtime, useProjects, useSavedViewActions, useSavedViews, useSprints, useTags, useTasks, useCan } from '@/api/queries'
 import { useCurrentUserId } from '@/stores/session'
 import { cn } from '@/lib/cn'
 import { errorMessage } from '@/lib/api'
@@ -41,8 +41,9 @@ export function BoardPage() {
   const { data: tasks, isLoading } = useTasks(projectId)
   const { data: sprints } = useSprints(projectId)
   const { data: tags } = useTags()
-  const role = useCurrentRole()
-  const canWrite = role !== undefined && role !== 'VIEWER'
+  const canWrite = useCan('TASK_EDIT')
+  const canCreateTask = useCan('TASK_CREATE')
+  const canManageSprints = useCan('SPRINT_MANAGE')
   useProjectRealtime(projectId)
 
   const [selected, setSelected] = useState<Task | null>(null)
@@ -207,7 +208,7 @@ export function BoardPage() {
             <History size={15} /> Zaman Makinesi
           </Button>
         </Link>
-        {canWrite && (
+        {canCreateTask && (
           <Button size="sm" className="h-9" onClick={() => setNewTaskOpen(true)}>
             <Plus size={15} /> Görev
           </Button>
@@ -255,7 +256,7 @@ export function BoardPage() {
         onOpenChange={(o) => !o && setSelected(null)}
       />
       <NewTaskDialog projectId={projectId} open={newTaskOpen} onOpenChange={setNewTaskOpen} />
-      <SprintsDialog projectId={projectId} open={sprintsOpen} onOpenChange={setSprintsOpen} canManage={role === 'WORKSPACE_ADMIN' || role === 'MANAGER'} />
+      <SprintsDialog projectId={projectId} open={sprintsOpen} onOpenChange={setSprintsOpen} canManage={canManageSprints} />
       <SaveViewDialog projectId={projectId} query={currentViewQuery} open={saveViewOpen} onOpenChange={setSaveViewOpen} />
     </Page>
   )

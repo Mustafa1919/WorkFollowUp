@@ -16,7 +16,7 @@ import { CheckCircle2, X } from 'lucide-react'
 import {
   useAgingWip,
   useBulkTaskAction,
-  useCurrentRole,
+  useCan,
   useMembers,
   useTags,
   useSprints,
@@ -42,8 +42,7 @@ interface Props {
 /** Kolonlar arasi surukle-birak = durum degisikligi (optimistic; hata olursa kart geri doner). */
 export function KanbanView({ projectId, projectKey, tasks, canWrite, onOpen }: Props) {
   const update = useUpdateTask(projectId)
-  const role = useCurrentRole()
-  const canApprove = role === 'WORKSPACE_ADMIN' || role === 'MANAGER'
+  const canApprove = useCan('TASK_APPROVE')
   const { approve } = useTaskLifecycle(projectId)
   const onApprove = (t: Task) =>
     approve.mutate(t.id, {
@@ -255,6 +254,8 @@ function BulkActionBar({ selectedTasks, onClear }: { selectedTasks: Task[]; onCl
   const { data: sprints } = useSprints(selectedTasks[0]?.projectId ?? '')
   const { data: tags } = useTags()
   const bulk = useBulkTaskAction()
+  // Sprint/atanan toplu islemleri backend'de TASK_PLAN ister (BulkTaskService); durum/etiket TASK_EDIT.
+  const canPlan = useCan('TASK_PLAN')
   const [resetKey, setResetKey] = useState(0)
 
   function run(body: {
@@ -302,6 +303,7 @@ function BulkActionBar({ selectedTasks, onClear }: { selectedTasks: Task[]; onCl
               </option>
             ))}
           </select>
+          {canPlan && (
           <select
             key={`sprint-${resetKey}`}
             defaultValue=""
@@ -319,6 +321,8 @@ function BulkActionBar({ selectedTasks, onClear }: { selectedTasks: Task[]; onCl
               </option>
             ))}
           </select>
+          )}
+          {canPlan && (
           <select
             key={`assignee-${resetKey}`}
             defaultValue=""
@@ -338,6 +342,7 @@ function BulkActionBar({ selectedTasks, onClear }: { selectedTasks: Task[]; onCl
                 </option>
               ))}
           </select>
+          )}
           {tags && tags.length > 0 && (
             <select
               key={`tag-${resetKey}`}
