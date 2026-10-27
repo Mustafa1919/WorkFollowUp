@@ -25,7 +25,7 @@ export function NotificationBell() {
 
   function openNotification(n: Notification) {
     if (!n.read) markRead.mutate(n.id)
-    if (n.projectId) navigate(`/projects/${n.projectId}`)
+    if (n.projectId) navigate(`/projects/${n.projectId}${n.taskId ? `?task=${n.taskId}` : ''}`)
   }
 
   return (

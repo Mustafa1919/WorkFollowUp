@@ -190,7 +190,7 @@ export function useCalendarTasksForProjects(projects: Project[], from: string, t
 export function useCreateTask(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (body: { title: string; dueDate?: string | null }) =>
+    mutationFn: async (body: { title: string; dueDate?: string | null; description?: string; assigneeId?: string; storyPoint?: number; sprintId?: string; tagIds?: string[] }) =>
       (await api.post<Task>(`/api/v1/projects/${projectId}/tasks`, body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.tasks(ws(), projectId) }),
   })

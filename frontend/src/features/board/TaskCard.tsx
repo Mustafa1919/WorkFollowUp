@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { Ban, CalendarDays, Check, Flame, ListChecks, MessageSquare } from 'lucide-react'
+import { Lock, CalendarDays, Check, Flame, ListChecks, MessageSquare } from 'lucide-react'
 import { differenceInCalendarDays, startOfToday } from 'date-fns'
 import type { Task } from '@/lib/types'
 import { cn } from '@/lib/cn'
@@ -29,7 +29,7 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
   const diff = task.dueDate ? differenceInCalendarDays(fromIso(task.dueDate), startOfToday()) : null
   const late = diff !== null && diff < 0 && task.status !== 'Done'
   // Bilgilendirici: sadece hala acik (Done olmayan) blocker'lar rozet gerektirir.
-  const openBlockers = task.blockedBy.filter((b) => b.status !== 'Done').length
+  const openBlockers = task.blockedBy.filter((b) => b.status !== 'Done')
   const memberMap = useMemberMap()
   const assignee = task.assigneeId ? memberMap.get(task.assigneeId) : undefined
   return (
@@ -90,9 +90,9 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
             {task.completedSubtaskCount}/{task.subtaskCount}
           </span>
         )}
-        {openBlockers > 0 && (
-          <span className="inline-flex items-center gap-0.5 text-danger" title={`${openBlockers} açık bağımlılık tarafından bloklanıyor`}>
-            <Ban size={12} />
+        {openBlockers.length > 0 && (
+          <span className="inline-flex items-center gap-0.5 text-danger" title={`Bloklayan görevler: ${openBlockers.map((b) => taskKey(projectKey, b.taskNumber)).join(', ')}`}>
+            <Lock size={12} />
           </span>
         )}
         {!!agingLevel && (

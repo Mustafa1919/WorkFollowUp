@@ -17,6 +17,8 @@ import { TaskDialog } from './TaskDialog'
 import { NewTaskDialog } from './NewTaskDialog'
 import { SprintsDialog } from './SprintsDialog'
 import { SaveViewDialog } from './SaveViewDialog'
+import { taskKey } from '@/lib/status'
+import { findLinkedTask } from './taskForm'
 
 type View = 'kanban' | 'calendar'
 
@@ -46,7 +48,6 @@ export function BoardPage() {
   const canManageSprints = useCan('SPRINT_MANAGE')
   useProjectRealtime(projectId)
 
-  const [selected, setSelected] = useState<Task | null>(null)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [sprintsOpen, setSprintsOpen] = useState(false)
   const [saveViewOpen, setSaveViewOpen] = useState(false)
@@ -81,17 +82,26 @@ export function BoardPage() {
     setParams(next, { replace: true })
   }
 
-  // Komut paletinden derin baglanti: `?task=<id>` ile gelinirse ilgili gorevi ac, sonra param'i
-  // temizle (bir daha tasks yenilendiginde tekrar acilmasin).
   const taskParam = params.get('task')
-  useEffect(() => {
-    if (!taskParam || !tasks) return
-    const found = tasks.find((t) => t.id === taskParam)
-    if (found) setSelected(found)
+  const selectedLive = findLinkedTask(tasks ?? [], taskParam, project?.key)
+  function setSelected(task: Task | null) {
     const next = new URLSearchParams(params)
-    next.delete('task')
+    if (task && project) next.set('task', taskKey(project.key, task.taskNumber))
+    else if (task) next.set('task', task.id)
+    else next.delete('task')
     setParams(next, { replace: true })
-  }, [taskParam, tasks, params, setParams])
+  }
+
+  // UUID baglantilarini anahtara cevir; bulunamayan gorevi sessizce temizle.
+  useEffect(() => {
+    if (!taskParam || !tasks || !project) return
+    const canonical = selectedLive ? taskKey(project.key, selectedLive.taskNumber) : null
+    if (taskParam === canonical) return
+    const next = new URLSearchParams(params)
+    if (canonical) next.set('task', canonical)
+    else next.delete('task')
+    setParams(next, { replace: true })
+  }, [taskParam, tasks, project, selectedLive, params, setParams])
 
   const filtered = useMemo(() => {
     if (!tasks) return []
@@ -112,9 +122,6 @@ export function BoardPage() {
     else next.set(key, value)
     setParams(next, { replace: true })
   }
-
-  // Dialog acikken guncel veriyi goster (optimistic guncelleme sonrasi).
-  const selectedLive = selected ? (tasks?.find((t) => t.id === selected.id) ?? selected) : null
 
   return (
     <Page className="max-w-none">

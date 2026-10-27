@@ -2,6 +2,7 @@ import * as RD from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'motion/react'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { cn } from '@/lib/cn'
 
 interface DialogProps {
   open: boolean
@@ -9,10 +10,11 @@ interface DialogProps {
   title: string
   description?: string
   children: ReactNode
+  size?: 'md' | 'xl'
 }
 
 /** Radix (erisilebilirlik, focus trap, Esc) + Motion (giris/cikis animasyonu). */
-export function Dialog({ open, onOpenChange, title, description, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, size = 'md' }: DialogProps) {
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -29,20 +31,20 @@ export function Dialog({ open, onOpenChange, title, description, children }: Dia
             <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
               <RD.Content asChild forceMount>
                 <motion.div
-                  className="pointer-events-auto max-h-[calc(100vh-32px)] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl outline-none"
+                  className={cn('pointer-events-auto max-h-[calc(100vh-32px)] w-full min-w-0 overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl outline-none', size === 'xl' ? 'max-w-[1100px]' : 'max-w-md')}
                   initial={{ opacity: 0, scale: 0.95, y: 12 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: 8 }}
                   transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                 >
                   <div className="mb-5 flex items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0 break-words">
                       <RD.Title className="text-lg font-semibold">{title}</RD.Title>
                       <RD.Description className={description ? 'mt-1 text-sm text-muted' : 'sr-only'}>
                         {description ?? title}
                       </RD.Description>
                     </div>
-                    <RD.Close className="cursor-pointer rounded-lg p-1 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+                    <RD.Close className="shrink-0 cursor-pointer rounded-lg p-1 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
                       <X size={18} />
                     </RD.Close>
                   </div>

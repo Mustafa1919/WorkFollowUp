@@ -30,6 +30,7 @@ interface Props {
 export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }: Props) {
   return (
     <Dialog
+      size="xl"
       open={!!task}
       onOpenChange={onOpenChange}
       title={task?.title ?? ''}
@@ -45,8 +46,8 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
             // Yorum yazmak is verisini degistirmez; onayli gorevde de acik kalir (ADR-0009 madde 8).
             // Yorum izni COMMENT_WRITE'tan gelir (TaskFields icinde), TASK_EDIT'ten degil.
             locked={!!task.approvedAt}
+            onClosed={() => onOpenChange(false)}
           />
-          <TaskLifecycle key={`lc-${task.id}`} task={task} onClosed={() => onOpenChange(false)} />
         </>
       )}
     </Dialog>
@@ -58,6 +59,7 @@ function TaskFields({
   sprints,
   canWrite,
   locked,
+  onClosed,
 }: {
   task: Task
   sprints: Sprint[]
@@ -65,6 +67,7 @@ function TaskFields({
   canWrite: boolean
   /** Onayli gorev: planlama/atama alanlari kilitli. */
   locked: boolean
+  onClosed: () => void
 }) {
   const canComment = useCan('COMMENT_WRITE')
   // Puan / son tarih / sprint / ust-alt gorev baglama: TASK_PLAN yoksa salt-okunur (gorunur kalir).
@@ -80,119 +83,123 @@ function TaskFields({
   const assignable = sprints.filter((s) => s.status !== 'completed' || s.id === task.sprintId)
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-3">
+      <div className="order-2 min-w-0 space-y-5 break-words lg:order-1 lg:col-span-2">
+        <h2 className="text-lg font-semibold">{task.title}</h2>
+        <DescriptionField task={task} canWrite={canWrite} />
+        <div className="border-t border-border pt-4">
+          <SubtaskPanel task={task} canWrite={canPlan} />
+        </div>
+        <div className="border-t border-border pt-4">
+          <CommentsAndActivity task={task} sprints={sprints} canComment={canComment} />
+        </div>
+      </div>
+      <div className="order-1 min-w-0 space-y-5 break-words lg:order-2">
+        {/* Dar sag sutunda atama satiri (secici + "Bana ata") izle butonuyla yan yana sigmiyor. */}
+        <div className="space-y-3">
           <AssigneeField task={task} locked={locked} />
+          <WatchButton task={task} />
         </div>
-        <WatchButton task={task} />
-      </div>
 
-      <DescriptionField task={task} canWrite={canWrite} />
 
-      <div>
-        <div className="mb-2 text-xs font-medium text-muted">Etiketler</div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {task.tags.map((tag) => (
-            <TagChip key={tag.id} tag={tag} onRemove={canWrite ? () => unassign.mutate({ taskId: task.id, tagId: tag.id }, { onError }) : undefined} />
-          ))}
-          {canWrite && <TagPicker task={task} />}
+        <div>
+          <div className="mb-2 text-xs font-medium text-muted">Etiketler</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {task.tags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} onRemove={canWrite ? () => unassign.mutate({ taskId: task.id, tagId: tag.id }, { onError }) : undefined} />
+            ))}
+            {canWrite && <TagPicker task={task} />}
+          </div>
         </div>
-      </div>
 
-      <div>
-        <div className="mb-2 text-xs font-medium text-muted">Durum</div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {TASK_STATUSES.map((s) => (
-            <button
-              key={s}
-              disabled={!canWrite}
-              onClick={() => s !== task.status && update.mutate({ id: task.id, patch: { status: s } }, { onError })}
-              className={cn(
-                'flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs transition-all disabled:cursor-default',
-                s === task.status
-                  ? `border-transparent ${STATUS_META[s].soft} ${STATUS_META[s].text} font-medium`
-                  : 'border-border text-muted hover:border-accent/40 hover:text-fg',
+        <div>
+          <div className="mb-2 text-xs font-medium text-muted">Durum</div>
+          <div className="grid grid-cols-2 gap-2">
+            {TASK_STATUSES.map((s) => (
+              <button
+                key={s}
+                disabled={!canWrite}
+                onClick={() => s !== task.status && update.mutate({ id: task.id, patch: { status: s } }, { onError })}
+                className={cn(
+                  'flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs transition-all disabled:cursor-default',
+                  s === task.status
+                    ? `border-transparent ${STATUS_META[s].soft} ${STATUS_META[s].text} font-medium`
+                    : 'border-border text-muted hover:border-accent/40 hover:text-fg',
+                )}
+              >
+                <StatusDot status={s} />
+                {STATUS_META[s].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid min-w-0 gap-4">
+          <Field label="Tarih (takvim)" id="t-due">
+            <div className="flex gap-2">
+              <Input
+                id="t-due"
+                className="min-w-0"
+                type="date"
+                min={todayIso()}
+                disabled={!canPlan}
+                value={task.dueDate ?? ''}
+                onChange={(e) => update.mutate({ id: task.id, patch: { dueDate: e.target.value || null } }, { onError })}
+              />
+              {task.dueDate && canPlan && (
+                <Button variant="ghost" size="sm" className="h-10" onClick={() => update.mutate({ id: task.id, patch: { dueDate: null } }, { onError })}>
+                  Kaldır
+                </Button>
               )}
-            >
-              <StatusDot status={s} />
-              {STATUS_META[s].label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Tarih (takvim)" id="t-due">
-          <div className="flex gap-2">
-            <Input
-              id="t-due"
-              type="date"
-              min={todayIso()}
+            </div>
+          </Field>
+          <Field label="Sprint" id="t-sprint">
+            <select
+              id="t-sprint"
               disabled={!canPlan}
-              value={task.dueDate ?? ''}
-              onChange={(e) => update.mutate({ id: task.id, patch: { dueDate: e.target.value || null } }, { onError })}
-            />
-            {task.dueDate && canPlan && (
-              <Button variant="ghost" size="sm" className="h-10" onClick={() => update.mutate({ id: task.id, patch: { dueDate: null } }, { onError })}>
-                Kaldır
+              value={task.sprintId ?? ''}
+              onChange={(e) => update.mutate({ id: task.id, patch: { sprintId: e.target.value || null } }, { onError })}
+              className={cn(inputClass, 'cursor-pointer')}
+            >
+              <option value="">Backlog</option>
+              {assignable.map((s) => (
+                <option key={s.id} value={s.id} disabled={s.status === 'completed'}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        {/* Puan: gorunur, TASK_PLAN yoksa salt-okunur. */}
+        {(canPlan || task.storyPoint != null) && (
+          <form
+            className="flex items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              storyPoint.mutate(
+                { id: task.id, storyPoint: sp === '' ? null : Number(sp) },
+                { onError, onSuccess: () => toast.success('Story point kaydedildi') },
+              )
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <Field label="Story point (boş = kaldır)" id="t-sp">
+                <Input id="t-sp" type="number" min={0} max={100} value={sp} onChange={(e) => setSp(e.target.value)} placeholder="ör. 3" disabled={!canPlan} />
+              </Field>
+            </div>
+            {canPlan && (
+              <Button type="submit" variant="outline" loading={storyPoint.isPending}>
+                Kaydet
               </Button>
             )}
-          </div>
-        </Field>
-        <Field label="Sprint" id="t-sprint">
-          <select
-            id="t-sprint"
-            disabled={!canPlan}
-            value={task.sprintId ?? ''}
-            onChange={(e) => update.mutate({ id: task.id, patch: { sprintId: e.target.value || null } }, { onError })}
-            className={cn(inputClass, 'cursor-pointer')}
-          >
-            <option value="">Backlog</option>
-            {assignable.map((s) => (
-              <option key={s.id} value={s.id} disabled={s.status === 'completed'}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+          </form>
+        )}
 
-      {/* Puan: gorunur, TASK_PLAN yoksa salt-okunur. */}
-      {(canPlan || task.storyPoint != null) && (
-        <form
-          className="flex items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            storyPoint.mutate(
-              { id: task.id, storyPoint: sp === '' ? null : Number(sp) },
-              { onError, onSuccess: () => toast.success('Story point kaydedildi') },
-            )
-          }}
-        >
-          <div className="flex-1">
-            <Field label="Story point (boş = kaldır)" id="t-sp">
-              <Input id="t-sp" type="number" min={0} max={100} value={sp} onChange={(e) => setSp(e.target.value)} placeholder="ör. 3" disabled={!canPlan} />
-            </Field>
-          </div>
-          {canPlan && (
-            <Button type="submit" variant="outline" loading={storyPoint.isPending}>
-              Kaydet
-            </Button>
-          )}
-        </form>
-      )}
-
-      <div className="border-t border-border pt-4">
-        <SubtaskPanel task={task} canWrite={canPlan} />
-      </div>
-
-      <div className="border-t border-border pt-4">
-        <DependencyPanel task={task} canWrite={canWrite} />
-      </div>
-
-      <div className="border-t border-border pt-4">
-        <CommentsAndActivity task={task} sprints={sprints} canComment={canComment} />
+        <div className="border-t border-border pt-4">
+          <DependencyPanel task={task} canWrite={canWrite} />
+        </div>
+        <TaskLifecycle task={task} onClosed={onClosed} />
       </div>
     </div>
   )

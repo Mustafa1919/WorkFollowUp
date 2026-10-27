@@ -36,7 +36,7 @@ export function AssigneeField({ task, locked }: { task: Task; locked: boolean })
     return (
       <div>
         <div className="mb-2 text-xs font-medium text-muted">Atanan</div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {current && <Avatar name={current.fullName} seed={current.userId} size={28} />}
           <span className="text-sm">{task.assigneeId ? (current?.fullName ?? 'Eski üye') : 'Atanmamış'}</span>
           {canSelfAssign && me && unassigned && (
@@ -57,7 +57,7 @@ export function AssigneeField({ task, locked }: { task: Task; locked: boolean })
   return (
     <div>
       <div className="mb-2 text-xs font-medium text-muted">Atanan</div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {current && <Avatar name={current.fullName} seed={current.userId} size={28} />}
         <select
           aria-label="Atanan kişi"
