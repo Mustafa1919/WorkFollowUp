@@ -64,6 +64,25 @@ public class TaskDependencyRepository {
   }
 
   /**
+   * ADR-0020: {@code blockedTaskId}'yi bloklayan, silinmemis ve {@code status <> 'Done'} gorevlerin
+   * "PROJE_ANAHTARI-NO" anahtarlari, anahtara gore sirali. Bos liste = acik bloklayan yok.
+   * Bloklayan farkli projede olabilir; anahtar her bloklayanin KENDI projesinden gelir. Native SQL
+   * oldugu icin {@code @SQLRestriction} UYGULANMAZ — soft-delete filtresi elle.
+   */
+  @SuppressWarnings("unchecked")
+  public List<String> findOpenBlockerKeys(UUID blockedTaskId) {
+    return entityManager
+        .createNativeQuery(
+            "SELECT p.key || '-' || t.task_number AS blocker_key FROM task_dependencies d "
+                + "JOIN tasks t ON t.id = d.blocking_task_id "
+                + "JOIN projects p ON p.id = t.project_id "
+                + "WHERE d.blocked_task_id = ?1 AND t.deleted_at IS NULL AND t.status <> 'Done' "
+                + "ORDER BY p.key, t.task_number")
+        .setParameter(1, blockedTaskId)
+        .getResultList();
+  }
+
+  /**
    * Ters-cift kontrolu: {@code blockedTaskId} zaten {@code blockingTaskId}'yi bloklamis mi (V19'un
    * DB seviyesinde yakalayamadigi kisit — servis katmaninda burada kapatilir).
    */

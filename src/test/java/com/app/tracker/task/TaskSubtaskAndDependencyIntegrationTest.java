@@ -254,15 +254,22 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void openBlockerDoesNotPreventStatusChange() {
-    // Kullanici karari: dependency sadece bilgilendirici, durum gecisini engellemez.
+  void openBlockerPreventsOnlyTheDoneTransition() {
+    // ADR-0020: eski "yalniz bilgilendirici" karari kaldirildi; acik bloklayan yalniz Done'u
+    // kapatir.
     Task blocked = inWorkspace(() -> taskService.createTask(project.getId(), "Blocked"));
     Task blocking = inWorkspace(() -> taskService.createTask(project.getId(), "Blocking"));
     inWorkspace(() -> taskDependencyService.link(blocked.getId(), blocking.getId(), adminUserId));
 
-    Task done =
-        inWorkspace(() -> taskService.updateStatus(blocked.getId(), TaskStatus.DONE, adminUserId));
-    assertEquals(TaskStatus.DONE, done.getStatus());
+    Task inProgress =
+        inWorkspace(
+            () -> taskService.updateStatus(blocked.getId(), TaskStatus.IN_PROGRESS, adminUserId));
+    assertEquals(TaskStatus.IN_PROGRESS, inProgress.getStatus());
+    assertThrows(
+        BusinessRuleException.class,
+        () ->
+            inWorkspace(
+                () -> taskService.updateStatus(blocked.getId(), TaskStatus.DONE, adminUserId)));
   }
 
   private <T> T inWorkspace(Supplier<T> action) {

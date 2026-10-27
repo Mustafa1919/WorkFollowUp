@@ -4,6 +4,7 @@ import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.outbox.OutboxEventRepository;
 import com.app.tracker.core.web.PageResponse;
+import com.app.tracker.dependency.repository.TaskDependencyRepository;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.repository.ProjectRepository;
 import com.app.tracker.sprint.model.Sprint;
@@ -30,6 +31,7 @@ import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -63,6 +65,7 @@ public class TaskService {
   private final ObjectMapper objectMapper;
   private final Clock clock;
   private final TaskAccessPolicy taskAccessPolicy;
+  private final TaskDependencyRepository taskDependencyRepository;
 
   public TaskService(
       ProjectRepository projectRepository,
@@ -76,7 +79,8 @@ public class TaskService {
       OutboxEventRepository outboxEventRepository,
       ObjectMapper objectMapper,
       Clock clock,
-      TaskAccessPolicy taskAccessPolicy) {
+      TaskAccessPolicy taskAccessPolicy,
+      TaskDependencyRepository taskDependencyRepository) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskCounterRepository = taskCounterRepository;
@@ -89,6 +93,7 @@ public class TaskService {
     this.objectMapper = objectMapper;
     this.clock = clock;
     this.taskAccessPolicy = taskAccessPolicy;
+    this.taskDependencyRepository = taskDependencyRepository;
   }
 
   @Transactional
@@ -167,6 +172,17 @@ public class TaskService {
       throw new BusinessRuleException(
           "Onaylanmis gorevin durumu degistirilemez; once onay geri alinmali.");
     }
+    // ADR-0020: acik (silinmemis, Done olmayan) bloklayani olan gorev Done'a gecemez. Done -> Done
+    // bugunku gibi serbest (kontrol yok). Toplu islemde tek tx: biri takilirsa hepsi geri alinir.
+    if (TaskStatus.DONE.equals(newStatus) && !TaskStatus.DONE.equals(task.getStatus())) {
+      List<String> blockerKeys = taskDependencyRepository.findOpenBlockerKeys(taskId);
+      if (!blockerKeys.isEmpty()) {
+        throw new BusinessRuleException(
+            taskKey(task)
+                + " tamamlanamaz; once bitmesi gereken gorevler: "
+                + String.join(", ", blockerKeys));
+      }
+    }
     String oldStatus = task.getStatus();
     task.updateStatus(newStatus);
     Task saved = taskRepository.save(task);
@@ -184,6 +200,22 @@ public class TaskService {
         saved.getWorkspaceId(),
         objectMapper.writeValueAsString(payload));
     return saved;
+  }
+
+  /**
+   * ADR-0020 — yalniz GithubEventProcessor: Done gecisi acik bloklayan yuzunden YAPILMADI. Durum
+   * DEGISMEZ, {@code task_events}'e yazilmaz; yalniz {@code task.events}'e {@code
+   * TASK_TRANSITION_BLOCKED} outbox olayi yazilir (Inbox bildirimi icin). Cagiranin tx'ine katilir
+   * (markProcessed ile ayni commit).
+   */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void recordTransitionBlocked(
+      Task task, String targetStatus, List<String> blockerKeys, UUID actorId) {
+    Map<String, Object> payload = basePayload(task, actorId);
+    payload.put("targetStatus", targetStatus);
+    payload.put("blockerKeys", List.copyOf(blockerKeys));
+    payload.put("source", "GITHUB_PR_MERGE");
+    writeTaskEvent("TASK_TRANSITION_BLOCKED", task, payload);
   }
 
   /**
@@ -604,6 +636,14 @@ public class TaskService {
         task.getId(),
         task.getWorkspaceId(),
         objectMapper.writeValueAsString(payload));
+  }
+
+  /** Kullaniciya gorunen gorev anahtari ("PROJE-NO"); proje RLS ile gorunmezse yalniz numara. */
+  private String taskKey(Task task) {
+    return projectRepository
+        .findById(task.getProjectId())
+        .map(project -> project.getKey() + "-" + task.getTaskNumber())
+        .orElse("#" + task.getTaskNumber());
   }
 
   private Task requireTask(UUID taskId) {

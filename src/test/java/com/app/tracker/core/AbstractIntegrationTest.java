@@ -36,7 +36,11 @@ public abstract class AbstractIntegrationTest {
       new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
           .withDatabaseName("tracker_test")
           .withUsername("app_migrator")
-          .withPassword("app_migrator");
+          .withPassword("app_migrator")
+          // Spring onbellegindeki her test context'i iki Hikari havuzu (yazma + okuma) acik tutar;
+          // varsayilan 100 baglanti ~5 context'te tukenip sonraki siniflari "remaining connection
+          // slots are reserved" ile dusuruyordu (Dalga 5, 2026-10-27).
+          .withCommand("postgres", "-c", "max_connections=400");
 
   static final KafkaContainer KAFKA =
       new KafkaContainer(DockerImageName.parse("apache/kafka:3.8.0"));

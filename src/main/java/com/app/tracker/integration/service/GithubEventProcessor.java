@@ -3,6 +3,7 @@ package com.app.tracker.integration.service;
 import com.app.tracker.automation.AutomationRuleService;
 import com.app.tracker.automation.AutomationTemplateKey;
 import com.app.tracker.core.idempotency.ProcessedEventStore;
+import com.app.tracker.dependency.repository.TaskDependencyRepository;
 import com.app.tracker.integration.IntegrationActor;
 import com.app.tracker.integration.service.GithubEventInterpreter.StatusIntent;
 import com.app.tracker.integration.service.GithubEventInterpreter.TaskReference;
@@ -12,6 +13,7 @@ import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.repository.TaskRepository;
 import com.app.tracker.task.service.TaskService;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,6 +64,7 @@ public class GithubEventProcessor {
   private final TaskRepository taskRepository;
   private final TaskService taskService;
   private final AutomationRuleService automationRuleService;
+  private final TaskDependencyRepository taskDependencyRepository;
 
   public GithubEventProcessor(
       ObjectMapper objectMapper,
@@ -69,13 +72,15 @@ public class GithubEventProcessor {
       ProjectRepository projectRepository,
       TaskRepository taskRepository,
       TaskService taskService,
-      AutomationRuleService automationRuleService) {
+      AutomationRuleService automationRuleService,
+      TaskDependencyRepository taskDependencyRepository) {
     this.objectMapper = objectMapper;
     this.processedEventStore = processedEventStore;
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskService = taskService;
     this.automationRuleService = automationRuleService;
+    this.taskDependencyRepository = taskDependencyRepository;
   }
 
   /**
@@ -123,6 +128,22 @@ public class GithubEventProcessor {
         taskRepository.findByProjectIdAndTaskNumber(project.get().getId(), reference.taskNumber());
     if (task.isEmpty() || !isForward(task.get().getStatus(), targetStatus)) {
       return false;
+    }
+    // ADR-0020: acik bloklayani olan gorev Done'a gecemez. Tuketicide kalici is kurali ihlali
+    // exception'a DONUSMEZ (DefaultErrorHandler retry + DLT'ye duserdi): on kontrol + atla + olay
+    // yaz. markProcessed zaten process() basinda ayni tx'te yapildi.
+    if (TaskStatus.DONE.equals(targetStatus)) {
+      List<String> blockerKeys = taskDependencyRepository.findOpenBlockerKeys(task.get().getId());
+      if (!blockerKeys.isEmpty()) {
+        taskService.recordTransitionBlocked(
+            task.get(), targetStatus, blockerKeys, IntegrationActor.SYSTEM_USER_ID);
+        log.info(
+            "Webhook Done gecisi bloklu, atlandi: {}-{} bloklayanlar={}",
+            reference.projectKey(),
+            reference.taskNumber(),
+            blockerKeys);
+        return false;
+      }
     }
     taskService.updateStatus(task.get().getId(), targetStatus, IntegrationActor.SYSTEM_USER_ID);
     log.info(

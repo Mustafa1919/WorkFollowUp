@@ -6,6 +6,7 @@ import com.app.tracker.core.outbox.OutboxEventRepository;
 import com.app.tracker.dependency.dto.TaskRefResponse;
 import com.app.tracker.dependency.repository.TaskDependencyRepository;
 import com.app.tracker.task.model.Task;
+import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import java.util.ArrayList;
@@ -19,11 +20,14 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * RAKIP_ANALIZI.md Bolum 3 — Dependency (Blocked by/Blocking), Subtask'in yanindaki ikinci parca.
- * TagService ile AYNI desen: idempotent link/unlink, batch N+1 onleme, approved-task kilidi.
- * Kullanici karariyla kapsam: sadece BILGILENDIRICI (durum gecisini engellemez), workspace icinde
- * herhangi proje arasinda kurulabilir (Subtask'in aksine proje siniri YOK). {@code task_events}'e
- * yazim Dalga 1.5 (Activity sekmesi) ile eklendi — analitik worker'lar hala bu event tipini
- * tuketmiyor, yalniz Activity sekmesi okuyor.
+ * TagService ile AYNI desen: idempotent link/unlink, batch N+1 onleme, approved-task kilidi. Ilk
+ * kapsam "yalniz bilgilendirici" idi; ADR-0020 ile DEGISTI: acik (silinmemis, Done olmayan)
+ * bloklayani olan gorev Done'a gecemez (TaskService#updateStatus; GitHub PR merge yolunda atlanip
+ * TASK_TRANSITION_BLOCKED yazilir) ve Done goreve acik bloklayan eklenemez ({@link #link}). Diger
+ * gecisler serbest; zincirleme geri acma ve kilit YOK. Workspace icinde herhangi proje arasinda
+ * kurulabilir (Subtask'in aksine proje siniri YOK). {@code task_events}'e yazim Dalga 1.5 (Activity
+ * sekmesi) ile eklendi — analitik worker'lar hala bu event tipini tuketmiyor, yalniz Activity
+ * sekmesi okuyor.
  */
 @Service
 public class TaskDependencyService {
@@ -65,6 +69,11 @@ public class TaskDependencyService {
     if (taskDependencyRepository.existsReverse(blockingTaskId, blockedTaskId)) {
       throw new BusinessRuleException(
           "Bu iki gorev zaten ters yonde birbirini bloklu — dongu olusturulamaz.");
+    }
+    // ADR-0020: tamamlanma kuralinin tersi — Done gorevin "acik bloklayani" olamaz.
+    if (TaskStatus.DONE.equals(blocked.getStatus())
+        && !TaskStatus.DONE.equals(blocking.getStatus())) {
+      throw new BusinessRuleException("Tamamlanmis bir goreve acik bir bloklayan eklenemez.");
     }
     if (taskDependencyRepository.link(blockingTaskId, blockedTaskId, blocked.getWorkspaceId())) {
       taskEventRepository.recordDependencyChanged(blockedTaskId, blockingTaskId, actorId, true);
