@@ -6,7 +6,6 @@ import com.app.tracker.comment.model.Comment;
 import com.app.tracker.comment.service.CommentService;
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.web.PageResponse;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -53,14 +52,7 @@ public class CommentController {
   }
 
   @PostMapping("/api/v1/tasks/{taskId}/comments")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('COMMENT_WRITE')")
   public ResponseEntity<CommentResponse> create(
       @PathVariable UUID taskId, @Valid @RequestBody CommentRequest request) {
     Comment comment = commentService.addComment(taskId, request.body(), CurrentUser.id());

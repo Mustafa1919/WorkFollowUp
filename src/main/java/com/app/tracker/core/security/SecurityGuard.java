@@ -23,6 +23,34 @@ public class SecurityGuard {
     this.membershipService = membershipService;
   }
 
+  /** Aktif TenantContext workspace'inde cagiranin rolu bu izni veriyor mu. */
+  public boolean can(String permission) {
+    return canAny(permission);
+  }
+
+  /** Verilen izinlerden en az biri; uyelik rolu yalniz bir kez okunur. */
+  public boolean canAny(String... permissions) {
+    WorkspacePermission[] requested =
+        Arrays.stream(permissions)
+            .map(WorkspacePermission::valueOf)
+            .toArray(WorkspacePermission[]::new);
+    UUID workspaceId = TenantContext.getWorkspaceId();
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (workspaceId == null
+        || authentication == null
+        || !authentication.isAuthenticated()
+        || !(authentication.getPrincipal() instanceof UUID userId)) {
+      return false;
+    }
+    return membershipService
+        .findRole(userId, workspaceId)
+        .map(
+            role ->
+                Arrays.stream(requested)
+                    .anyMatch(permission -> RolePermissions.has(role, permission)))
+        .orElse(false);
+  }
+
   public boolean hasWorkspaceRole(UUID workspaceId, String... roles) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null || !authentication.isAuthenticated()) {

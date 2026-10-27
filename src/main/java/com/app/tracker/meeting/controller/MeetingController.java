@@ -8,7 +8,6 @@ import com.app.tracker.meeting.dto.MeetingResponse;
 import com.app.tracker.meeting.model.Meeting;
 import com.app.tracker.meeting.service.MeetingOccurrenceCalculator;
 import com.app.tracker.meeting.service.MeetingService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -41,13 +40,6 @@ public class MeetingController {
   /** {@code TaskController.calendar} ile AYNI sınır — 6 haftalık ay ızgarası 42 gün. */
   private static final int MAX_OCCURRENCE_RANGE_DAYS = 62;
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final MeetingService meetingService;
 
   public MeetingController(MeetingService meetingService) {
@@ -55,7 +47,7 @@ public class MeetingController {
   }
 
   @PostMapping
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('MEETING_MANAGE')")
   public ResponseEntity<MeetingResponse> create(@Valid @RequestBody MeetingRequest request) {
     Meeting meeting =
         meetingService.create(
@@ -95,7 +87,7 @@ public class MeetingController {
   }
 
   @PutMapping("/{meetingId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('MEETING_MANAGE')")
   public MeetingResponse update(
       @PathVariable UUID meetingId, @Valid @RequestBody MeetingRequest request) {
     Meeting meeting =
@@ -118,7 +110,7 @@ public class MeetingController {
   }
 
   @DeleteMapping("/{meetingId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('MEETING_MANAGE')")
   public ResponseEntity<Void> delete(@PathVariable UUID meetingId) {
     meetingService.delete(meetingId);
     return ResponseEntity.noContent().build();

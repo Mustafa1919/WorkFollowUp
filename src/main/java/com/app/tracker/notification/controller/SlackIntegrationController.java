@@ -3,7 +3,6 @@ package com.app.tracker.notification.controller;
 import com.app.tracker.notification.dto.SlackIntegrationRequest;
 import com.app.tracker.notification.dto.SlackIntegrationResponse;
 import com.app.tracker.notification.service.SlackIntegrationService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/integrations/slack")
 @Profile("!migrate")
-@PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('" + WorkspaceRole.ADMIN + "')")
+@PreAuthorize("@securityGuard.can('INTEGRATION_MANAGE')")
 public class SlackIntegrationController {
 
   private final SlackIntegrationService service;

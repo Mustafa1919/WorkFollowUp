@@ -3,7 +3,6 @@ package com.app.tracker.automation;
 import com.app.tracker.automation.dto.AutomationRuleResponse;
 import com.app.tracker.automation.dto.AutomationRuleToggleRequest;
 import com.app.tracker.core.security.CurrentUser;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -26,13 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/projects/{projectId}/automation-rules")
 public class AutomationRuleController {
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final AutomationRuleService automationRuleService;
 
   public AutomationRuleController(AutomationRuleService automationRuleService) {
@@ -47,7 +39,7 @@ public class AutomationRuleController {
   }
 
   @PutMapping("/{templateKey}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('AUTOMATION_MANAGE')")
   public AutomationRuleResponse setEnabled(
       @PathVariable UUID projectId,
       @PathVariable AutomationTemplateKey templateKey,

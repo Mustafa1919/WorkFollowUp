@@ -5,7 +5,6 @@ import com.app.tracker.dependency.service.TaskDependencyService.DependencySummar
 import com.app.tracker.retro.dto.RetroItemResponse;
 import com.app.tracker.task.dto.TaskResponse;
 import com.app.tracker.task.model.Task;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -30,15 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class RetroController {
 
-  private static final String WRITE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')";
-
   private final RetroService retroService;
   private final RetroItemService retroItemService;
 
@@ -58,7 +48,7 @@ public class RetroController {
   }
 
   @PostMapping("/api/v1/sprints/{sprintId}/retro/items")
-  @PreAuthorize(WRITE)
+  @PreAuthorize("@securityGuard.can('RETRO_ITEM_WRITE')")
   public ResponseEntity<RetroItemResponse> createItem(
       @PathVariable UUID sprintId,
       @jakarta.validation.Valid @RequestBody RetroItemRequest request) {
@@ -74,7 +64,7 @@ public class RetroController {
   }
 
   @PostMapping("/api/v1/retro-items/{id}/convert-to-task")
-  @PreAuthorize(WRITE)
+  @PreAuthorize("@securityGuard.can('TASK_CREATE')")
   public ResponseEntity<TaskResponse> convertToTask(@PathVariable UUID id) {
     Task task = retroItemService.convertToTask(id, CurrentUser.id());
     // Yeni gorevin hicbir etiketi/story point'i/alt gorevi/bagimliligi/yorumu olamaz

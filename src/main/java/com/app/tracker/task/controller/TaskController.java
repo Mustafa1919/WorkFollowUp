@@ -24,7 +24,6 @@ import com.app.tracker.task.repository.TaskCustomFieldRepository;
 import com.app.tracker.task.service.BulkTaskService;
 import com.app.tracker.task.service.TaskActivityService;
 import com.app.tracker.task.service.TaskService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -78,14 +77,7 @@ public class TaskController {
   }
 
   @PostMapping("/api/v1/projects/{projectId}/tasks")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_CREATE')")
   public ResponseEntity<TaskResponse> create(
       @PathVariable UUID projectId, @Valid @RequestBody CreateTaskRequest request) {
     Task task =
@@ -114,14 +106,7 @@ public class TaskController {
 
   /** {@code dueDate: null} gorevi takvimden kaldirir. */
   @PutMapping("/api/v1/tasks/{taskId}/due-date")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public ResponseEntity<TaskResponse> updateDueDate(
       @PathVariable UUID taskId, @RequestBody UpdateDueDateRequest request) {
     Task task = taskService.updateDueDate(taskId, request.dueDate(), CurrentUser.id());
@@ -139,14 +124,7 @@ public class TaskController {
   }
 
   @PatchMapping("/api/v1/tasks/{taskId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public ResponseEntity<TaskResponse> updateStatus(
       @PathVariable UUID taskId, @Valid @RequestBody UpdateTaskStatusRequest request) {
     Task task = taskService.updateStatus(taskId, request.status(), CurrentUser.id());
@@ -155,14 +133,7 @@ public class TaskController {
 
   /** {@code sprintId: null} gorevi sprint'ten cikarir. */
   @PutMapping("/api/v1/tasks/{taskId}/sprint")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public ResponseEntity<TaskResponse> assignSprint(
       @PathVariable UUID taskId, @RequestBody AssignSprintRequest request) {
     Task task = taskService.assignSprint(taskId, request.sprintId(), CurrentUser.id());
@@ -170,14 +141,7 @@ public class TaskController {
   }
 
   @PutMapping("/api/v1/tasks/{taskId}/story-point")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public ResponseEntity<TaskResponse> updateStoryPoint(
       @PathVariable UUID taskId, @Valid @RequestBody UpdateStoryPointRequest request) {
     Task task = taskService.updateStoryPoint(taskId, request.storyPoint(), CurrentUser.id());
@@ -197,30 +161,20 @@ public class TaskController {
 
   /** Onay yetkisi ADMIN/MANAGER: gorevi yapan DEVELOPER kendi isini onaylayamaz. */
   @PostMapping("/api/v1/tasks/{taskId}/approval")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_APPROVE')")
   public ResponseEntity<TaskResponse> approve(@PathVariable UUID taskId) {
     return ResponseEntity.ok(toResponse(taskService.approve(taskId, CurrentUser.id())));
   }
 
   @DeleteMapping("/api/v1/tasks/{taskId}/approval")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_APPROVE')")
   public ResponseEntity<TaskResponse> revokeApproval(@PathVariable UUID taskId) {
     return ResponseEntity.ok(toResponse(taskService.revokeApproval(taskId, CurrentUser.id())));
   }
 
   /** Soft delete; yalniz workspace ADMIN. */
   @DeleteMapping("/api/v1/tasks/{taskId}")
-  @PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('" + WorkspaceRole.ADMIN + "')")
+  @PreAuthorize("@securityGuard.can('TASK_DELETE')")
   public ResponseEntity<Void> delete(@PathVariable UUID taskId) {
     taskService.deleteTask(taskId, CurrentUser.id());
     return ResponseEntity.noContent().build();
@@ -232,28 +186,14 @@ public class TaskController {
    * DELETE): zaten atanmis/atanmamis durum hata degil no-op'tur.
    */
   @PutMapping("/api/v1/tasks/{taskId}/tags/{tagId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public TaskResponse assignTag(@PathVariable UUID taskId, @PathVariable UUID tagId) {
     Task task = tagService.assign(taskId, tagId, CurrentUser.id());
     return toResponse(task);
   }
 
   @DeleteMapping("/api/v1/tasks/{taskId}/tags/{tagId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public TaskResponse unassignTag(@PathVariable UUID taskId, @PathVariable UUID tagId) {
     Task task = tagService.unassign(taskId, tagId, CurrentUser.id());
     return toResponse(task);
@@ -265,27 +205,13 @@ public class TaskController {
    * olarak parent DELETE'i {@code /parent} altinda, id'siz.
    */
   @PutMapping("/api/v1/tasks/{taskId}/parent/{parentTaskId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public TaskResponse setParent(@PathVariable UUID taskId, @PathVariable UUID parentTaskId) {
     return toResponse(taskService.setParent(taskId, parentTaskId, CurrentUser.id()));
   }
 
   @DeleteMapping("/api/v1/tasks/{taskId}/parent")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public TaskResponse removeParent(@PathVariable UUID taskId) {
     return toResponse(taskService.removeParent(taskId, CurrentUser.id()));
   }
@@ -301,27 +227,13 @@ public class TaskController {
    * AYNI (ADMIN/MANAGER/DEVELOPER) — bagimlilik kurmak da gorev duzenlemenin bir parcasi.
    */
   @PutMapping("/api/v1/tasks/{taskId}/dependencies/{blockingTaskId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public TaskResponse linkDependency(@PathVariable UUID taskId, @PathVariable UUID blockingTaskId) {
     return toResponse(taskDependencyService.link(taskId, blockingTaskId, CurrentUser.id()));
   }
 
   @DeleteMapping("/api/v1/tasks/{taskId}/dependencies/{blockingTaskId}")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public TaskResponse unlinkDependency(
       @PathVariable UUID taskId, @PathVariable UUID blockingTaskId) {
     return toResponse(taskDependencyService.unlink(taskId, blockingTaskId, CurrentUser.id()));
@@ -329,14 +241,7 @@ public class TaskController {
 
   /** V22: {@code assigneeId: null} atamayi kaldirir. Yetki diger gorev mutasyonlariyla AYNI. */
   @PutMapping("/api/v1/tasks/{taskId}/assignee")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.canAny('TASK_PLAN', 'TASK_SELF_ASSIGN')")
   public TaskResponse assign(
       @PathVariable UUID taskId, @RequestBody UpdateAssigneeRequest request) {
     return toResponse(taskService.assign(taskId, request.assigneeId(), CurrentUser.id()));
@@ -349,14 +254,7 @@ public class TaskController {
   }
 
   @PutMapping("/api/v1/tasks/{taskId}/description")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public TaskDetailResponse updateDescription(
       @PathVariable UUID taskId, @Valid @RequestBody UpdateDescriptionRequest request) {
     UUID actorId = CurrentUser.id();
@@ -404,14 +302,7 @@ public class TaskController {
    * MANAGER/DEVELOPER); en fazla 100 gorev {@code BulkTaskRequest} DTO'sunda sinirlanir.
    */
   @PostMapping("/api/v1/tasks/bulk")
-  @PreAuthorize(
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "', '"
-          + WorkspaceRole.DEVELOPER
-          + "')")
+  @PreAuthorize("@securityGuard.can('TASK_EDIT')")
   public List<TaskResponse> bulk(@Valid @RequestBody BulkTaskRequest request) {
     List<Task> tasks =
         bulkTaskService.apply(

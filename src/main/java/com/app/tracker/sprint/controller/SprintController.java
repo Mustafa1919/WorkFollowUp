@@ -4,7 +4,6 @@ import com.app.tracker.sprint.dto.CreateSprintRequest;
 import com.app.tracker.sprint.dto.SprintResponse;
 import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.service.SprintService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -21,13 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SprintController {
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final SprintService sprintService;
 
   public SprintController(SprintService sprintService) {
@@ -35,7 +27,7 @@ public class SprintController {
   }
 
   @PostMapping("/api/v1/projects/{projectId}/sprints")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('SPRINT_MANAGE')")
   public ResponseEntity<SprintResponse> create(
       @PathVariable UUID projectId, @Valid @RequestBody CreateSprintRequest request) {
     Sprint sprint =
@@ -50,13 +42,13 @@ public class SprintController {
   }
 
   @PostMapping("/api/v1/sprints/{sprintId}/start")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('SPRINT_MANAGE')")
   public SprintResponse start(@PathVariable UUID sprintId) {
     return SprintResponse.from(sprintService.startSprint(sprintId));
   }
 
   @PostMapping("/api/v1/sprints/{sprintId}/complete")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('SPRINT_MANAGE')")
   public SprintResponse complete(@PathVariable UUID sprintId) {
     return SprintResponse.from(sprintService.completeSprint(sprintId));
   }

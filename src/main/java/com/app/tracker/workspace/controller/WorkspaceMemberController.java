@@ -5,7 +5,6 @@ import com.app.tracker.workspace.dto.ChangeWorkspaceMemberRoleRequest;
 import com.app.tracker.workspace.dto.InviteWorkspaceMemberRequest;
 import com.app.tracker.workspace.dto.WorkspaceInvitationResponse;
 import com.app.tracker.workspace.dto.WorkspaceMemberResponse;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceInvitationService;
 import com.app.tracker.workspace.service.WorkspaceMemberService;
 import jakarta.validation.Valid;
@@ -32,9 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/workspaces/members")
 public class WorkspaceMemberController {
 
-  private static final String ADMIN_ONLY =
-      "@securityGuard.hasCurrentWorkspaceRole('" + WorkspaceRole.ADMIN + "')";
-
   private final WorkspaceMemberService memberService;
   private final WorkspaceInvitationService invitationService;
 
@@ -45,7 +41,7 @@ public class WorkspaceMemberController {
   }
 
   @PostMapping
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public ResponseEntity<WorkspaceMemberResponse> add(
       @Valid @RequestBody AddWorkspaceMemberRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED)
@@ -58,21 +54,21 @@ public class WorkspaceMemberController {
   }
 
   @PatchMapping("/{userId}")
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public WorkspaceMemberResponse changeRole(
       @PathVariable UUID userId, @Valid @RequestBody ChangeWorkspaceMemberRoleRequest request) {
     return memberService.changeRole(userId, request.role());
   }
 
   @DeleteMapping("/{userId}")
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public ResponseEntity<Void> remove(@PathVariable UUID userId) {
     memberService.removeMember(userId);
     return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/invitations")
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public ResponseEntity<WorkspaceInvitationResponse> invite(
       @Valid @RequestBody InviteWorkspaceMemberRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED)
@@ -80,13 +76,13 @@ public class WorkspaceMemberController {
   }
 
   @GetMapping("/invitations")
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public List<WorkspaceInvitationResponse> pendingInvitations() {
     return invitationService.listPending();
   }
 
   @DeleteMapping("/invitations/{invitationId}")
-  @PreAuthorize(ADMIN_ONLY)
+  @PreAuthorize("@securityGuard.can('MEMBER_MANAGE')")
   public ResponseEntity<Void> revokeInvitation(@PathVariable UUID invitationId) {
     invitationService.revoke(invitationId);
     return ResponseEntity.noContent().build();

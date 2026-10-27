@@ -4,7 +4,6 @@ import com.app.tracker.tag.dto.TagRequest;
 import com.app.tracker.tag.dto.TagResponse;
 import com.app.tracker.tag.model.Tag;
 import com.app.tracker.tag.service.TagService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -30,13 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/tags")
 public class TagController {
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final TagService tagService;
 
   public TagController(TagService tagService) {
@@ -44,7 +36,7 @@ public class TagController {
   }
 
   @PostMapping
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('TAG_MANAGE')")
   public ResponseEntity<TagResponse> create(@Valid @RequestBody TagRequest request) {
     Tag tag = tagService.createTag(request.name(), request.color());
     return ResponseEntity.status(HttpStatus.CREATED).body(TagResponse.from(tag));
@@ -56,13 +48,13 @@ public class TagController {
   }
 
   @PutMapping("/{tagId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('TAG_MANAGE')")
   public TagResponse update(@PathVariable UUID tagId, @Valid @RequestBody TagRequest request) {
     return TagResponse.from(tagService.update(tagId, request.name(), request.color()));
   }
 
   @DeleteMapping("/{tagId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('TAG_MANAGE')")
   public ResponseEntity<Void> delete(@PathVariable UUID tagId) {
     tagService.deleteTag(tagId);
     return ResponseEntity.noContent().build();

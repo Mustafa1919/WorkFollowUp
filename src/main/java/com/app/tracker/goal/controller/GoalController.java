@@ -6,7 +6,6 @@ import com.app.tracker.goal.dto.GoalResponse;
 import com.app.tracker.goal.dto.GoalUpdateRequest;
 import com.app.tracker.goal.service.GoalService;
 import com.app.tracker.report.model.ReportPeriod;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -34,13 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/goals")
 public class GoalController {
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final GoalService goalService;
 
   public GoalController(GoalService goalService) {
@@ -59,7 +51,7 @@ public class GoalController {
   }
 
   @PostMapping
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('GOAL_MANAGE')")
   public ResponseEntity<GoalResponse> create(@Valid @RequestBody GoalRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(
@@ -73,7 +65,7 @@ public class GoalController {
   }
 
   @PutMapping("/{goalId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('GOAL_MANAGE')")
   public GoalResponse update(
       @PathVariable UUID goalId, @Valid @RequestBody GoalUpdateRequest request) {
     return GoalResponse.from(
@@ -81,14 +73,14 @@ public class GoalController {
   }
 
   @PutMapping("/{goalId}/progress")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('GOAL_MANAGE')")
   public GoalResponse updateProgress(
       @PathVariable UUID goalId, @Valid @RequestBody GoalProgressRequest request) {
     return GoalResponse.from(goalService.updateProgress(goalId, request.value()));
   }
 
   @DeleteMapping("/{goalId}")
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('GOAL_MANAGE')")
   public ResponseEntity<Void> delete(@PathVariable UUID goalId) {
     goalService.delete(goalId);
     return ResponseEntity.noContent().build();

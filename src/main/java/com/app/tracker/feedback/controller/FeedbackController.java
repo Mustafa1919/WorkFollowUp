@@ -4,7 +4,6 @@ import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.feedback.dto.FeedbackRequest;
 import com.app.tracker.feedback.dto.FeedbackResponse;
 import com.app.tracker.feedback.service.FeedbackService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -25,13 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/feedback")
 public class FeedbackController {
 
-  private static final String MANAGE =
-      "@securityGuard.hasCurrentWorkspaceRole('"
-          + WorkspaceRole.ADMIN
-          + "', '"
-          + WorkspaceRole.MANAGER
-          + "')";
-
   private final FeedbackService feedbackService;
 
   public FeedbackController(FeedbackService feedbackService) {
@@ -45,7 +37,7 @@ public class FeedbackController {
   }
 
   @GetMapping
-  @PreAuthorize(MANAGE)
+  @PreAuthorize("@securityGuard.can('FEEDBACK_READ')")
   public List<FeedbackResponse> list() {
     return feedbackService.list().stream().map(FeedbackResponse::from).toList();
   }

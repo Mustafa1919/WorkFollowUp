@@ -5,12 +5,13 @@ import com.app.tracker.comment.repository.CommentRepository;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.outbox.OutboxEventRepository;
+import com.app.tracker.core.security.RolePermissions;
+import com.app.tracker.core.security.WorkspacePermission;
 import com.app.tracker.core.web.PageResponse;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.repository.TaskEventRepository;
 import com.app.tracker.task.repository.TaskRepository;
 import com.app.tracker.task.repository.TaskWatcherRepository;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.model.WorkspaceUser;
 import com.app.tracker.workspace.repository.WorkspaceUserRepository;
 import java.time.Clock;
@@ -168,7 +169,7 @@ public class CommentService {
       return;
     }
     if (!comment.getAuthorId().equals(actorId)
-        && !isWorkspaceAdmin(comment.getWorkspaceId(), actorId)) {
+        && !canModerateComments(comment.getWorkspaceId(), actorId)) {
       throw new AccessDeniedException("Yalniz yazan veya workspace ADMIN yorumu silebilir.");
     }
     comment.softDelete(clock.instant());
@@ -210,11 +211,11 @@ public class CommentService {
         .toList();
   }
 
-  private boolean isWorkspaceAdmin(UUID workspaceId, UUID userId) {
+  private boolean canModerateComments(UUID workspaceId, UUID userId) {
     return workspaceUserRepository
         .findByWorkspaceIdAndUserId(workspaceId, userId)
         .map(WorkspaceUser::getRole)
-        .map(WorkspaceRole.ADMIN::equals)
+        .map(role -> RolePermissions.has(role, WorkspacePermission.COMMENT_MODERATE))
         .orElse(false);
   }
 

@@ -3,7 +3,6 @@ package com.app.tracker.integration.controller;
 import com.app.tracker.integration.dto.WebhookIntegrationResponse;
 import com.app.tracker.integration.dto.WebhookIntegrationSecretResponse;
 import com.app.tracker.integration.service.WebhookIntegrationService;
-import com.app.tracker.workspace.model.WorkspaceRole;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
@@ -25,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/integrations/webhooks")
 @Profile("!migrate")
-@PreAuthorize("@securityGuard.hasCurrentWorkspaceRole('" + WorkspaceRole.ADMIN + "')")
+@PreAuthorize("@securityGuard.can('INTEGRATION_MANAGE')")
 public class WebhookIntegrationController {
 
   private final WebhookIntegrationService service;
