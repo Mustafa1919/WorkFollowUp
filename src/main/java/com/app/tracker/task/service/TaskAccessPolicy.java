@@ -48,6 +48,26 @@ public class TaskAccessPolicy {
   }
 
   /**
+   * Alt gorev olusturma (ADR-0021): TASK_CREATE varsa serbest; yoksa ust gorevin atanani cagiran
+   * olmali, aksi halde {@link AccessDeniedException}.
+   */
+  public void checkCreateSubtask(Task parent, UUID actorId) {
+    if (has(actorId, parent.getWorkspaceId(), WorkspacePermission.TASK_CREATE)) {
+      return;
+    }
+    if (actorId == null || !actorId.equals(parent.getAssigneeId())) {
+      throw new AccessDeniedException(
+          "Alt gorev yalniz size atanmis bir gorevin altina acilabilir (ya da gorev olusturma"
+              + " yetkisi gerekir).");
+    }
+  }
+
+  /** Cagiranda ilgili workspace'te TASK_PLAN var mi. */
+  public boolean canPlan(UUID actorId, UUID workspaceId) {
+    return has(actorId, workspaceId, WorkspacePermission.TASK_PLAN);
+  }
+
+  /**
    * Cagiranin verilen workspace'te izni yoksa {@link AccessDeniedException}; {@code reason} hata
    * mesajina eklenir.
    */

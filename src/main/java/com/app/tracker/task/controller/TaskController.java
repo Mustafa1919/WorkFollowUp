@@ -10,6 +10,7 @@ import com.app.tracker.tag.dto.TagResponse;
 import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.dto.AssignSprintRequest;
 import com.app.tracker.task.dto.BulkTaskRequest;
+import com.app.tracker.task.dto.CreateSubtaskRequest;
 import com.app.tracker.task.dto.CreateTaskRequest;
 import com.app.tracker.task.dto.TaskActivityResponse;
 import com.app.tracker.task.dto.TaskDetailResponse;
@@ -215,6 +216,18 @@ public class TaskController {
   @PreAuthorize("@securityGuard.can('TASK_PLAN')")
   public TaskResponse removeParent(@PathVariable UUID taskId) {
     return toResponse(taskService.removeParent(taskId, CurrentUser.id()));
+  }
+
+  /**
+   * Sifirdan alt gorev (ADR-0021). Kaba izin anotasyonda; "yalniz kendine atanmis gorevin altina"
+   * ince kurali TaskAccessPolicy.checkCreateSubtask'ta.
+   */
+  @PostMapping("/api/v1/tasks/{parentTaskId}/subtasks")
+  @PreAuthorize("@securityGuard.canAny('TASK_CREATE', 'SUBTASK_CREATE_OWN')")
+  public ResponseEntity<TaskResponse> createSubtask(
+      @PathVariable UUID parentTaskId, @Valid @RequestBody CreateSubtaskRequest request) {
+    Task task = taskCreationService.createSubtask(parentTaskId, request, CurrentUser.id());
+    return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(task));
   }
 
   /** TaskDialog'un alt gorev listesi: sadece sayi degil, tam TaskResponse listesi gerekir. */

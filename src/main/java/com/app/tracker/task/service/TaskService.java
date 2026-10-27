@@ -259,6 +259,10 @@ public class TaskService {
   @Transactional
   public Task updateStoryPoint(UUID taskId, Integer storyPoint, UUID actorId) {
     Task task = requireTask(taskId);
+    if (storyPoint != null && task.getParentTaskId() != null) {
+      throw new BusinessRuleException(
+          "Alt goreve story point verilemez; puan ust gorevde tutulur.");
+    }
     Integer oldStoryPoint = taskCustomFieldRepository.getStoryPoint(taskId);
     if (Objects.equals(oldStoryPoint, storyPoint)) {
       return task;
@@ -511,6 +515,9 @@ public class TaskService {
     if (!taskRepository.findByParentTaskIdOrderByTaskNumber(taskId).isEmpty()) {
       throw new BusinessRuleException("Alt gorevi olan bir gorev subtask yapilamaz.");
     }
+    if (taskCustomFieldRepository.getStoryPoint(taskId) != null) {
+      throw new BusinessRuleException("Puanli bir gorev alt gorev yapilamaz; once puani kaldirin.");
+    }
     task.changeParent(parentTaskId);
     Task saved = taskRepository.save(task);
     writeTaskEvent("TASK_PARENT_CHANGED", saved, parentPayload(saved, parentTaskId, actorId));
@@ -644,6 +651,12 @@ public class TaskService {
         .findById(task.getProjectId())
         .map(project -> project.getKey() + "-" + task.getTaskNumber())
         .orElse("#" + task.getTaskNumber());
+  }
+
+  /** Silinmemis gorevi yukler; yoksa 404. Diger servisler (TaskCreationService) icin. */
+  @Transactional(readOnly = true)
+  public Task getTask(UUID taskId) {
+    return requireTask(taskId);
   }
 
   private Task requireTask(UUID taskId) {

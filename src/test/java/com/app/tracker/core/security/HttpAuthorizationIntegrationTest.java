@@ -194,6 +194,9 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/parent/{id}", null, MANAGE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/parent", null, MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/subtasks", null, ALL_ROLES),
+        // Dalga 5.5: sifirdan alt gorev; DEVELOPER anotasyonu gecer (SUBTASK_CREATE_OWN), "yalniz
+        // kendine atanmis gorev" kurali serviste (rastgele {id} -> 404, 403 degil).
+        Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/subtasks", "{\"title\":\"S\"}", WRITE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
         // V22 atama/aciklama: anotasyon yazma rollerini gecirir; atamada DEVELOPER icin ince kural
