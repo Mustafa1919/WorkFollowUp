@@ -1,6 +1,14 @@
 import * as DM from '@radix-ui/react-dropdown-menu'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, Inbox } from 'lucide-react'
+import { Bell, CheckCheck, Inbox, X } from 'lucide-react'
+import {
+  desktopPermission,
+  dismissDesktopHint,
+  isDesktopEnabled,
+  isDesktopHintDismissed,
+  requestDesktopPermission,
+} from '@/lib/desktopNotifications'
 import { useNotificationActions, useNotifications, useUnreadCount } from '@/api/queries'
 import { fromNow } from '@/lib/dates'
 import { cn } from '@/lib/cn'
@@ -19,6 +27,9 @@ export function NotificationBell() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useNotifications(false)
   const { markRead, markAllRead } = useNotificationActions()
   const navigate = useNavigate()
+  const [hintVersion, setHintVersion] = useState(0)
+  // hintVersion yalniz yeniden hesaplamayi tetikler (localStorage/izin okuması render sirasinda yapilir).
+  const showHint = hintVersion >= 0 && desktopPermission() === 'default' && !isDesktopEnabled() && !isDesktopHintDismissed()
 
   const notifications = data?.pages.flatMap((p) => p.data) ?? []
   const badge = unreadCount && unreadCount > 0 ? (unreadCount > 99 ? '99+' : String(unreadCount)) : null
@@ -100,6 +111,34 @@ export function NotificationBell() {
               </button>
             )}
           </div>
+
+          {showHint && (
+            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-xs">
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  void requestDesktopPermission().then(() => {
+                    dismissDesktopHint()
+                    setHintVersion((v) => v + 1)
+                  })
+                }}
+                className="cursor-pointer rounded-md px-1.5 py-1 text-accent outline-none hover:bg-surface-2"
+              >
+                Masaüstü bildirimlerini aç
+              </button>
+              <button
+                aria-label="Öneriyi kapat"
+                onClick={(e) => {
+                  e.preventDefault()
+                  dismissDesktopHint()
+                  setHintVersion((v) => v + 1)
+                }}
+                className="cursor-pointer rounded-md p-1 text-muted outline-none hover:bg-surface-2 hover:text-fg"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
         </DM.Content>
       </DM.Portal>
     </DM.Root>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { desktopTargetPath, isAppNotification, maybeShowDesktopNotification } from '@/lib/desktopNotifications'
 import { subscribeToNotifications, subscribeToProject } from '@/lib/realtime'
 import { useSession } from '@/stores/session'
 import type {
@@ -1031,12 +1033,16 @@ export function useNotificationActions() {
 export function useNotificationRealtime() {
   const workspaceId = useSession((s) => s.workspaceId)
   const qc = useQueryClient()
+  const navigate = useNavigate()
   useEffect(() => {
     if (!workspaceId) return
-    return subscribeToNotifications(() => {
+    return subscribeToNotifications((payload) => {
       qc.invalidateQueries({ queryKey: ['ws', workspaceId, 'notifications'] })
+      if (isAppNotification(payload)) {
+        maybeShowDesktopNotification(payload, (n) => navigate(desktopTargetPath(n)))
+      }
     })
-  }, [workspaceId, qc])
+  }, [workspaceId, qc, navigate])
 }
 
 // ---------------------------------------------------------------- meetings

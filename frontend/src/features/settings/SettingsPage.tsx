@@ -26,6 +26,13 @@ import { fmt } from '@/lib/dates'
 import type { Tag, WorkspaceInvitation, WorkspaceMember, WorkspaceRole } from '@/lib/types'
 import { useTheme } from '@/stores/theme'
 import { openGuidedTour } from '@/lib/guidedTour'
+import {
+  desktopPermission,
+  isDesktopEnabled,
+  requestDesktopPermission,
+  setDesktopEnabled,
+  type DesktopPermission,
+} from '@/lib/desktopNotifications'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Page } from '@/components/ui/misc'
@@ -53,6 +60,9 @@ export function SettingsPage() {
           <Button variant="outline" size="sm" onClick={openGuidedTour}>
             <Compass size={14} /> Turu başlat
           </Button>
+        </Section>
+        <Section title="Masaüstü bildirimleri" text="Uygulama sekmesi arka plandayken yeni bildirimler işletim sistemi bildirimi olarak da görünür. Tercihin bu tarayıcıda saklanır." icon={<Bell size={18} />}>
+          <DesktopNotificationSettings />
         </Section>
         <Section title="Üyeler" text="Workspace'e kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
           <MemberSettings isAdmin={canManageMembers} />
@@ -317,6 +327,55 @@ function InvitationSettings() {
           <Mail size={14} /> Davet et
         </Button>
       </form>
+    </div>
+  )
+}
+
+function DesktopNotificationSettings() {
+  const [permission, setPermission] = useState<DesktopPermission>(() => desktopPermission())
+  const [enabled, setEnabled] = useState(() => isDesktopEnabled())
+
+  if (permission === 'unsupported') {
+    return <p className="text-sm text-muted">Bu tarayıcı masaüstü bildirimlerini desteklemiyor.</p>
+  }
+  if (permission === 'insecure') {
+    return <p className="text-sm text-muted">Masaüstü bildirimleri yalnız güvenli bağlantıda (HTTPS, geçerli sertifika) çalışır.</p>
+  }
+
+  async function onToggle(checked: boolean) {
+    if (!checked) {
+      setDesktopEnabled(false)
+      setEnabled(false)
+      return
+    }
+    if (permission === 'default') {
+      const result = await requestDesktopPermission()
+      setPermission(desktopPermission())
+      setEnabled(result === 'granted' && isDesktopEnabled())
+      return
+    }
+    setDesktopEnabled(true)
+    setEnabled(true)
+  }
+
+  const denied = permission === 'denied'
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
+          checked={enabled && permission === 'granted'}
+          disabled={denied}
+          onChange={(e) => void onToggle(e.target.checked)}
+        />
+        Sekme arka plandayken masaüstü bildirimi göster
+      </label>
+      {denied && (
+        <p className="text-xs text-muted">
+          Tarayıcı izni reddedilmiş; adres çubuğundaki site ayarlarından Bildirimler'i 'İzin ver' yapın.
+        </p>
+      )}
     </div>
   )
 }
