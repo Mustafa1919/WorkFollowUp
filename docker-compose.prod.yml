@@ -1,0 +1,79 @@
+# Uretim sertlestirme katmani. docker-compose.yml (infra) + docker-compose.app.yml (uygulama)
+# uzerine UCUNCU katman olarak binilir, tek basina calismaz:
+#   docker compose -f docker-compose.yml -f docker-compose.app.yml -f docker-compose.prod.yml \
+#     --env-file deploy/.env.prod up -d
+# Detay ve gerekce: docs/DEPLOYMENT.md
+
+x-logging: &default-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  postgres:
+    # docker-compose.yml'deki "ports: 5432:5432" burada TAMAMEN kaldiriliyor (bos liste degil,
+    # override key'in kendisi yok) -- compose override'da bir listeyi bosaltmanin yolu budur.
+    # Docker'in yayinladigi bir port ufw kurallarini atlayabilir (bkz. DEPLOYMENT.md SS2), bu
+    # yuzden hicbir host portu yayinlanmiyor; servisler yalniz Docker ic aginda konusuyor.
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${DB_MIGRATOR_PASSWORD:?DB_MIGRATOR_PASSWORD gerekli}
+    <<: *default-logging
+
+  redis:
+    ports: !reset []
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD gerekli}"]
+    <<: *default-logging
+
+  kafka:
+    # EXTERNAL listener'a hic ihtiyac yok: app konteynerleri ayni Docker aginda, ic
+    # PLAINTEXT listener'i (kafka:19092) kullaniyor (bkz. docker-compose.app.yml).
+    ports: !reset []
+    <<: *default-logging
+
+  migrate:
+    environment:
+      DB_PASSWORD: ${DB_MIGRATOR_PASSWORD:?DB_MIGRATOR_PASSWORD gerekli}
+    <<: *default-logging
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER gerekli}/tracker:${IMAGE_TAG:?IMAGE_TAG (commit SHA) gerekli}
+    # docker-compose.app.yml'deki host portu (8080:8080) burada kaldiriliyor: backend'e yalniz
+    # ayni Docker aginda oturan frontend/nginx erisir, disariya dogrudan acik degil.
+    ports: !reset []
+    environment:
+      DB_PASSWORD: ${DB_RUNTIME_PASSWORD:?DB_RUNTIME_PASSWORD gerekli (bkz. DEPLOYMENT.md SS7)}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD gerekli}
+      SPRING_PROFILES_ACTIVE: prod
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?APP_PUBLIC_URL (https://...) gerekli}
+      CORS_ALLOWED_ORIGINS: ${APP_PUBLIC_URL:?APP_PUBLIC_URL gerekli}
+      SYSTEM_ADMIN_EMAILS: ${SYSTEM_ADMIN_EMAILS:-}
+      WEBHOOK_SECRET_MASTER_KEY: ${WEBHOOK_SECRET_MASTER_KEY:?WEBHOOK_SECRET_MASTER_KEY gerekli}
+      JWT_PRIVATE_KEY_LOCATION: file:/etc/tracker/jwt/private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/etc/tracker/jwt/public.pem
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST gerekli}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER gerekli}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD gerekli}
+      SMTP_AUTH: "true"
+      SMTP_STARTTLS: "true"
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM gerekli}
+    volumes:
+      # JWT anahtarlari imaja gomulu degil, host'tan salt-okunur bind mount (bkz.
+      # DEPLOYMENT.md SS5). deploy/jwt/ dizini .gitignore'da.
+      - ./deploy/jwt:/etc/tracker/jwt:ro
+    restart: unless-stopped
+    mem_limit: 1536m
+    <<: *default-logging
+
+  frontend:
+    # docker-compose.app.yml'de "3000:80" tum arayuzlere (0.0.0.0) acikti -- Caddy'yi (host
+    # surecinde, TLS terminasyonu) bypass edip dogrudan HTTP'ye erisilebilirdi. Yalniz
+    # localhost'a baglayarak Caddy'nin arkasina kapatiyoruz.
+    ports:
+      - "127.0.0.1:3000:80"
+    restart: unless-stopped
+    mem_limit: 256m
+    <<: *default-logging

@@ -37,3 +37,10 @@ k8s/overlays/*/.env.migrator.secret
 k8s/overlays/*/.jwt-*.pem
 
 CLAUDE.md
+
+# Guvenlik testi: dogrulanmamis hipotezler ve ham bulgu ciktilari public repoya girmez
+docs/security/local/
+
+### Uretim sirlari (bkz. docs/DEPLOYMENT.md) ###
+deploy/.env.prod
+deploy/jwt/

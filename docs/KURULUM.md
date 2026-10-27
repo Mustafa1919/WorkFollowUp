@@ -1,9 +1,8 @@
 # WorkFollowUp — Yerel Kurulum Dokümanı
 
 Bu doküman, Faz 4 (mikroservis dönüşümü) öncesi mevcut **moduler monolit** mimariyi lokalde
-ayağa kaldırıp Swagger üzerinden denemek içindir. Üretim/K8s dağıtımı için `docs/
-PHASE_0_CICD_AND_DEPLOYMENT.md` ve `k8s/` dizinine bakın — bu doküman yalnız yerel geliştirme
-akışını anlatır.
+ayağa kaldırıp Swagger üzerinden denemek içindir. Bir bulut sunucusuna canlıya almak için
+**`docs/DEPLOYMENT.md`**'ye bakın; bu doküman yalnız yerel geliştirme akışını anlatır.
 
 ## 1. Ön Koşullar
 

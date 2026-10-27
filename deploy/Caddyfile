@@ -1,0 +1,24 @@
+# Uretim reverse proxy sablonu. app.example.com'u gercek alan adinizla degistirip
+# /etc/caddy/Caddyfile olarak kopyalayin. Detay: docs/DEPLOYMENT.md Bolum 10.
+# Caddy TLS'i otomatik alir/yeniler (Let's Encrypt) -- ayrica certbot/cron gerekmez.
+
+app.example.com {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# connect-src'e kendi alan adinizi wss:// ile ekleyin (STOMP, /ws/ ayni origin'den).
+		Content-Security-Policy "default-src 'self'; connect-src 'self' wss://app.example.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		-Server
+	}
+
+	# /actuator/ probe'lari yalniz ic agdan calisir (04 kontrol listesi CFG-02).
+	# frontend/nginx.conf bu yolu backend'e proxy'liyor; disaridan kapatmanin tek noktasi burasi.
+	@actuator path /actuator/*
+	respond @actuator 404
+
+	reverse_proxy localhost:3000
+}

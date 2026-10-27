@@ -43,6 +43,8 @@ için:
 
 **→ [`docs/KURULUM.md`](docs/KURULUM.md)**
 
+Bir bulut sunucusuna canlıya almak için: **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)**
+
 Kısaca:
 
 ```bash
