@@ -1,6 +1,8 @@
 package com.app.tracker.task.service;
 
 import com.app.tracker.core.exception.BusinessRuleException;
+import com.app.tracker.core.security.WorkspacePermission;
+import com.app.tracker.core.tenancy.TenantContext;
 import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.dto.BulkOperation;
 import com.app.tracker.task.model.Task;
@@ -20,10 +22,13 @@ public class BulkTaskService {
 
   private final TaskService taskService;
   private final TagService tagService;
+  private final TaskAccessPolicy taskAccessPolicy;
 
-  public BulkTaskService(TaskService taskService, TagService tagService) {
+  public BulkTaskService(
+      TaskService taskService, TagService tagService, TaskAccessPolicy taskAccessPolicy) {
     this.taskService = taskService;
     this.tagService = tagService;
+    this.taskAccessPolicy = taskAccessPolicy;
   }
 
   @Transactional
@@ -35,6 +40,14 @@ public class BulkTaskService {
       UUID assigneeId,
       UUID tagId,
       UUID actorId) {
+    // ADR-0019: izin dongu ve alan kontrolunden ONCE — yetkisiz istekte hicbir gorev degismez.
+    WorkspacePermission required =
+        switch (operation) {
+          case STATUS, ADD_TAG, REMOVE_TAG -> WorkspacePermission.TASK_EDIT;
+          case SPRINT, ASSIGNEE -> WorkspacePermission.TASK_PLAN;
+        };
+    taskAccessPolicy.require(
+        actorId, TenantContext.getWorkspaceId(), required, "Toplu " + operation + " islemi");
     requireOperationFields(operation, status, tagId);
     for (UUID taskId : taskIds) {
       switch (operation) {

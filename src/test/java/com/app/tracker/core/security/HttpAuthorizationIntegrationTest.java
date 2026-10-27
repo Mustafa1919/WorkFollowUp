@@ -129,19 +129,20 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.POST, "/api/v1/sprints/{id}/complete", null, MANAGE),
         // Monte Carlo tahmin (Dalga 2.2): analitik okuma ile AYNI ilke, rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/forecast", null, ALL_ROLES),
-        // Gorev: yazma ADMIN/MANAGER/DEVELOPER, VIEWER yalniz okur.
-        Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/tasks", "{\"title\":\"T\"}", WRITE),
+        // Gorev: duzenleme (durum) ADMIN/MANAGER/DEVELOPER; olusturma ve planlama (sprint, puan,
+        // bitis tarihi) ADR-0019 geregi yalniz ADMIN/MANAGER (TASK_CREATE/TASK_PLAN); VIEWER okur.
+        Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/tasks", "{\"title\":\"T\"}", MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks", null, ALL_ROLES),
         Endpoint.of(HttpMethod.PATCH, "/api/v1/tasks/{id}", "{\"status\":\"Done\"}", WRITE),
-        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/sprint", "{\"sprintId\":null}", WRITE),
-        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/story-point", "{\"storyPoint\":3}", WRITE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/sprint", "{\"sprintId\":null}", MANAGE),
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/story-point", "{\"storyPoint\":3}", MANAGE),
         Endpoint.of(
             HttpMethod.GET,
             "/api/v1/projects/{id}/tasks/calendar?from=2026-09-01&to=2026-10-12",
             null,
             ALL_ROLES),
         Endpoint.of(
-            HttpMethod.PUT, "/api/v1/tasks/{id}/due-date", "{\"dueDate\":\"2099-09-30\"}", WRITE),
+            HttpMethod.PUT, "/api/v1/tasks/{id}/due-date", "{\"dueDate\":\"2099-09-30\"}", MANAGE),
         // Onay: ADMIN/MANAGER (gorevi yapan DEVELOPER kendi isini onaylayamaz); silme yalniz ADMIN.
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks/approved", null, ALL_ROLES),
         Endpoint.of(HttpMethod.POST, "/api/v1/tasks/{id}/approval", null, MANAGE),
@@ -186,15 +187,16 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tags/{id}", null, MANAGE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/tags/{id}", null, WRITE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/tags/{id}", null, WRITE),
-        // Subtask/Dependency: tag'lerle AYNI yazma rolleri (gorev duzenlemenin bir parcasi);
-        // listeleme (subtasks) her uye.
-        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/parent/{id}", null, WRITE),
-        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/parent", null, WRITE),
+        // Subtask hiyerarsisi (ust gorev bagla/kaldir) planlamadir: ADR-0019 geregi yalniz
+        // ADMIN/MANAGER (TASK_PLAN). Dependency tag'lerle AYNI yazma rolleri; listeleme her uye.
+        Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/parent/{id}", null, MANAGE),
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/parent", null, MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/subtasks", null, ALL_ROLES),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/tasks/{id}/dependencies/{id}", null, WRITE),
-        // V22 atama/aciklama: gorev mutasyonuyla AYNI yazma rolleri; detay okuma ve izleme her uye
-        // (izlemek gorevi degistirmez, yalniz bildirim almaktir).
+        // V22 atama/aciklama: anotasyon yazma rollerini gecirir; atamada DEVELOPER icin ince kural
+        // (yalniz kendini atama/birakma) ADR-0019 geregi TaskAccessPolicy'de. Detay okuma ve
+        // izleme her uye (izlemek gorevi degistirmez, yalniz bildirim almaktir).
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/assignee", "{\"assigneeId\":null}", WRITE),
         Endpoint.of(
             HttpMethod.PUT, "/api/v1/tasks/{id}/description", "{\"description\":\"d\"}", WRITE),
@@ -213,7 +215,9 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         Endpoint.of(HttpMethod.GET, "/api/v1/tasks/{id}/activity", null, ALL_ROLES),
         // Dalga 1.6: global arama — okuma her uye, rol siniri yok.
         Endpoint.of(HttpMethod.GET, "/api/v1/search?q=deneme", null, ALL_ROLES),
-        // Dalga 1.7: toplu islem diger gorev mutasyonlariyla AYNI (WRITE); kayitli gorunumler
+        // Dalga 1.7: toplu islem anotasyonu WRITE (TASK_EDIT); SPRINT/ASSIGNEE islemleri ADR-0019
+        // geregi BulkTaskService'te ayrica TASK_PLAN ister (burada STATUS govdesi); kayitli
+        // gorunumler
         // kisisel tercih, rol siniri yok (watch/notification-preferences ile AYNI desen).
         Endpoint.of(
             HttpMethod.POST,
@@ -304,9 +308,9 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         // Hedefler: tanim ve elle ilerleme ADMIN/MANAGER (Tags/Meetings ile ayni gerekce),
         // listeleme her uye.
         Endpoint.of(HttpMethod.GET, "/api/v1/goals?year=2099", null, ALL_ROLES),
-        // Veriye dayali retro (Dalga 2.4): okuma rol siniri yok; madde ekleme/goreve donusturme
-        // diger gorev mutasyonlariyla AYNI (WRITE); silme sahiplik servis katmaninda (SavedView
-        // ile AYNI desen) — bu yuzden ALL_ROLES.
+        // Veriye dayali retro (Dalga 2.4): okuma rol siniri yok; madde ekleme WRITE; goreve
+        // donusturme gorev olusturmadir, ADR-0019 geregi yalniz ADMIN/MANAGER (TASK_CREATE); silme
+        // sahiplik servis katmaninda (SavedView ile AYNI desen) — bu yuzden ALL_ROLES.
         Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/retro", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/sprints/{id}/retro/items", null, ALL_ROLES),
         Endpoint.of(
@@ -315,7 +319,7 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             "{\"kind\":\"went_well\",\"body\":\"Iyi gitti\"}",
             WRITE),
         Endpoint.of(HttpMethod.DELETE, "/api/v1/retro-items/{id}", null, ALL_ROLES),
-        Endpoint.of(HttpMethod.POST, "/api/v1/retro-items/{id}/convert-to-task", null, WRITE),
+        Endpoint.of(HttpMethod.POST, "/api/v1/retro-items/{id}/convert-to-task", null, MANAGE),
         Endpoint.of(HttpMethod.POST, "/api/v1/goals", GOAL_JSON, MANAGE),
         Endpoint.of(
             HttpMethod.PUT, "/api/v1/goals/{id}", "{\"title\":\"H\",\"targetValue\":5}", MANAGE),

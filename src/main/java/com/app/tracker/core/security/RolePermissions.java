@@ -6,10 +6,8 @@ import static com.app.tracker.core.security.WorkspacePermission.INTEGRATION_MANA
 import static com.app.tracker.core.security.WorkspacePermission.MEMBER_MANAGE;
 import static com.app.tracker.core.security.WorkspacePermission.RETRO_ITEM_WRITE;
 import static com.app.tracker.core.security.WorkspacePermission.SUBTASK_CREATE_OWN;
-import static com.app.tracker.core.security.WorkspacePermission.TASK_CREATE;
 import static com.app.tracker.core.security.WorkspacePermission.TASK_DELETE;
 import static com.app.tracker.core.security.WorkspacePermission.TASK_EDIT;
-import static com.app.tracker.core.security.WorkspacePermission.TASK_PLAN;
 import static com.app.tracker.core.security.WorkspacePermission.TASK_SELF_ASSIGN;
 
 import com.app.tracker.workspace.model.WorkspaceRole;
@@ -30,13 +28,7 @@ public final class RolePermissions {
                           TASK_DELETE, COMMENT_MODERATE, MEMBER_MANAGE, INTEGRATION_MANAGE))),
           WorkspaceRole.DEVELOPER,
               Set.of(
-                  TASK_CREATE,
-                  TASK_EDIT,
-                  TASK_PLAN,
-                  TASK_SELF_ASSIGN,
-                  SUBTASK_CREATE_OWN,
-                  COMMENT_WRITE,
-                  RETRO_ITEM_WRITE),
+                  TASK_EDIT, TASK_SELF_ASSIGN, SUBTASK_CREATE_OWN, COMMENT_WRITE, RETRO_ITEM_WRITE),
           WorkspaceRole.VIEWER, Set.of());
 
   private RolePermissions() {}

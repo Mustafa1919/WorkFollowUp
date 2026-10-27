@@ -62,6 +62,7 @@ public class TaskService {
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
   private final Clock clock;
+  private final TaskAccessPolicy taskAccessPolicy;
 
   public TaskService(
       ProjectRepository projectRepository,
@@ -74,7 +75,8 @@ public class TaskService {
       WorkspaceUserRepository workspaceUserRepository,
       OutboxEventRepository outboxEventRepository,
       ObjectMapper objectMapper,
-      Clock clock) {
+      Clock clock,
+      TaskAccessPolicy taskAccessPolicy) {
     this.projectRepository = projectRepository;
     this.taskRepository = taskRepository;
     this.taskCounterRepository = taskCounterRepository;
@@ -86,6 +88,7 @@ public class TaskService {
     this.outboxEventRepository = outboxEventRepository;
     this.objectMapper = objectMapper;
     this.clock = clock;
+    this.taskAccessPolicy = taskAccessPolicy;
   }
 
   @Transactional
@@ -269,10 +272,15 @@ public class TaskService {
    * workspace'inde VIEWER disi bir uye olmalidir ({@code workspace_users} RLS'siz oldugundan
    * workspace id acikca verilir). Atanan otomatik izleyici olur; {@code TASK_ASSIGNED} izlemese
    * bile atanana bildirilir (InboxFanoutService).
+   *
+   * <p>ADR-0019: atama ince kurali {@link TaskAccessPolicy#checkAssign} ile no-op kontrolunden ONCE
+   * denetlenir. Gercek cagiran kullanici {@code actorId} olarak verilmelidir (izin onun rolunden
+   * turetilir); sistem aktorleri bu metodu cagirmaz.
    */
   @Transactional
   public Task assign(UUID taskId, UUID assigneeId, UUID actorId) {
     Task task = requireTask(taskId);
+    taskAccessPolicy.checkAssign(task, assigneeId, actorId);
     UUID oldAssigneeId = task.getAssigneeId();
     if (Objects.equals(oldAssigneeId, assigneeId)) {
       return task;

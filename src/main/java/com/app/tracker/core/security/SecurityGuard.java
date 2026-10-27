@@ -50,25 +50,4 @@ public class SecurityGuard {
                     .anyMatch(permission -> RolePermissions.has(role, permission)))
         .orElse(false);
   }
-
-  public boolean hasWorkspaceRole(UUID workspaceId, String... roles) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      return false;
-    }
-    UUID userId = (UUID) authentication.getPrincipal();
-    return membershipService
-        .findRole(userId, workspaceId)
-        .map(role -> Arrays.asList(roles).contains(role))
-        .orElse(false);
-  }
-
-  /** WorkspaceContextFilter zaten dogruladigi icin, aktif TenantContext'e karsi rol kontrolu. */
-  public boolean hasCurrentWorkspaceRole(String... roles) {
-    UUID workspaceId = TenantContext.getWorkspaceId();
-    if (workspaceId == null) {
-      return false;
-    }
-    return hasWorkspaceRole(workspaceId, roles);
-  }
 }

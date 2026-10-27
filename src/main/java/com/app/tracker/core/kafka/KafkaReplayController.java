@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * PHASE_2_DETAILED_DESIGN.md Bolum 3.3, madde 3 — DLT replay yonetici endpoint'i. Workspace'e ozgu
  * degildir (bir workspace'in degil, sistemin Kafka altyapisinin ustunde calisir), bu yuzden
- * {@code @securityGuard.hasCurrentWorkspaceRole} DEGIL, global {@code SYSTEM_ADMIN} yetkisi
- * (SystemAdminProperties) gerektirir.
+ * workspace rol/izin tabanli {@code @securityGuard} kontrolu DEGIL, global {@code SYSTEM_ADMIN}
+ * yetkisi (SystemAdminProperties) gerektirir.
  */
 @RestController
 public class KafkaReplayController {

@@ -31,15 +31,9 @@ class RolePermissionsTest {
             AUTOMATION_MANAGE,
             FEEDBACK_READ),
         RolePermissions.of(WorkspaceRole.MANAGER));
+    // ADR-0019 madde 2: gelistirici gorev olusturamaz ve planlayamaz (TASK_CREATE/TASK_PLAN yok).
     assertEquals(
-        Set.of(
-            TASK_CREATE,
-            TASK_EDIT,
-            TASK_PLAN,
-            TASK_SELF_ASSIGN,
-            SUBTASK_CREATE_OWN,
-            COMMENT_WRITE,
-            RETRO_ITEM_WRITE),
+        Set.of(TASK_EDIT, TASK_SELF_ASSIGN, SUBTASK_CREATE_OWN, COMMENT_WRITE, RETRO_ITEM_WRITE),
         RolePermissions.of(WorkspaceRole.DEVELOPER));
     assertEquals(Set.of(), RolePermissions.of(WorkspaceRole.VIEWER));
   }
@@ -51,6 +45,8 @@ class RolePermissionsTest {
     assertFalse(RolePermissions.has("YOK", TASK_EDIT));
     assertTrue(RolePermissions.has(WorkspaceRole.DEVELOPER, TASK_EDIT));
     assertFalse(RolePermissions.has(WorkspaceRole.DEVELOPER, TASK_DELETE));
+    assertFalse(RolePermissions.has(WorkspaceRole.DEVELOPER, TASK_CREATE));
+    assertFalse(RolePermissions.has(WorkspaceRole.DEVELOPER, TASK_PLAN));
   }
 
   @Test
