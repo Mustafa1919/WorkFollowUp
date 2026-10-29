@@ -13,6 +13,12 @@ Sonuç rapora (05) `GEÇTİ / KALDI / UYGULANAMAZ` + kanıt (test adı, tarama �
 
 **Ortak fikstür:** İki kiracı (A, B), her birinde ADMIN/MANAGER/DEVELOPER/VIEWER rolünde birer kullanıcı ve her kaynak
 tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanıcı. Kurulum: 03 §3.
+Her kiracıda ek olarak: bir alt görev (atanmış DEVELOPER'ın görevinin altında), açık bloklayanı olan bir görev,
+bir yorum içinde mention ve A'nın DEVELOPER'ı için bir kişisel erişim token'ı (PAT).
+
+> **Güncelleme (2026-10-29):** İlk sürüm 2026-09-26'da, Dalga 3.3'ten önce yazıldı. Sonradan gelen yüzeyler
+> için eklenen satırlar: AUTH-11, TOK-11..16, AUTHZ-09..14, TEN-09..11, INJ-09, DOS-07..08, CFG-09, LOG-05 ve
+> §16 (PRIV). Uygulama sunucuda canlı olduğundan koşum sırası README'deki iş akışında güncellendi.
 
 ---
 
@@ -30,6 +36,7 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | AUTH-08 | Parola değişiminde mevcut oturumlar sonlandırılır | Oto | Sıfırlama sonrası eski refresh ailesi geçersiz | P1 | ASVS 3.3.3 | |
 | AUTH-09 | E-posta doğrulama token'ı: tek kullanımlık, 24 saat | Oto | Tekrar kullanım ve süre aşımı reddedilir | P2 | ASVS 2.5 | |
 | AUTH-10 | Güvenlik olayı bildirimi (parola değişti) gönderilir | Oto (Mailpit) | E-posta gider | P3 | ASVS 2.5.5 | |
+| AUTH-11 | Kayıt, aydınlatma beyanı olmadan sunucu tarafında reddedilir (UI'ya güvenilmez) | Oto | Beyan yok/false 422, eski sürüm 400; kullanıcı oluşmaz | P1 | V35, KVKK m. 10 | |
 
 ## 2. Oturum ve Token Yönetimi (TOK)
 
@@ -45,6 +52,12 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | TOK-08 | Token ortamlar arası taşınamaz | Konf | Her ortamın ayrı anahtar çifti; `iss`/`aud` kararı raporda | P2 | ASVS 3.5.3 | H-14 |
 | TOK-09 | Access token'da hassas veri yok | Oto | Payload yalnız `sub, roles, jti, iat, exp` | P2 | ASVS 3.5 | |
 | TOK-10 | Frontend token'ı kalıcı depolamada tutmaz | Manuel (DevTools) | localStorage/sessionStorage'da access/refresh token yok | P2 | ASVS 3.2.3 | |
+| TOK-11 | PAT düz metni DB'de yok, yalnız oluşturma yanıtında bir kez görünür | Oto | `personal_access_tokens`'ta SHA-256 hash; listeleme yanıtında token yok | P1 | ADR-0018, ASVS 2.10 | |
+| TOK-12 | PAT ile token yönetimi yapılamaz (oluştur/listele/iptal) | Oto (mevcut `AccessTokenIntegrationTest`) | PAT'li istek 403; JWT'li aynı istek 2xx | P1 | ADR-0018 | |
+| TOK-13 | PAT `SYSTEM_ADMIN` yetkisi taşımaz | Oto | Sistem yöneticisinin PAT'i ile admin ucu 403 | P1 | ADR-0018 | |
+| TOK-14 | İptal edilen/süresi dolan PAT anında reddedilir | Oto | İptal sonrası ilk istek 401 | P1 | ASVS 3.3.1 | |
+| TOK-15 | JWT/PAT ayrıştırması karışmaz: `wf_pat_` önekli bozuk değer ve PAT gövdeli JWT 401 | Oto | 401, 500 değil; çift kimlik doğrulama yok | P2 | ASVS 7.4.1 | H-03 |
+| TOK-16 | PAT hız sınırı token başına; aşımda 429 + `Retry-After`, geçersiz denemeler bütçe tüketmez | Oto | Eşik üstü 429 | P2 | API4, ADR-0018 | |
 
 ## 3. Yetkilendirme — Dikey (AUTHZ)
 
@@ -58,6 +71,12 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | AUTHZ-06 | SYSTEM_ADMIN uçları yalnız SYSTEM_ADMIN'e açık | Oto | Diğer tüm roller 403 | P1 | API5 | |
 | AUTHZ-07 | Yetki geri alındığında etki süresi bilinen sınırda | Manuel | Workspace rolü anında, global rol ≤ token TTL | P3 | ASVS 4.1.x | H-12 |
 | AUTHZ-08 | Otomasyon kuralları kullanıcının kendi yetkisini aşan eylem yaptırmaz | Oto | Kural yönetimi ADMIN/MANAGER; sistem aktörü döngüye girmez | P2 | ADR-0016 | |
+| AUTHZ-09 | Yetki matrisi ADR-0019 izin tablosuyla birebir (Dalga 5 sonrası) | Oto (mevcut `HttpAuthorizationIntegrationTest`, `RolePermissionsTest`) | Beklenen izinler testte elle yazılı; üretim eşlemesi çağrılmaz | P1 | ADR-0019 | |
+| AUTHZ-10 | DEVELOPER görev oluşturamaz ve planlama alanlarını (puan, son tarih, sprint) değiştiremez; tekil, toplu ve genişletilmiş oluşturma yollarının hepsinde | Oto | 403; toplu istekte hiçbir değişiklik uygulanmaz | P1 | ADR-0019 | |
+| AUTHZ-11 | `TASK_SELF_ASSIGN` yalnız atanmamış göreve ve yalnız kendine | Oto | Başkasına atama ya da atanmış görevi devralma 403 | P1 | ADR-0019 | |
+| AUTHZ-12 | `SUBTASK_CREATE_OWN` yalnız kendisine atanmış görevin altında | Oto | Başkasının görevinin altına alt görev 403; puanlı alt görev reddedilir | P1 | ADR-0019, ADR-0021 | |
+| AUTHZ-13 | Açık bloklayanı olan görev hiçbir yoldan Done olamaz (tekil, toplu, sürükle-bırak, GitHub PR merge, otomasyon) | Oto | API 400; GitHub tüketicisi atlar + bildirim yazar, DLT'ye düşmez | P2 | ADR-0020 | |
+| AUTHZ-14 | `/me/permissions` başka workspace'in iznini döndürmez | Oto | Üye olunmayan `X-Workspace-Id` 403, başlıksız 400 | P1 | ADR-0019 | |
 
 ## 4. Kiracı İzolasyonu — Yatay / BOLA (TEN)
 
@@ -71,6 +90,9 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | TEN-06 | Geçersiz workspace başlığı düzgün reddedilir | Oto | 400/403, 500 değil | P2 | ASVS 7.4.1 | H-03 |
 | TEN-07 | Arka plan işleri ve Kafka tüketicileri doğru kiracı bağlamında çalışır | Oto (mevcut entegrasyon testleri) | Olay yalnız kendi kiracısının verisini etkiler | P1 | Mimari.md §4 | |
 | TEN-08 | Bağlantı havuzunda kiracı bağlamı sızmaz | Oto | Ardışık farklı kiracı istekleri aynı bağlantıda karışmaz (`SET LOCAL`) | P1 | Mimari.md §4 | |
+| TEN-09 | Mention yalnız aynı workspace üyesine çözülür | Oto | B üyesinin `@[uuid]`'i yorumda kalır ama bildirim/e-posta üretmez | P1 | ADR-0009 | |
+| TEN-10 | Alt görev ve genişletilmiş oluşturmadaki id'ler (parent, atanan, sprint, etiket) kiracıya bağlı | Oto | B'ye ait id içeren istek reddedilir, görev oluşmaz (tek tx) | P1 | API1, ADR-0021 | |
+| TEN-11 | `?task=KEY-NO` / UUID derin linki başka kiracının görevini açmaz | Manuel | B'nin anahtarı A oturumunda "bulunamadı" | P2 | API1 | |
 
 ## 5. Veritabanı (DB)
 
@@ -99,6 +121,7 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | INJ-06 | E-posta başlıklarına (konu, alıcı) CRLF enjeksiyonu yok | Oto | Satır sonu içeren ad/başlık konuya taşınmaz | P2 | WSTG-INPV-10 | |
 | INJ-07 | Log enjeksiyonu yok (kullanıcı girdisi satır sonuyla loga yazılmaz) | Kod incelemesi | Yapılandırılmış log ya da kaçış | P3 | ASVS 7.3.1 | |
 | INJ-08 | İstek gövdesi boyut ve JSON derinlik sınırları | Oto + Konf | Aşırı büyük gövde 413; derin iç içe JSON reddedilir | P2 | ASVS 13.1 | |
+| INJ-09 | Tüketicide yazılan alanlar sütun sınırını aşmaz (bildirim gövdesi, telemetri mesajı) | Oto | Uzun girdi kırpılır/özetlenir; kalıcı hata ve DLT yok | P2 | V34 notu | |
 
 ## 7. İstemci Tarafı ve XSS (XSS / FE)
 
@@ -162,6 +185,8 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | DOS-04 | Tüm liste uçlarında üst limit | Oto | `limit` üst sınırı zorlanır | P2 | API4 | |
 | DOS-05 | DB `statement_timeout` ve havuz boyutu bilinçli ayarlı | Konf | Değerler belgelenmiş | P2 | ASVS 1.x | |
 | DOS-06 | Kafka zehirli mesajı tüketiciyi durdurmaz | Oto (mevcut DLT) | Mesaj DLT'ye düşer | P2 | Faz 2 | |
+| DOS-07 | Telemetri ve geri bildirim uçları kullanıcı başına sınırlı (bilinen eksik: hız sınırı yok) | Oto | Eşik üstü 429; parti boyutu üst sınırı zorlanır | P2 | API4 | H-10 |
+| DOS-08 | Genişletilmiş oluşturmanın ürettiği olay patlaması (~6 realtime olay) istemcide sınırlı refetch üretir | Manuel | Kabul/karar raporda (güvenlikten çok kapasite) | P3 | | |
 
 ## 12. Yapılandırma ve Bilgi İfşası (CFG)
 
@@ -175,6 +200,7 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | CFG-06 | CORS yalnız bilinen origin, credentials ile joker yok | Oto + Konf | Yabancı origin preflight reddedilir | P1 | WSTG-CLNT-07 | |
 | CFG-07 | Prod profilinde dev anahtarları/varsayılanlarla açılış reddedilir | Oto (mevcut guard testleri) | JWT, webhook master key ve public URL guard'ları çalışır | P1 | ADR-0003 | |
 | CFG-08 | Tüm sırlar env/secret'tan, image ve repoda yok | SAST (gitleaks) + Konf | gitleaks temiz; image katmanlarında sır yok | P1 | ASVS 2.10 | |
+| CFG-09 | Sunucudaki gerçek reverse proxy yapılandırması repodaki şablonla aynı (`deploy/Caddyfile`: başlıklar, `/actuator/*` 404) | Manuel (sunucuda `curl -I`) | Şablondaki başlıkların hepsi yanıtta; `/actuator/health` dışarıdan 404 | P1 | WSTG-CONF-05 | H-08 |
 
 ## 13. Altyapı (INF)
 
@@ -209,6 +235,18 @@ tipinden en az bir kayıt; ayrıca hiçbir workspace'e üye olmayan bir kullanı
 | LOG-02 | Loglarda sır/token/parola yok | Manuel (log taraması) | Yok | P1 | ASVS 7.1.1 |
 | LOG-03 | Loglar saklanıyor ve erişim kısıtlı | Konf | Saklama süresi belgelenmiş | P3 | ASVS 7.3 |
 | LOG-04 | Temel uyarılar (5xx oranı, login hata oranı) | Konf | En az bir uyarı kanalı | P3 | |
+| LOG-05 | Hata telemetrisi (`error_events.message`) kişisel veri ve sır taşımaz (bilinen eksik: `ex.getMessage()` ham saklanıyor) | Kod incelemesi + Oto | E-posta/token içeren istisna mesajı maskelenir ya da yalnız tip saklanır | P1 | ASVS 7.1.1, KVKK m. 4 | |
+
+## 16. Kişisel Veri / KVKK (PRIV)
+
+| ID | Kontrol | Yöntem | Beklenen | Önc. | Ref |
+|---|---|---|---|---|---|
+| PRIV-01 | Aydınlatma beyanı kanıtlanabilir: sürüm + zaman saklanır, ilk onay anı tekrar onayla ezilmez | Oto | `users.privacy_notice_version/accepted_at`; aynı sürüme ikinci onay zamanı değiştirmez | P1 | KVKK m. 10, V35 |
+| PRIV-02 | Aydınlatma onayı PAT ile verilemez | Oto | 403 | P2 | V35 |
+| PRIV-03 | Aydınlatma metni gerçek veri akışıyla uyumlu (işlenen veri, alıcılar, saklama süreleri) | Kod incelemesi | Metinde olmayan bir veri/alıcı kodda yok: telemetri, SMTP, Slack, GitHub, loglar, IP (brute-force sayacı) | P1 | KVKK m. 10 |
+| PRIV-04 | Saklama süreleri uygulanıyor (refresh 7 gün, outbox 7 gün, processed_events 30 gün; telemetri ve log süresi tanımlı) | Konf + Oto | Tanımsız saklama yok; temizleme işi çalışıyor | P2 | KVKK m. 7 |
+| PRIV-05 | İlgili kişi başvurusu yolu çalışıyor (metindeki iletişim adresi; hesap silme şimdilik elle) | Manuel | Başvuru adresi geçerli; elle silme prosedürü belgelenmiş | P2 | KVKK m. 11, 13 |
+| PRIV-06 | Kişisel veri istemci depolamasında gereksiz yere tutulmaz | Manuel (DevTools) | localStorage'da yalnız e-posta (oturum) ve tercih bayrakları; görev/yorum içeriği yok | P3 | ASVS 8.2 |
 
 ---
 
@@ -223,5 +261,8 @@ Koşum sonrası `Oto` işaretli ve henüz testi olmayan kontroller şu yeni test
 | `security/TokenHardeningTest` | TOK-01..05, TOK-09, AUTH-02, AUTH-07..09 |
 | `security/InputHandlingTest` | INJ-04..06, INJ-08, TEN-06 |
 | `security/IdempotencyIsolationTest` | BL-05, BL-06 |
-| `security/RateLimitTest` | DOS-01..04 (rate limit eklendikten sonra) |
+| `security/RateLimitTest` | DOS-01..04, DOS-07, TOK-16 (rate limit eklendikten sonra) |
+| `security/AccessTokenHardeningTest` | TOK-11, TOK-13..15 (TOK-12 mevcut testte) |
+| `security/PermissionPathsTest` | AUTHZ-10..14, TEN-09, TEN-10 |
+| `user/PrivacyNoticeIntegrationTest` (KVKK dilimiyle gelir) | AUTH-11, PRIV-01, PRIV-02 |
 | CI: CodeQL + OSV-Scanner + ZAP baseline (zamanlanmış) | INJ-01, SC-01..03, SC-06, FE-01, CFG-04 |

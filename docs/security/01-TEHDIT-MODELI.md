@@ -22,18 +22,22 @@
 | A4 Kötü niyetli/ele geçirilmiş dış sistem | Sahte webhook, tekrar gönderim, büyük/bozuk gövde |
 | A5 Ağ üzerindeki saldırgan (aynı sunucu ağı / internet) | Açıkta kalmış Postgres/Redis/Kafka/Mailpit portları, TLS'siz trafik |
 | A6 İçeriden / tedarik zinciri | Bağımlılık açığı, sızmış secret, kötü niyetli paket |
+| A7 Çalınmış PAT sahibi | Kullanıcının workspace rolleri (SYSTEM_ADMIN hariç), `Authorization: Bearer wf_pat_...`; token yönetimi ve aydınlatma onayı kapalı |
 
 ## 3. Güven Sınırları ve Veri Akışı
 
 ```
  İnternet
-   │  (TLS sonlandırma — ŞU AN YOK, bkz. 04)
+   │
    ▼
- nginx (frontend container, :80)  ──── statik SPA
+ Caddy (host, TLS sonlandırma + güvenlik başlıkları, /actuator/* → 404; şablon: deploy/Caddyfile)
+   │ localhost:3000
+   ▼
+ nginx (frontend container, 127.0.0.1:3000→80)  ──── statik SPA
    │ /api/  /ws/  /actuator/   (X-Forwarded-For eklenir)
    ▼
  [SINIR-1] Spring Security zinciri
-   JwtAuthenticationFilter → WorkspaceContextFilter → IdempotencyFilter → Controller
+   JwtAuthenticationFilter → PatAuthenticationFilter → WorkspaceContextFilter → IdempotencyFilter → Controller
    │  @PreAuthorize (rol)            │ TenantContext
    ▼                                 ▼
  [SINIR-2] Servis katmanı (@Transactional) → TenancyGuardAspect → SET LOCAL app.current_workspace_id
@@ -50,7 +54,11 @@
 **RLS'e tabi OLMAYAN tablolar** (izolasyon tamamen uygulama kodunda — test önceliği yüksek):
 `users`, `workspaces`, `workspace_users`, `refresh_tokens`, `verification_tokens`,
 `workspace_invitations`, `notification_preferences`, `outbox_events`, `processed_events`,
-`task_counters`. **FORCE'suz RLS:** `webhook_integrations` (bilinçli, ADR-0004).
+`task_counters`, `personal_access_tokens` (V32), `usage_events`, `error_events` (V33).
+**FORCE'suz RLS:** `webhook_integrations` (bilinçli, ADR-0004).
+
+> 2026-10-29 notu: Diyagram sunucu kurulumuna (2026-10-28) göre güncellendi. Sunucudaki gerçek Caddy
+> yapılandırması repodaki şablondan farklı olabilir (alan adı yerine IP); CFG-09 bunu doğrular.
 
 ## 4. STRIDE Özeti
 

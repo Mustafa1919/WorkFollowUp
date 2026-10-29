@@ -1,8 +1,13 @@
 # Güvenlik Testi Dokümantasyonu
 
-> Durum (2026-09-25): **Plan aşaması.** Testler henüz koşulmadı. Koşum şartı: tüm yerel
-> commit'ler atılmış ve `origin/main`'e push edilmiş olmalı (hareketli hedefe test yapılmaz).
-> Önce **rapor** çıkarılır, düzeltmeler rapor önceliklendirildikten sonra ayrı dilimlerde yapılır.
+> Durum (2026-10-29): **Plan aşaması, katalog Dalga 3.3–5 ve KVKK için güncellendi.** Testler henüz
+> koşulmadı. Koşum şartı: tüm yerel commit'ler atılmış ve `origin/main`'e push edilmiş olmalı
+> (hareketli hedefe test yapılmaz). Önce **rapor** çıkarılır, düzeltmeler rapor önceliklendirildikten
+> sonra ayrı dilimlerde yapılır.
+>
+> **Sıra değişikliği:** Uygulama 2026-10-28'de sunucuya kuruldu ve kullanımda; aşağıdaki iş akışının
+> [5] adımı testlerden önce gerçekleşti. Bu yüzden sunucuya özgü P1 kontroller (INF-01..06, CFG-01..03,
+> CFG-09) yerel koşumu beklemeden ilk iş olarak sunucuda yapılır; yerel koşum ve rapor ondan sonra gelir.
 
 ## Amaç
 
