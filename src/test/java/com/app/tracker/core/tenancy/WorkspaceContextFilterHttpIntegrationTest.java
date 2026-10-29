@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
+import com.app.tracker.user.model.PrivacyNotice;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -31,7 +32,8 @@ class WorkspaceContextFilterHttpIntegrationTest extends AbstractIntegrationTest 
   @Test
   void nonMemberWorkspaceHeaderIs403NotUnauthorized() throws Exception {
     String email = "filter-" + UUID.randomUUID() + "@tracker.local";
-    authService.register(email, "correct-horse-battery", "Filter User");
+    authService.register(
+        email, "correct-horse-battery", "Filter User", PrivacyNotice.CURRENT_VERSION);
     String token = authService.login(email, "correct-horse-battery", "127.0.0.1").accessToken();
 
     HttpResponse<String> response =

@@ -20,6 +20,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -64,7 +65,13 @@ class TaskApprovalAndDeletionIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Appr WS"));
     project = inWorkspace(() -> projectService.createProject("APR", "Approval Project"));
     actorId =
-        authService.register("apr-" + UUID.randomUUID() + "@tracker.local", PASSWORD, "A").getId();
+        authService
+            .register(
+                "apr-" + UUID.randomUUID() + "@tracker.local",
+                PASSWORD,
+                "A",
+                PrivacyNotice.CURRENT_VERSION)
+            .getId();
   }
 
   // ---- gecmis tarih ----
@@ -212,7 +219,8 @@ class TaskApprovalAndDeletionIntegrationTest extends AbstractIntegrationTest {
 
   private String memberToken(String role) {
     String email = "apr-member-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Member").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "Member", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, userId, role);
     return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
+import com.app.tracker.user.model.PrivacyNotice;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -136,7 +137,7 @@ class TelemetryIntegrationTest extends AbstractIntegrationTest {
   @Test
   void realHttpRequestFlowsThroughKafkaIntoUsageAndErrorEvents() throws Exception {
     String email = "telemetry-" + UUID.randomUUID() + "@tracker.local";
-    authService.register(email, PASSWORD, "Telemetry User");
+    authService.register(email, PASSWORD, "Telemetry User", PrivacyNotice.CURRENT_VERSION);
     String jwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
 
     HttpResponse<Void> usageResponse =

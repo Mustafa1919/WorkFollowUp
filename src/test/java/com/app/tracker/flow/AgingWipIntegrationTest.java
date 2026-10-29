@@ -19,6 +19,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -185,7 +186,8 @@ class AgingWipIntegrationTest extends AbstractIntegrationTest {
 
   private UUID registerMember(String prefix, String role) {
     String email = prefix + "-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "User").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "User", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, userId, role);
     return userId;
   }

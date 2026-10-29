@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -44,7 +45,8 @@ class AccessTokenIntegrationTest extends AbstractIntegrationTest {
   @BeforeEach
   void setUp() {
     String email = "pat-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "PAT User").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "PAT User", PrivacyNotice.CURRENT_VERSION).getId();
     jwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
     workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "PAT WS"));

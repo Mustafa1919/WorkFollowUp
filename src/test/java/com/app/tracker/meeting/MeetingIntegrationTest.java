@@ -13,6 +13,7 @@ import com.app.tracker.meeting.model.Meeting;
 import com.app.tracker.meeting.model.MeetingFrequency;
 import com.app.tracker.meeting.service.MeetingService;
 import com.app.tracker.meeting.service.MeetingService.Occurrence;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -53,7 +54,8 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
     workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Meeting WS"));
     String email = "meeting-owner-" + UUID.randomUUID() + "@tracker.local";
-    adminUserId = authService.register(email, PASSWORD, "Owner").getId();
+    adminUserId =
+        authService.register(email, PASSWORD, "Owner", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminUserId, WorkspaceRole.ADMIN);
   }
 
@@ -249,7 +251,8 @@ class MeetingIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(
         null, () -> workspaceService.createWorkspace(otherWorkspaceId, "Other WS"));
     String email = "meeting-other-" + UUID.randomUUID() + "@tracker.local";
-    UUID otherUserId = authService.register(email, PASSWORD, "Other").getId();
+    UUID otherUserId =
+        authService.register(email, PASSWORD, "Other", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(otherWorkspaceId, otherUserId, WorkspaceRole.ADMIN);
 
     inWorkspace(

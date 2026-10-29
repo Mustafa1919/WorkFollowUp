@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -16,7 +17,6 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -234,7 +234,8 @@ class MeControllerIntegrationTest extends AbstractIntegrationTest {
 
   private Actor newUser(String fullName) {
     String email = "me-contract-" + UUID.randomUUID() + "@tracker.local";
-    UUID id = authService.register(email, PASSWORD, fullName).getId();
+    UUID id =
+        authService.register(email, PASSWORD, fullName, PrivacyNotice.CURRENT_VERSION).getId();
     String jwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
     return new Actor(id, email, fullName, jwt);
   }
@@ -273,11 +274,18 @@ class MeControllerIntegrationTest extends AbstractIntegrationTest {
 
   private void assertMe(HttpResponse<String> response, Actor actor) throws Exception {
     assertStatus(200, response);
-    JsonNode expected =
-        objectMapper.valueToTree(
-            Map.of(
-                "id", actor.id().toString(), "email", actor.email(), "fullName", actor.fullName()));
-    assertEquals(expected, objectMapper.readTree(response.body()), response.body());
+    JsonNode body = objectMapper.readTree(response.body());
+    assertEquals(
+        List.of("id", "email", "fullName", "privacyNoticeVersion", "privacyNoticeAcceptedAt"),
+        body.propertyNames().stream().toList(),
+        response.body());
+    assertEquals(actor.id().toString(), body.get("id").asText(), response.body());
+    assertEquals(actor.email(), body.get("email").asText(), response.body());
+    assertEquals(actor.fullName(), body.get("fullName").asText(), response.body());
+    // Kayit aydinlatma beyaniyla yapildi; ayrintili davranis PrivacyNoticeIntegrationTest'te.
+    assertEquals(
+        PrivacyNotice.CURRENT_VERSION, body.get("privacyNoticeVersion").asText(), response.body());
+    assertTrue(body.get("privacyNoticeAcceptedAt").isString(), response.body());
   }
 
   private void assertPermissions(HttpResponse<String> response, String role, List<String> expected)

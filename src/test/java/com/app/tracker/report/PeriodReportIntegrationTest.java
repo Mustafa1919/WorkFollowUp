@@ -29,6 +29,7 @@ import com.app.tracker.report.service.PeriodReportService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.service.WorkspaceService;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
@@ -79,7 +80,11 @@ class PeriodReportIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Report WS"));
     actorId =
         authService
-            .register("report-" + UUID.randomUUID() + "@tracker.local", "Parola123!Guclu", "R")
+            .register(
+                "report-" + UUID.randomUUID() + "@tracker.local",
+                "Parola123!Guclu",
+                "R",
+                PrivacyNotice.CURRENT_VERSION)
             .getId();
     alpha = inWorkspace(() -> projectService.createProject("ALP", "Alpha"));
     beta = inWorkspace(() -> projectService.createProject("BET", "Beta"));

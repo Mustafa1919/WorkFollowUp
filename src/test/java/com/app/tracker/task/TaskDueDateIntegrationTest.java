@@ -14,6 +14,7 @@ import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -60,7 +61,13 @@ class TaskDueDateIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Due WS"));
     project = inWorkspace(() -> projectService.createProject("DUE", "Due Project"));
     actorId =
-        authService.register("due-" + UUID.randomUUID() + "@tracker.local", PASSWORD, "A").getId();
+        authService
+            .register(
+                "due-" + UUID.randomUUID() + "@tracker.local",
+                PASSWORD,
+                "A",
+                PrivacyNotice.CURRENT_VERSION)
+            .getId();
   }
 
   @Test
@@ -157,7 +164,8 @@ class TaskDueDateIntegrationTest extends AbstractIntegrationTest {
 
   private String memberToken(String role) {
     String email = "due-member-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Member").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "Member", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, userId, role);
     return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }

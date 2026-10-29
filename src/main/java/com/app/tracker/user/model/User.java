@@ -3,6 +3,7 @@ package com.app.tracker.user.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,17 @@ public class User {
   private boolean emailVerified;
 
   private boolean systemAdmin;
+
+  private String privacyNoticeVersion;
+
+  private Instant privacyNoticeAcceptedAt;
+
+  public void acceptPrivacyNotice(String version, Instant acceptedAt) {
+    if (!version.equals(this.privacyNoticeVersion)) {
+      this.privacyNoticeVersion = version;
+      this.privacyNoticeAcceptedAt = acceptedAt;
+    }
+  }
 
   public static User newUser(UUID id, String email, String passwordHash, String fullName) {
     User user = new User();

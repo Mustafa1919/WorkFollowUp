@@ -10,6 +10,7 @@ import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -68,7 +69,7 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
   @Test
   void registrationSendsAVerificationEmailToTheNewUser() {
     String email = "verify-" + UUID.randomUUID() + "@tracker.local";
-    authService.register(email, PASSWORD, "Yeni Kullanici");
+    authService.register(email, PASSWORD, "Yeni Kullanici", PrivacyNotice.CURRENT_VERSION);
 
     assertEquals(1, messagesTo(email, "dogrula", 1).size());
   }
@@ -156,7 +157,8 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
   // ---- yardimcilar --------------------------------------------------------------------------
 
   private UUID register(String email, String fullName) {
-    UUID id = authService.register(email, PASSWORD, fullName).getId();
+    UUID id =
+        authService.register(email, PASSWORD, fullName, PrivacyNotice.CURRENT_VERSION).getId();
     userEmails.put(id, email);
     return id;
   }

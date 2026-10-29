@@ -15,6 +15,7 @@ import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.service.SprintService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.service.WorkspaceService;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -56,7 +57,10 @@ class SprintLifecycleIntegrationTest extends AbstractIntegrationTest {
     actorId =
         authService
             .register(
-                "sprint-" + UUID.randomUUID() + "@tracker.local", "correct-horse-battery", "Actor")
+                "sprint-" + UUID.randomUUID() + "@tracker.local",
+                "correct-horse-battery",
+                "Actor",
+                PrivacyNotice.CURRENT_VERSION)
             .getId();
   }
 

@@ -21,6 +21,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
 import com.app.tracker.task.service.TaskService.TaskDetail;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMemberService;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
@@ -320,7 +321,8 @@ class CommentIntegrationTest extends AbstractIntegrationTest {
 
   private UUID newMember(String role) {
     String email = "cmt-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Uye " + role).getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "Uye " + role, PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, userId, role);
     return userId;
   }

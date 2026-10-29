@@ -19,6 +19,7 @@ import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskActivityService;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -63,10 +64,14 @@ class TaskActivityIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Activity WS"));
     project = inWorkspace(() -> projectService.createProject("ACT", "Activity Project"));
     String adminEmail = "act-admin-" + UUID.randomUUID() + "@tracker.local";
-    adminUserId = authService.register(adminEmail, PASSWORD, "Admin").getId();
+    adminUserId =
+        authService.register(adminEmail, PASSWORD, "Admin", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminUserId, WorkspaceRole.ADMIN);
     String devEmail = "act-dev-" + UUID.randomUUID() + "@tracker.local";
-    developerUserId = authService.register(devEmail, PASSWORD, "Gelistirici").getId();
+    developerUserId =
+        authService
+            .register(devEmail, PASSWORD, "Gelistirici", PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, developerUserId, WorkspaceRole.DEVELOPER);
   }
 

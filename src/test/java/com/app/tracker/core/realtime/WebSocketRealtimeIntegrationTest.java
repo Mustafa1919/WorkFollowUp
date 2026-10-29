@@ -10,6 +10,7 @@ import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.security.DecodedJwt;
 import com.app.tracker.core.security.JwtService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -68,7 +69,8 @@ class WebSocketRealtimeIntegrationTest extends AbstractIntegrationTest {
   }
 
   private String issueTokenForNewUser(String email) {
-    authService.register(email, "correct-horse-battery", "Test User");
+    authService.register(
+        email, "correct-horse-battery", "Test User", PrivacyNotice.CURRENT_VERSION);
     return authService.login(email, "correct-horse-battery", "127.0.0.1").accessToken();
   }
 

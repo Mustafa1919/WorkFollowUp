@@ -18,6 +18,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -57,7 +58,8 @@ class TaskSubtaskAndDependencyIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Sub WS"));
     project = inWorkspace(() -> projectService.createProject("SUB", "Subtask Project"));
     String email = "sub-owner-" + UUID.randomUUID() + "@tracker.local";
-    adminUserId = authService.register(email, PASSWORD, "Owner").getId();
+    adminUserId =
+        authService.register(email, PASSWORD, "Owner", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminUserId, WorkspaceRole.ADMIN);
   }
 

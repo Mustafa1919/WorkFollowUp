@@ -6,8 +6,10 @@ import com.app.tracker.core.security.model.RefreshToken;
 import com.app.tracker.core.security.model.VerificationToken;
 import com.app.tracker.core.security.repository.RefreshTokenRepository;
 import com.app.tracker.core.security.repository.VerificationTokenRepository;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ public class AuthService {
   private final StringRedisTemplate redisTemplate;
   private final SystemAdminProperties systemAdminProperties;
   private final String dummyHash;
+  private final Clock clock;
 
   public AuthService(
       UserRepository userRepository,
@@ -53,7 +56,9 @@ public class AuthService {
       BruteForceGuard bruteForceGuard,
       EmailNotificationPublisher emailNotificationPublisher,
       StringRedisTemplate redisTemplate,
-      SystemAdminProperties systemAdminProperties) {
+      SystemAdminProperties systemAdminProperties,
+      Clock clock) {
+    this.clock = clock;
     this.userRepository = userRepository;
     this.refreshTokenRepository = refreshTokenRepository;
     this.verificationTokenRepository = verificationTokenRepository;
@@ -72,7 +77,12 @@ public class AuthService {
   public record LoginResult(String accessToken, String refreshToken, Duration refreshTtl) {}
 
   @Transactional
-  public User register(String email, String rawPassword, String fullName) {
+  public User register(
+      String email, String rawPassword, String fullName, String privacyNoticeVersion) {
+    if (!PrivacyNotice.CURRENT_VERSION.equals(privacyNoticeVersion)) {
+      throw new BusinessRuleException(
+          "Aydinlatma metni guncellendi; sayfayi yenileyip yeniden onaylayin.");
+    }
     requireMinLength(rawPassword);
     userRepository
         .findByEmail(email)
@@ -82,6 +92,7 @@ public class AuthService {
             });
     User user =
         User.newUser(UUID.randomUUID(), email, passwordEncoder.encode(rawPassword), fullName);
+    user.acceptPrivacyNotice(privacyNoticeVersion, Instant.now(clock));
     userRepository.save(user);
     issueVerificationToken(user.getId(), "EMAIL_VERIFICATION", Duration.ofHours(24));
     return user;

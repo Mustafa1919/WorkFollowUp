@@ -15,6 +15,7 @@ import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.service.SprintService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -61,7 +62,7 @@ class ForecastServiceIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Forecast WS"));
     project = inWorkspace(() -> projectService.createProject("FCT", "Forecast Project"));
     String email = "forecast-owner-" + UUID.randomUUID() + "@tracker.local";
-    actorId = authService.register(email, PASSWORD, "Owner").getId();
+    actorId = authService.register(email, PASSWORD, "Owner", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, actorId, WorkspaceRole.ADMIN);
   }
 

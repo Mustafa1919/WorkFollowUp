@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Input'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Aurora } from '@/components/Aurora'
+import { PRIVACY_NOTICE_VERSION } from '@/features/legal/privacyNotice'
 
 const FEATURES = [
   { icon: KanbanSquare, text: 'Sürükle-bırak Kanban panosu' },
@@ -29,7 +30,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     e.preventDefault()
     setLoading(true)
     try {
-      if (!isLogin) await api.post('/api/v1/auth/register', { email, password, fullName })
+      if (!isLogin) await api.post('/api/v1/auth/register', {
+        email, password, fullName,
+        privacyNoticeAccepted: true,
+        privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
+      })
       const res = await api.post<{ accessToken: string }>('/api/v1/auth/login', { email, password })
       const session = useSession.getState()
       session.setEmail(email)
@@ -129,6 +134,15 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                   placeholder={isLogin ? undefined : 'En az 12 karakter'}
                 />
               </Field>
+              {!isLogin && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" required className="mt-1 accent-accent" />
+                  <span>
+                    <a href="/kvkk" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Aydınlatma metnini</a>{' '}
+                    okudum ve anladım.
+                  </span>
+                </label>
+              )}
               {isLogin && (
                 <p className="-mt-2 text-right text-xs">
                   <Link to="/forgot-password" className="text-muted hover:text-accent hover:underline">

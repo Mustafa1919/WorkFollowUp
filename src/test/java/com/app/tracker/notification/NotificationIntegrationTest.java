@@ -19,6 +19,7 @@ import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -273,17 +274,22 @@ class NotificationIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Inbox WS"));
 
     String adminEmail = "inbox-admin-" + UUID.randomUUID() + "@tracker.local";
-    UUID adminId = authService.register(adminEmail, PASSWORD, "Admin").getId();
+    UUID adminId =
+        authService.register(adminEmail, PASSWORD, "Admin", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminId, WorkspaceRole.ADMIN);
     String adminToken = authService.login(adminEmail, PASSWORD, "127.0.0.1").accessToken();
 
     String devEmail = "inbox-dev-" + UUID.randomUUID() + "@tracker.local";
-    UUID devId = authService.register(devEmail, PASSWORD, "Dev").getId();
+    UUID devId =
+        authService.register(devEmail, PASSWORD, "Dev", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, devId, WorkspaceRole.DEVELOPER);
     String devToken = authService.login(devEmail, PASSWORD, "127.0.0.1").accessToken();
 
     String viewerEmail = "inbox-viewer-" + UUID.randomUUID() + "@tracker.local";
-    UUID viewerId = authService.register(viewerEmail, PASSWORD, "Viewer").getId();
+    UUID viewerId =
+        authService
+            .register(viewerEmail, PASSWORD, "Viewer", PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, viewerId, WorkspaceRole.VIEWER);
 
     Project project =

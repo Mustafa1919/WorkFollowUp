@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -53,13 +54,14 @@ class WorkspaceMemberIntegrationTest extends AbstractIntegrationTest {
     workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Member WS"));
     String email = "member-admin-" + UUID.randomUUID() + "@tracker.local";
-    UUID adminId = authService.register(email, PASSWORD, "Admin").getId();
+    UUID adminId =
+        authService.register(email, PASSWORD, "Admin", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminId, WorkspaceRole.ADMIN);
     adminToken = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }
 
   private String registerPlainUser(String email) {
-    authService.register(email, PASSWORD, "Someone");
+    authService.register(email, PASSWORD, "Someone", PrivacyNotice.CURRENT_VERSION);
     return email;
   }
 

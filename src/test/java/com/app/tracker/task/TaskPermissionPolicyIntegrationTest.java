@@ -21,6 +21,7 @@ import com.app.tracker.task.dto.UpdateAssigneeRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -303,7 +304,10 @@ class TaskPermissionPolicyIntegrationTest extends AbstractIntegrationTest {
 
   private Member member(String role) {
     String email = "policy-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Policy " + role).getId();
+    UUID userId =
+        authService
+            .register(email, PASSWORD, "Policy " + role, PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, userId, role);
     return new Member(userId, authService.login(email, PASSWORD, "127.0.0.1").accessToken());
   }

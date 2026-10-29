@@ -21,6 +21,7 @@ import com.app.tracker.sprint.service.SprintService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.service.WorkspaceService;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -70,7 +71,8 @@ class VelocityIntegrationTest extends AbstractIntegrationTest {
             .register(
                 "velocity-" + UUID.randomUUID() + "@tracker.local",
                 "correct-horse-battery",
-                "Actor")
+                "Actor",
+                PrivacyNotice.CURRENT_VERSION)
             .getId();
   }
 

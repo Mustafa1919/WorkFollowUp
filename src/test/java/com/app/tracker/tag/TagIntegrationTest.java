@@ -19,6 +19,7 @@ import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -65,7 +66,8 @@ class TagIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Tag WS"));
     project = inWorkspace(() -> projectService.createProject("TAG", "Tag Project"));
     String email = "tag-owner-" + UUID.randomUUID() + "@tracker.local";
-    adminUserId = authService.register(email, PASSWORD, "Owner").getId();
+    adminUserId =
+        authService.register(email, PASSWORD, "Owner", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminUserId, WorkspaceRole.ADMIN);
     adminToken = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }

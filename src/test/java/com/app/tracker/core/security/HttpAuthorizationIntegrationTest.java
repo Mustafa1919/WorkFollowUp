@@ -10,6 +10,7 @@ import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.tenancy.TenantExecutor;
 import com.app.tracker.project.model.Project;
 import com.app.tracker.project.service.ProjectService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -123,6 +124,11 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/me", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/me/permissions", null, ALL_ROLES),
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/me/privacy-notice-acceptance",
+            "{\"version\":\"" + PrivacyNotice.CURRENT_VERSION + "\"}",
+            ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects", null, ALL_ROLES),
         // Sprint yasam dongusu: yalniz ADMIN/MANAGER.
         Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/sprints", SPRINT_JSON, MANAGE),
@@ -380,13 +386,14 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
 
   private String memberToken(String role) {
     String email = role.toLowerCase() + "-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Authz User").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "Authz User", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, userId, role);
     return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }
 
   private String newUserToken(String email) {
-    authService.register(email, PASSWORD, "Authz User");
+    authService.register(email, PASSWORD, "Authz User", PrivacyNotice.CURRENT_VERSION);
     return authService.login(email, PASSWORD, "127.0.0.1").accessToken();
   }
 

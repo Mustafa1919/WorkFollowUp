@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -62,7 +63,8 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
     workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Invite WS"));
     String email = "invite-admin-" + UUID.randomUUID() + "@tracker.local";
-    UUID adminId = authService.register(email, PASSWORD, "Admin").getId();
+    UUID adminId =
+        authService.register(email, PASSWORD, "Admin", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminId, WorkspaceRole.ADMIN);
     adminToken = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
 
@@ -103,7 +105,7 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
     assertTrue(previewBody.contains("Invite WS"), previewBody);
 
     // Henuz kayitsiz: register + login, sonra kabul et.
-    authService.register(inviteeEmail, PASSWORD, "Davetli");
+    authService.register(inviteeEmail, PASSWORD, "Davetli", PrivacyNotice.CURRENT_VERSION);
     String inviteeToken = authService.login(inviteeEmail, PASSWORD, "127.0.0.1").accessToken();
 
     String acceptBody =
@@ -152,7 +154,7 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
     String token = extractTokenFromEmail(inviteeEmail);
 
     String otherEmail = "someone-else-" + UUID.randomUUID() + "@tracker.local";
-    authService.register(otherEmail, PASSWORD, "Baskasi");
+    authService.register(otherEmail, PASSWORD, "Baskasi", PrivacyNotice.CURRENT_VERSION);
     String otherToken = authService.login(otherEmail, PASSWORD, "127.0.0.1").accessToken();
 
     assertEquals(
@@ -216,7 +218,7 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
             .getContentAsString();
     assertFalse(pendingAfter.contains(inviteeEmail), pendingAfter);
 
-    authService.register(inviteeEmail, PASSWORD, "Iptal Edilen");
+    authService.register(inviteeEmail, PASSWORD, "Iptal Edilen", PrivacyNotice.CURRENT_VERSION);
     String inviteeToken = authService.login(inviteeEmail, PASSWORD, "127.0.0.1").accessToken();
     assertEquals(
         400,
@@ -261,7 +263,8 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
   @Test
   void inviteRequiresAdminRole() throws Exception {
     String devEmail = "notadmin-" + UUID.randomUUID() + "@tracker.local";
-    UUID devId = authService.register(devEmail, PASSWORD, "Dev").getId();
+    UUID devId =
+        authService.register(devEmail, PASSWORD, "Dev", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, devId, WorkspaceRole.DEVELOPER);
     String devToken = authService.login(devEmail, PASSWORD, "127.0.0.1").accessToken();
 

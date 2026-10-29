@@ -28,6 +28,7 @@ import com.app.tracker.task.dto.UpdateTaskStatusRequest;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -557,7 +558,10 @@ class DependencyCompletionRuleIntegrationTest extends AbstractIntegrationTest {
 
   private Member member(String role) {
     String email = "dependency-" + UUID.randomUUID() + "@tracker.local";
-    UUID id = authService.register(email, PASSWORD, "Dependency " + role).getId();
+    UUID id =
+        authService
+            .register(email, PASSWORD, "Dependency " + role, PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, id, role);
     return new Member(id, authService.login(email, PASSWORD, "127.0.0.1").accessToken());
   }

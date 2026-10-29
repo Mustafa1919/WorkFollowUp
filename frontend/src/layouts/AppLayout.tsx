@@ -22,6 +22,7 @@ import { Logo } from '@/features/auth/AuthPage'
 import { CreateProjectDialog } from '@/features/dashboard/CreateProjectDialog'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { GuidedTour } from '@/components/GuidedTour'
+import { PrivacyNoticeGate } from '@/features/legal/PrivacyNoticeGate'
 import { trackPageView } from '@/lib/telemetry'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -134,6 +135,7 @@ export function AppLayout() {
       <ShortcutsDialog />
       <FeedbackWidget />
       <GuidedTour />
+      <PrivacyNoticeGate />
     </div>
   )
 }

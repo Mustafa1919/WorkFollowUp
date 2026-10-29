@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.app.tracker.core.AbstractIntegrationTest;
 import com.app.tracker.core.security.AuthService;
 import com.app.tracker.core.tenancy.TenantExecutor;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -44,7 +45,8 @@ class FeedbackIntegrationTest extends AbstractIntegrationTest {
   @BeforeEach
   void setUp() {
     String email = "feedback-admin-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Admin").getId();
+    UUID userId =
+        authService.register(email, PASSWORD, "Admin", PrivacyNotice.CURRENT_VERSION).getId();
     adminJwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
     workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Feedback WS"));
@@ -66,7 +68,8 @@ class FeedbackIntegrationTest extends AbstractIntegrationTest {
   @Test
   void developerCannotListFeedback() throws Exception {
     String email = "feedback-dev-" + UUID.randomUUID() + "@tracker.local";
-    UUID devId = authService.register(email, PASSWORD, "Dev").getId();
+    UUID devId =
+        authService.register(email, PASSWORD, "Dev", PrivacyNotice.CURRENT_VERSION).getId();
     String devJwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
     membershipService.addMember(workspaceId, devId, WorkspaceRole.DEVELOPER);
 
@@ -97,7 +100,8 @@ class FeedbackIntegrationTest extends AbstractIntegrationTest {
     tenantExecutor.runAs(
         null, () -> workspaceService.createWorkspace(otherWorkspaceId, "Diger WS"));
     String email = "feedback-other-" + UUID.randomUUID() + "@tracker.local";
-    UUID otherUserId = authService.register(email, PASSWORD, "Other Admin").getId();
+    UUID otherUserId =
+        authService.register(email, PASSWORD, "Other Admin", PrivacyNotice.CURRENT_VERSION).getId();
     String otherJwt = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
     membershipService.addMember(otherWorkspaceId, otherUserId, WorkspaceRole.ADMIN);
 

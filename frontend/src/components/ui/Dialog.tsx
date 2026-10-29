@@ -11,12 +11,13 @@ interface DialogProps {
   description?: string
   children: ReactNode
   size?: 'md' | 'xl'
+  dismissible?: boolean
 }
 
 /** Radix (erisilebilirlik, focus trap, Esc) + Motion (giris/cikis animasyonu). */
-export function Dialog({ open, onOpenChange, title, description, children, size = 'md' }: DialogProps) {
+export function Dialog({ open, onOpenChange, title, description, children, size = 'md', dismissible = true }: DialogProps) {
   return (
-    <RD.Root open={open} onOpenChange={onOpenChange}>
+    <RD.Root open={open} onOpenChange={(next) => { if (dismissible || next) onOpenChange(next) }}>
       <AnimatePresence>
         {open && (
           <RD.Portal forceMount>
@@ -29,7 +30,10 @@ export function Dialog({ open, onOpenChange, title, description, children, size 
               />
             </RD.Overlay>
             <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
-              <RD.Content asChild forceMount>
+              <RD.Content asChild forceMount
+                onEscapeKeyDown={(event) => { if (!dismissible) event.preventDefault() }}
+                onInteractOutside={(event) => { if (!dismissible) event.preventDefault() }}
+              >
                 <motion.div
                   className={cn('pointer-events-auto max-h-[calc(100vh-32px)] w-full min-w-0 overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-2xl outline-none', size === 'xl' ? 'max-w-[1100px]' : 'max-w-md')}
                   initial={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -44,9 +48,9 @@ export function Dialog({ open, onOpenChange, title, description, children, size 
                         {description ?? title}
                       </RD.Description>
                     </div>
-                    <RD.Close className="shrink-0 cursor-pointer rounded-lg p-1 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+                    {dismissible && <RD.Close className="shrink-0 cursor-pointer rounded-lg p-1 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
                       <X size={18} />
-                    </RD.Close>
+                    </RD.Close>}
                   </div>
                   {children}
                 </motion.div>

@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useSession } from '@/stores/session'
+import { useMe } from '@/api/queries'
+import { PRIVACY_NOTICE_VERSION } from '@/features/legal/privacyNotice'
 import { hasTourBeenSeen, markTourSeen, onGuidedTourOpenRequested } from '@/lib/guidedTour'
 
 interface Step {
@@ -67,15 +69,20 @@ export function GuidedTour() {
     [],
   )
 
+  // Aydinlatma onayi bekleyen kullanicida tur, kapatilamayan onay penceresinin ustune binmesin:
+  // onay verilip /me yenilenince acilir.
+  const me = useMe()
+  const noticeAccepted = me.isSuccess && me.data.privacyNoticeVersion === PRIVACY_NOTICE_VERSION
+
   // Sayfa/nav/proje listesi yerlesene kadar kisa bir gecikmeyle, kullanici basina bir kere.
   useEffect(() => {
-    if (hasTourBeenSeen(email)) return
+    if (!noticeAccepted || hasTourBeenSeen(email)) return
     const timer = setTimeout(() => {
       setStep(0)
       setOpen(true)
     }, 800)
     return () => clearTimeout(timer)
-  }, [email])
+  }, [email, noticeAccepted])
 
   useEffect(() => {
     if (!open) return

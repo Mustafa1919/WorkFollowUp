@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.app.tracker.core.AbstractIntegrationTest;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,8 @@ class SystemAdminIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void configuredEmailIsPromotedToSystemAdminOnLogin() {
-    authService.register(ADMIN_EMAIL, "correct-horse-battery", "Owner");
+    authService.register(
+        ADMIN_EMAIL, "correct-horse-battery", "Owner", PrivacyNotice.CURRENT_VERSION);
 
     AuthService.LoginResult result =
         authService.login(ADMIN_EMAIL, "correct-horse-battery", "127.0.0.1");
@@ -48,7 +50,7 @@ class SystemAdminIntegrationTest extends AbstractIntegrationTest {
   @Test
   void unconfiguredEmailStaysRegularUser() {
     String email = "regular@tracker.local";
-    authService.register(email, "correct-horse-battery", "Regular");
+    authService.register(email, "correct-horse-battery", "Regular", PrivacyNotice.CURRENT_VERSION);
 
     AuthService.LoginResult result = authService.login(email, "correct-horse-battery", "127.0.0.1");
 

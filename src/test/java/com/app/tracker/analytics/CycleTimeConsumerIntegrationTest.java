@@ -19,6 +19,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.service.WorkspaceService;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
@@ -135,7 +136,11 @@ class CycleTimeConsumerIntegrationTest extends AbstractIntegrationTest {
     Task task = tenantExecutor.runAs(ws, () -> taskService.createTask(project.getId(), "T"));
     UUID actor =
         authService
-            .register("e2e-" + UUID.randomUUID() + "@tracker.local", "correct-horse-battery", "A")
+            .register(
+                "e2e-" + UUID.randomUUID() + "@tracker.local",
+                "correct-horse-battery",
+                "A",
+                PrivacyNotice.CURRENT_VERSION)
             .getId();
 
     tenantExecutor.runAs(ws, () -> taskService.updateStatus(task.getId(), "In Progress", actor));

@@ -19,6 +19,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.sprint.model.Sprint;
 import com.app.tracker.sprint.service.SprintService;
 import com.app.tracker.tag.service.TagService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -241,7 +242,11 @@ class ExtendedTaskCreationIntegrationTest extends AbstractIntegrationTest {
       throws Exception {
     UUID outsider =
         authService
-            .register("outsider-" + UUID.randomUUID() + "@tracker.local", PASSWORD, "Outsider")
+            .register(
+                "outsider-" + UUID.randomUUID() + "@tracker.local",
+                PASSWORD,
+                "Outsider",
+                PrivacyNotice.CURRENT_VERSION)
             .getId();
     ObjectNode request = fullRequest(false);
     assertFullTask(createAccepted(manager, request), request);
@@ -353,7 +358,10 @@ class ExtendedTaskCreationIntegrationTest extends AbstractIntegrationTest {
 
   private Member member(String role) {
     String email = "extended-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Creation " + role).getId();
+    UUID userId =
+        authService
+            .register(email, PASSWORD, "Creation " + role, PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, userId, role);
     return new Member(userId, authService.login(email, PASSWORD, "127.0.0.1").accessToken());
   }

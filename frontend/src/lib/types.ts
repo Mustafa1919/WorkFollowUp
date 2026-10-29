@@ -30,6 +30,8 @@ export interface Me {
   id: string
   email: string
   fullName: string | null
+  privacyNoticeVersion: string | null
+  privacyNoticeAcceptedAt: string | null
 }
 
 export interface MyPermissions {

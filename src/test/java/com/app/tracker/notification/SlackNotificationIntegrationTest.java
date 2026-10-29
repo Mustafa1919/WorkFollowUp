@@ -22,6 +22,7 @@ import com.app.tracker.project.service.ProjectService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -401,7 +402,8 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
     UUID workspaceId = UUID.randomUUID();
     tenantExecutor.runAs(null, () -> workspaceService.createWorkspace(workspaceId, "Slack WS"));
     String email = "slack-admin-" + UUID.randomUUID() + "@tracker.local";
-    UUID adminId = authService.register(email, PASSWORD, "Slack Admin").getId();
+    UUID adminId =
+        authService.register(email, PASSWORD, "Slack Admin", PrivacyNotice.CURRENT_VERSION).getId();
     membershipService.addMember(workspaceId, adminId, WorkspaceRole.ADMIN);
     String token = authService.login(email, PASSWORD, "127.0.0.1").accessToken();
 

@@ -13,6 +13,7 @@ import { CompletedPage } from '@/features/completed/CompletedPage'
 import { MeetingsPage } from '@/features/meetings/MeetingsPage'
 import { StandupsPage } from '@/features/standups/StandupsPage'
 import { MyWorkPage } from '@/features/my-work/MyWorkPage'
+import { PrivacyNoticePage } from '@/features/legal/PrivacyNoticePage'
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
   // Token'li: oturum durumundan bagimsiz calismali (eski bir e-postadaki linke giren, halihazirda
   // giris yapmis birini de kapsar) — GuestOnly/AuthGate'in DISINDA.
   { path: '/reset-password', element: <ResetPasswordPage /> },
+  { path: '/kvkk', element: <PrivacyNoticePage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
   { path: '/invitations/:token', element: <InvitationAcceptPage /> },
   {

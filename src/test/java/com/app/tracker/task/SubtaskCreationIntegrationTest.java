@@ -19,6 +19,7 @@ import com.app.tracker.tag.service.TagService;
 import com.app.tracker.task.model.Task;
 import com.app.tracker.task.model.TaskStatus;
 import com.app.tracker.task.service.TaskService;
+import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import com.app.tracker.workspace.service.WorkspaceService;
@@ -403,7 +404,10 @@ class SubtaskCreationIntegrationTest extends AbstractIntegrationTest {
 
   private Member member(String role) {
     String email = "subtask-" + UUID.randomUUID() + "@tracker.local";
-    UUID userId = authService.register(email, PASSWORD, "Subtask " + role).getId();
+    UUID userId =
+        authService
+            .register(email, PASSWORD, "Subtask " + role, PrivacyNotice.CURRENT_VERSION)
+            .getId();
     membershipService.addMember(workspaceId, userId, role);
     return new Member(userId, authService.login(email, PASSWORD, "127.0.0.1").accessToken());
   }
