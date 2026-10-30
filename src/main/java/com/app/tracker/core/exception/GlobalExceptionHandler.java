@@ -3,6 +3,7 @@ package com.app.tracker.core.exception;
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.security.RefreshTokenReuseException;
 import com.app.tracker.core.tenancy.TenantContext;
+import com.app.tracker.core.web.RequestBodyTooLargeException;
 import com.app.tracker.telemetry.TelemetryEventPublisher;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -78,6 +80,34 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatus.FORBIDDEN, "Bu islemi yapmak icin yetkiniz yok.");
     problem.setType(URI.create("https://api.app.com/errors/forbidden"));
     problem.setTitle("Erisim Reddedildi");
+    return problem;
+  }
+
+  @ExceptionHandler(RequestBodyTooLargeException.class)
+  public ResponseEntity<ProblemDetail> handleBodyTooLarge(RequestBodyTooLargeException ex) {
+    return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(tooLargeProblem(ex));
+  }
+
+  /** Chunked govde Jackson okurken siniri asarsa 413; diger okunamaz govdeler 400 kalir. */
+  @Override
+  protected ResponseEntity<Object> handleHttpMessageNotReadable(
+      HttpMessageNotReadableException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+    for (Throwable t = ex; t != null; t = t.getCause() == t ? null : t.getCause()) {
+      if (t instanceof RequestBodyTooLargeException tooLarge) {
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(tooLargeProblem(tooLarge));
+      }
+    }
+    return super.handleHttpMessageNotReadable(ex, headers, status, request);
+  }
+
+  private static ProblemDetail tooLargeProblem(RequestBodyTooLargeException ex) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, ex.detail());
+    problem.setType(URI.create("https://api.app.com/errors/payload-too-large"));
+    problem.setTitle("Istek Govdesi Cok Buyuk");
     return problem;
   }
 

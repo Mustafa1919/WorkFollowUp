@@ -103,7 +103,14 @@ public class IdempotencyFilter extends OncePerRequestFilter {
       writeTooLarge(response);
       return;
     }
-    byte[] body = readBody(request);
+    byte[] body;
+    try {
+      body = readBody(request);
+    } catch (RequestBodyTooLargeException e) {
+      // Genel sinir (RequestBodyLimitFilter) asildi; ayni problem govdesi, Redis'e dokunulmadi.
+      RequestBodyLimitFilter.writeTooLarge(response, e);
+      return;
+    }
     if (body == null) {
       writeTooLarge(response);
       return;

@@ -4,6 +4,7 @@ import com.app.tracker.core.security.CorsProperties;
 import com.app.tracker.core.security.JwtProperties;
 import com.app.tracker.core.security.PatProperties;
 import com.app.tracker.core.security.SystemAdminProperties;
+import com.app.tracker.core.web.RequestBodyLimitProperties;
 import com.app.tracker.integration.WebhookProperties;
 import com.app.tracker.notification.SlackProperties;
 import com.app.tracker.notification.email.EmailProperties;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties({
   JwtProperties.class,
+  RequestBodyLimitProperties.class,
   PatProperties.class,
   CorsProperties.class,
   SystemAdminProperties.class,

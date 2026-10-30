@@ -67,6 +67,9 @@ app:
     rate-limit-window: PT1M
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  http:
+    # Istek govdesi ust siniri (RequestBodyLimitFilter); asan istek 413 alir.
+    max-request-body-size: 2MB
   webhook:
     # DEV-ONLY varsayilan (public repoda): staging/prod'da WebhookSecretService bu degerle (veya
     # 32 karakterden kisa bir degerle) acilisi REDDEDER — gercek deger WEBHOOK_SECRET_MASTER_KEY.
