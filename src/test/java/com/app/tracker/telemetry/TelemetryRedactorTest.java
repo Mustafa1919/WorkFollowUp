@@ -116,20 +116,34 @@ class TelemetryRedactorTest {
   }
 
   @Test
-  void attackInputsOf4000CharsRepeatedFinishUnder500ms() {
-    String[] inputs = {"a.".repeat(2000), "a".repeat(4000)};
-    for (String in : inputs) {
-      r.redactMessage(in);
-      r.redactMessage(in);
+  void attackInputsOf4000CharsTakeLessThanTenTimesHarmlessInput() {
+    String harmless = ("harmless".repeat(8) + " ").repeat(62).substring(0, 4000);
+    String[] inputs = {harmless, "a.".repeat(2000), "a".repeat(4000)};
+    int repetitions = 20;
+    for (String input : inputs) {
+      measureRedactionNanos(input, repetitions);
     }
-    long start = System.nanoTime();
-    for (int i = 0; i < 20; i++) {
-      for (String in : inputs) {
-        r.redactMessage(in);
+    long[] minima = {Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE};
+    for (int sample = 0; sample < 5; sample++) {
+      for (int i = 0; i < inputs.length; i++) {
+        minima[i] = Math.min(minima[i], measureRedactionNanos(inputs[i], repetitions));
       }
     }
-    long ms = (System.nanoTime() - start) / 1_000_000;
-    assertTrue(ms < 500, "yavas: " + ms + " ms");
+    double dottedRatio = (double) minima[1] / minima[0];
+    double unbrokenRatio = (double) minima[2] / minima[0];
+    System.out.printf(
+        "Redaction min nanos: harmless=%d, dotted=%d, unbroken=%d; ratios=%.3f, %.3f%n",
+        minima[0], minima[1], minima[2], dottedRatio, unbrokenRatio);
+    assertTrue(dottedRatio < 10, "dotted attack / harmless: " + dottedRatio);
+    assertTrue(unbrokenRatio < 10, "unbroken attack / harmless: " + unbrokenRatio);
+  }
+
+  private long measureRedactionNanos(String input, int repetitions) {
+    long start = System.nanoTime();
+    for (int i = 0; i < repetitions; i++) {
+      r.redactMessage(input);
+    }
+    return System.nanoTime() - start;
   }
 
   @Test
