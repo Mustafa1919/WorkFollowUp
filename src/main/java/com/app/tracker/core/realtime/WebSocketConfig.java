@@ -23,6 +23,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * WebSocketAuthInterceptor) gore session'a ozel gercek bir {@code /queue/...} hedefine cevirir;
  * istemcinin gonderdigi id YOKTUR, bu yuzden baska bir kullanicinin kanalina abone olmak yapisal
  * olarak imkansizdir (workspace kanalinin aksine ayri bir uyelik kontrolu GEREKMEZ).
+ *
+ * <p>clientOutboundChannel'da {@link WebSocketDeliveryGuard}: CONNECT/SUBSCRIBE'daki tek seferlik
+ * kontrollerin ardindan token suresi, token iptali ve workspace uyeligi teslim aninda yeniden
+ * denetlenir (bkz. sinifin javadoc'u).
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -30,10 +34,15 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   private final WebSocketAuthInterceptor authInterceptor;
+  private final WebSocketDeliveryGuard deliveryGuard;
   private final CorsProperties corsProperties;
 
-  public WebSocketConfig(WebSocketAuthInterceptor authInterceptor, CorsProperties corsProperties) {
+  public WebSocketConfig(
+      WebSocketAuthInterceptor authInterceptor,
+      WebSocketDeliveryGuard deliveryGuard,
+      CorsProperties corsProperties) {
     this.authInterceptor = authInterceptor;
+    this.deliveryGuard = deliveryGuard;
     this.corsProperties = corsProperties;
   }
 
@@ -53,5 +62,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Override
   public void configureClientInboundChannel(ChannelRegistration registration) {
     registration.interceptors(authInterceptor);
+  }
+
+  @Override
+  public void configureClientOutboundChannel(ChannelRegistration registration) {
+    registration.interceptors(deliveryGuard);
   }
 }

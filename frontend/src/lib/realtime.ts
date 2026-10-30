@@ -1,4 +1,6 @@
 import { Client, ReconnectionTimeMode, type IMessage, type StompSubscription } from '@stomp/stompjs'
+import { refreshAccessToken } from '@/lib/api'
+import { useSession } from '@/stores/session'
 
 /**
  * Backend `core/realtime/WebSocketConfig` — native WebSocket (SockJS YOK), tek endpoint
@@ -76,10 +78,33 @@ export function ensureRealtimeConnected(token: string) {
       resubscribe()
       resubscribeNotifications()
     },
-    onStompError: (frame) => console.debug('[realtime] STOMP hatası:', frame.headers.message),
+    onStompError: (frame) => handleStompError(created, frame.headers.message),
     onWebSocketError: (event) => console.debug('[realtime] WebSocket hatası:', event),
   })
+  const created = client
   client.activate()
+}
+
+// Sunucunun kimlik nedeniyle kapattigi ERROR basliklari (WebSocketDeliveryGuard + WebSocketAuthInterceptor).
+// Spring basligi istisna mesajindan uretir; tam esleme yerine includes ile karsilastirilir.
+const AUTH_ERROR_MARKERS = ['Oturum suresi doldu', 'Yetki geri alindi', 'Kimlik dogrulama basarisiz']
+
+// R3: ayni client icin en cok bir refresh denemesi (art arda ERROR'lar ikinci refresh tetiklemez).
+const refreshAttempted = new WeakSet<Client>()
+
+function handleStompError(source: Client, message: string | undefined) {
+  console.debug('[realtime] STOMP hatası:', message)
+  if (!message || !AUTH_ERROR_MARKERS.some((m) => message.includes(m))) return
+  // R4: disconnectRealtime() sonrasi (cikis / token degisimi) gelen gec ERROR'u yoksay.
+  if (client !== source || refreshAttempted.has(source)) return
+  refreshAttempted.add(source)
+  // Eski token'la stompjs'in sonsuz yeniden baglanma dongusunu durdur.
+  void source.deactivate()
+  // Basarida refreshAccessToken yeni token'i useSession'a yazar; AppLayout effect'i yeni client'i
+  // kurar (burada kurulmaz — cift baglanti olmasin). `desired*` niyetleri korunur.
+  void refreshAccessToken().then((token) => {
+    if (!token) useSession.getState().clear()
+  })
 }
 
 /**

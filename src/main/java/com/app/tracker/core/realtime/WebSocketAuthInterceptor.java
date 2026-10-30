@@ -4,6 +4,7 @@ import com.app.tracker.core.security.DecodedJwt;
 import com.app.tracker.core.security.JwtService;
 import com.app.tracker.core.security.JwtValidationException;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
+import java.time.Clock;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,11 +34,16 @@ import org.springframework.stereotype.Component;
  * kanaliyla ayni id-eslestirme kontrolune tabi tutulmaz — gercek yonlendirme Spring'in
  * UserDestinationMessageHandler'inin CONNECT'te set edilen Principal'dan kurdugu session-ozel
  * hedefle yapilir (bkz. WebSocketConfig javadoc'u).
+ *
+ * <p>CONNECT basarili olunca oturum {@link WebSocketSessionRegistry}'ye (userId, jti, exp) yazilir;
+ * bu kontroller TEK SEFERLIKTIR, sonraki teslimatlarda sure/iptal/uyelik {@link
+ * WebSocketDeliveryGuard} tarafindan yeniden denetlenir. DISCONNECT frame'inde kayit silinir.
  */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
-  private static final Pattern PROJECT_TOPIC_PATTERN =
+  /** {@link WebSocketDeliveryGuard} ayni tam capali deseni kullanir. */
+  static final Pattern PROJECT_TOPIC_PATTERN =
       Pattern.compile("^/topic/workspace\\.([0-9a-fA-F-]{36})\\.project\\.([0-9a-fA-F-]{36})$");
 
   /** Istemcinin gonderdigi TAM CAPALI literal hedef (bkz. sinif javadoc'u); id tasimaz. */
@@ -46,14 +52,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
   private final JwtService jwtService;
   private final StringRedisTemplate redisTemplate;
   private final WorkspaceMembershipService membershipService;
+  private final WebSocketSessionRegistry sessionRegistry;
+  private final Clock clock;
 
   public WebSocketAuthInterceptor(
       JwtService jwtService,
       StringRedisTemplate redisTemplate,
-      WorkspaceMembershipService membershipService) {
+      WorkspaceMembershipService membershipService,
+      WebSocketSessionRegistry sessionRegistry,
+      Clock clock) {
     this.jwtService = jwtService;
     this.redisTemplate = redisTemplate;
     this.membershipService = membershipService;
+    this.sessionRegistry = sessionRegistry;
+    this.clock = clock;
   }
 
   @Override
@@ -67,6 +79,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
       authenticate(accessor);
     } else if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
       authorizeSubscription(accessor);
+    } else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
+      sessionRegistry.remove(accessor.getSessionId());
     }
     return message;
   }
@@ -82,6 +96,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         throw new JwtValidationException("Token iptal edilmis.");
       }
       accessor.setUser(new WebSocketPrincipal(decoded.userId()));
+      sessionRegistry.register(
+          accessor.getSessionId(),
+          new WebSocketSessionState(decoded.userId(), decoded.jti(), decoded.expiresAt()));
     } catch (JwtValidationException e) {
       throw new MessagingException("Kimlik dogrulama basarisiz.", e);
     }
@@ -108,6 +125,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     UUID workspaceId = UUID.fromString(matcher.group(1));
     if (membershipService.findRole(principal.userId(), workspaceId).isEmpty()) {
       throw new MessagingException("Bu workspace'e uye degilsiniz: " + workspaceId);
+    }
+    WebSocketSessionState state = sessionRegistry.get(accessor.getSessionId());
+    if (state != null) {
+      state.recordMembershipCheck(workspaceId, clock.instant());
     }
   }
 }

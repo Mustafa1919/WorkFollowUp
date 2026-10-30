@@ -62,7 +62,10 @@ public class JwtService {
     @SuppressWarnings("unchecked")
     List<String> roles = (List<String>) payload.get("roles");
     return new DecodedJwt(
-        UUID.fromString((String) payload.get("sub")), roles, (String) payload.get("jti"));
+        UUID.fromString((String) payload.get("sub")),
+        roles,
+        (String) payload.get("jti"),
+        Instant.ofEpochSecond(exp));
   }
 
   private String sign(Map<String, Object> payload) {
