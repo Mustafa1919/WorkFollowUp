@@ -2,6 +2,7 @@ package com.app.tracker.core;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
 import org.flywaydb.core.Flyway;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -107,6 +108,19 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
     registry.add("spring.mail.host", MAILPIT::getHost);
     registry.add("spring.mail.port", () -> MAILPIT.getMappedPort(1025));
+  }
+
+  /** Guvenlik testleri icin: tablo sahibi {@code app_migrator} ile yeni bir duz JDBC baglantisi. */
+  public static Connection openMigratorConnection() throws SQLException {
+    return DriverManager.getConnection(
+        POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+  }
+
+  /**
+   * Guvenlik testleri icin: uygulamanin gercek rolu {@code app_runtime} ile yeni JDBC baglantisi.
+   */
+  public static Connection openRuntimeConnection() throws SQLException {
+    return DriverManager.getConnection(POSTGRES.getJdbcUrl(), "app_runtime", "app_runtime");
   }
 
   /**
