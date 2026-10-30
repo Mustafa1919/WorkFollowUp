@@ -8,7 +8,7 @@ set -e
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     CREATE ROLE app_runtime WITH LOGIN NOSUPERUSER PASSWORD 'app_runtime';
     GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO app_runtime;
-    GRANT USAGE, CREATE ON SCHEMA public TO app_runtime;
+    GRANT USAGE ON SCHEMA public TO app_runtime;
     ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA public
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_runtime;
 EOSQL
@@ -19,7 +19,7 @@ for db in tracker_dev tracker_staging tracker_prod; do
         GRANT CONNECT ON DATABASE ${db} TO app_runtime;
 EOSQL
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "${db}" <<-EOSQL
-        GRANT USAGE, CREATE ON SCHEMA public TO app_runtime;
+        GRANT USAGE ON SCHEMA public TO app_runtime;
         ALTER DEFAULT PRIVILEGES FOR ROLE app_migrator IN SCHEMA public
             GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_runtime;
 EOSQL
