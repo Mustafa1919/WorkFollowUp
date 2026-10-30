@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.app</groupId>
@@ -29,12 +29,23 @@
 	<properties>
 		<java.version>21</java.version>
 		<testcontainers.version>1.21.4</testcontainers.version>
-		<!-- Spring Boot 4.1.1 Tomcat 11.0.24 getiriyor: Trivy 3 CRITICAL CVE (CVE-2026-65182, -65905,
-		     -68525) raporluyor, duzeltme 11.0.25. Boot 4.1.2 cikinca bu satiri kaldir. -->
-		<tomcat.version>11.0.25</tomcat.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
+			<!-- CVE-2026-106450, -106451, -106452, -106453, -59949:
+			     kafka-clients bunu (1.11.4+) getirince kaldir. -->
+			<dependency>
+				<groupId>at.yawk.lz4</groupId>
+				<artifactId>lz4-java</artifactId>
+				<version>1.11.4</version>
+			</dependency>
+			<!-- CVE-2026-93451, -108106, -116590:
+			     kafka-clients bunu (1.1.10.9+) getirince kaldir. -->
+			<dependency>
+				<groupId>org.xerial.snappy</groupId>
+				<artifactId>snappy-java</artifactId>
+				<version>1.1.10.9</version>
+			</dependency>
 			<dependency>
 				<groupId>org.testcontainers</groupId>
 				<artifactId>testcontainers-bom</artifactId>

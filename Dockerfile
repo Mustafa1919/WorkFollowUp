@@ -1,5 +1,5 @@
 # --- Build stage -----------------------------------------------------------
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21.0.13_9-jdk-alpine-3.24 AS build
 WORKDIR /workspace
 
 COPY .mvn/ .mvn/
@@ -14,7 +14,7 @@ RUN ./mvnw package -DskipTests -B \
     && java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
 # --- Run stage ---------------------------------------------------------------
-FROM eclipse-temurin:21-jre-alpine AS run
+FROM eclipse-temurin:21.0.13_9-jre-alpine-3.24 AS run
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
