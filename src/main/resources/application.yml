@@ -70,6 +70,21 @@ app:
   http:
     # Istek govdesi ust siniri (RequestBodyLimitFilter); asan istek 413 alir.
     max-request-body-size: 2MB
+    # Istemci IP'si yalniz bu aglardan gelen X-Forwarded-For'dan cozulur (ClientIpResolver);
+    # digerlerinde XFF yok sayilir. Uretim: Caddy -> nginx (Docker agi) -> backend.
+    trusted-proxies: 127.0.0.0/8, ::1/128, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7
+  rate-limit:
+    # Uc bazli sabit pencere hiz siniri (RateLimitFilter, Redis). Asan istek 429 + Retry-After.
+    # Kimliksiz uclar IP'ye, digerleri kullaniciya gore sayilir. Yol/anahtar turu kodda sabit.
+    enabled: true
+    rules:
+      login: { limit: 20, window: PT1M }
+      register: { limit: 10, window: PT1M }
+      password-reset: { limit: 10, window: PT1M }
+      invitation: { limit: 30, window: PT1H }
+      telemetry-usage: { limit: 30, window: PT1M }
+      telemetry-error: { limit: 30, window: PT1M }
+      feedback: { limit: 5, window: PT1M }
   webhook:
     # DEV-ONLY varsayilan (public repoda): staging/prod'da WebhookSecretService bu degerle (veya
     # 32 karakterden kisa bir degerle) acilisi REDDEDER — gercek deger WEBHOOK_SECRET_MASTER_KEY.

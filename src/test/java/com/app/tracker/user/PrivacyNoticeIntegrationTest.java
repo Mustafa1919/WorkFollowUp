@@ -379,8 +379,16 @@ class PrivacyNoticeIntegrationTest extends AbstractIntegrationTest {
     if (bearer != null) {
       request.header("Authorization", "Bearer " + bearer);
     }
+    // Benzersiz istemci IP'si: kayit ucunun IP basina hiz siniri (SEC-07) paylasilan Redis'te
+    // diger testlerin 127.0.0.1 butcesinden etkilenmesin.
+    request.header("X-Forwarded-For", uniqueIp());
     // Hicbir cagrida X-Workspace-Id yoktur; bu uclar workspace gerektirmez.
     return HTTP.send(request.build(), HttpResponse.BodyHandlers.ofString());
+  }
+
+  private static String uniqueIp() {
+    java.util.concurrent.ThreadLocalRandom r = java.util.concurrent.ThreadLocalRandom.current();
+    return "10." + r.nextInt(1, 255) + "." + r.nextInt(1, 255) + "." + r.nextInt(1, 255);
   }
 
   private String url(String path) {

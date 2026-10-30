@@ -1,5 +1,6 @@
 package com.app.tracker.core.security;
 
+import com.app.tracker.core.ratelimit.RateLimitFilter;
 import com.app.tracker.core.tenancy.WorkspaceContextFilter;
 import com.app.tracker.core.web.IdempotencyFilter;
 import java.time.Duration;
@@ -51,7 +52,10 @@ public class SecurityConfig {
   }
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  // RateLimitFilter yapici yerine bean metoduna enjekte edilir: yapici imzasi CORS testlerinde
+  // (filtresiz) dogrudan kullaniliyor.
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter)
+      throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -81,7 +85,9 @@ public class SecurityConfig {
                     .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(patAuthenticationFilter, JwtAuthenticationFilter.class)
-        .addFilterAfter(workspaceContextFilter, PatAuthenticationFilter.class)
+        // Hiz siniri kimlik bilindikten SONRA, uyelik sorgusu ve idempotency kilidinden ONCE.
+        .addFilterAfter(rateLimitFilter, PatAuthenticationFilter.class)
+        .addFilterAfter(workspaceContextFilter, RateLimitFilter.class)
         .addFilterAfter(idempotencyFilter, WorkspaceContextFilter.class);
     return http.build();
   }

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -323,7 +323,9 @@ class TelemetryRedactionContractTest {
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private String accessToken;
 
-    @BeforeAll
+    // Her test kendi kullanicisiyla: telemetry-error kullanici basina hiz siniri (SEC-07,
+    // 30/dk) sinif boyu tek kullanicinin butcesini tuketmesin.
+    @BeforeEach
     void authenticate() {
       String email = "redaction-contract-" + UUID.randomUUID() + "@tracker.local";
       authService.register(

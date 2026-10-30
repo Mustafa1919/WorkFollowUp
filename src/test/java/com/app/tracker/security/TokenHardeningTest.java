@@ -706,18 +706,26 @@ class TokenHardeningTest extends AbstractIntegrationTest {
   }
 
   private HttpResponse<String> httpLogin(String email, String password) {
-    return http.post(
-        "/api/v1/auth/login",
-        (String) null,
-        null,
-        "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}");
+    return anonymousPost(
+        "/api/v1/auth/login", "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}");
+  }
+
+  /**
+   * Kimliksiz auth istegi, benzersiz {@code X-Forwarded-For} ile: IP basina hiz siniri (SEC-07)
+   * paylasilan Redis'te diger testlerin 127.0.0.1 butcesini tuketmesin.
+   */
+  private HttpResponse<String> anonymousPost(String path, String body) {
+    return http.send("POST", path, null, null, body, Map.of("X-Forwarded-For", uniqueIp()));
+  }
+
+  private static String uniqueIp() {
+    java.util.concurrent.ThreadLocalRandom r = java.util.concurrent.ThreadLocalRandom.current();
+    return "10." + r.nextInt(1, 255) + "." + r.nextInt(1, 255) + "." + r.nextInt(1, 255);
   }
 
   private HttpResponse<String> httpRegister(String email) {
-    return http.post(
+    return anonymousPost(
         "/api/v1/auth/register",
-        (String) null,
-        null,
         "{\"email\":\""
             + email
             + "\",\"password\":\""
@@ -730,11 +738,8 @@ class TokenHardeningTest extends AbstractIntegrationTest {
 
   private String requestResetToken(User user) {
     HttpResponse<String> r =
-        http.post(
-            "/api/v1/auth/password-reset/request",
-            (String) null,
-            null,
-            "{\"email\":\"" + user.email() + "\"}");
+        anonymousPost(
+            "/api/v1/auth/password-reset/request", "{\"email\":\"" + user.email() + "\"}");
     assertEquals(202, r.statusCode(), r.body());
     return mail.rawToken(user.email(), "sifirlama");
   }

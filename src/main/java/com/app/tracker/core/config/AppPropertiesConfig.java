@@ -1,9 +1,11 @@
 package com.app.tracker.core.config;
 
+import com.app.tracker.core.ratelimit.RateLimitProperties;
 import com.app.tracker.core.security.CorsProperties;
 import com.app.tracker.core.security.JwtProperties;
 import com.app.tracker.core.security.PatProperties;
 import com.app.tracker.core.security.SystemAdminProperties;
+import com.app.tracker.core.web.ClientIpProperties;
 import com.app.tracker.core.web.RequestBodyLimitProperties;
 import com.app.tracker.integration.WebhookProperties;
 import com.app.tracker.notification.SlackProperties;
@@ -15,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties({
   JwtProperties.class,
   RequestBodyLimitProperties.class,
+  ClientIpProperties.class,
+  RateLimitProperties.class,
   PatProperties.class,
   CorsProperties.class,
   SystemAdminProperties.class,

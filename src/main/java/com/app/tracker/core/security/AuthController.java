@@ -6,6 +6,7 @@ import com.app.tracker.core.security.dto.LoginResponse;
 import com.app.tracker.core.security.dto.PasswordResetConfirmDto;
 import com.app.tracker.core.security.dto.PasswordResetRequestDto;
 import com.app.tracker.core.security.dto.RegisterRequest;
+import com.app.tracker.core.web.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -34,10 +35,13 @@ public class AuthController {
 
   private final AuthService authService;
   private final CorsProperties corsProperties;
+  private final ClientIpResolver clientIpResolver;
 
-  public AuthController(AuthService authService, CorsProperties corsProperties) {
+  public AuthController(
+      AuthService authService, CorsProperties corsProperties, ClientIpResolver clientIpResolver) {
     this.authService = authService;
     this.corsProperties = corsProperties;
+    this.clientIpResolver = clientIpResolver;
   }
 
   @PostMapping("/register")
@@ -51,7 +55,8 @@ public class AuthController {
   public ResponseEntity<LoginResponse> login(
       @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
     AuthService.LoginResult result =
-        authService.login(request.email(), request.password(), clientIp(httpRequest));
+        authService.login(
+            request.email(), request.password(), clientIpResolver.resolve(httpRequest));
     return withRefreshCookie(result);
   }
 
@@ -134,10 +139,5 @@ public class AuthController {
         && !corsProperties.getAllowedOrigins().contains(origin)) {
       throw new BusinessRuleException("Gecersiz istek kaynagi.");
     }
-  }
-
-  private static String clientIp(HttpServletRequest request) {
-    String forwarded = request.getHeader("X-Forwarded-For");
-    return forwarded != null ? forwarded.split(",")[0].trim() : request.getRemoteAddr();
   }
 }
