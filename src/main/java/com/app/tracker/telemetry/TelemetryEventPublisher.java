@@ -30,10 +30,15 @@ public class TelemetryEventPublisher {
   private final KafkaTemplate<String, String> kafkaTemplate;
   private final ObjectMapper objectMapper;
 
+  private final TelemetryRedactor redactor;
+
   public TelemetryEventPublisher(
-      KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
+      KafkaTemplate<String, String> kafkaTemplate,
+      ObjectMapper objectMapper,
+      TelemetryRedactor redactor) {
     this.kafkaTemplate = kafkaTemplate;
     this.objectMapper = objectMapper;
+    this.redactor = redactor;
   }
 
   public void publishFeatureUsed(
@@ -53,12 +58,35 @@ public class TelemetryEventPublisher {
       String message,
       String path,
       Instant occurredAt) {
+    // Tek bogaz noktasi: hem frontend raporu hem backend 500'leri buradan gecer (SEC-09).
+    // Maskeleme hatasi yayini patlatmaz; fail-closed: ham deger yerine sabit isaret gider.
+    String safeErrorType;
+    String safeMessage;
+    String safePath;
+    try {
+      safeErrorType = redactor.redactErrorType(errorType);
+    } catch (RuntimeException | StackOverflowError e) {
+      log.warn("Telemetri errorType maskelenemedi (best-effort)", e);
+      safeErrorType = TelemetryRedactor.FAILED;
+    }
+    try {
+      safeMessage = redactor.redactMessage(message);
+    } catch (RuntimeException | StackOverflowError e) {
+      log.warn("Telemetri mesaji maskelenemedi (best-effort)", e);
+      safeMessage = TelemetryRedactor.FAILED;
+    }
+    try {
+      safePath = redactor.redactPath(path);
+    } catch (RuntimeException | StackOverflowError e) {
+      log.warn("Telemetri yolu maskelenemedi (best-effort)", e);
+      safePath = TelemetryRedactor.FAILED;
+    }
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("userId", userId == null ? null : userId.toString());
     payload.put("source", source);
-    payload.put("errorType", errorType);
-    payload.put("message", message);
-    payload.put("path", path);
+    payload.put("errorType", safeErrorType);
+    payload.put("message", safeMessage);
+    payload.put("path", safePath);
     publish(ERROR_OCCURRED, workspaceId, occurredAt, payload);
   }
 

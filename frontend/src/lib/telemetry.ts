@@ -56,10 +56,17 @@ export function flush() {
 /** Sekme kapanirken kuyrukta kalani gondermeyi dener (garanti degil, best-effort). */
 window.addEventListener('beforeunload', flush)
 
+/** Sorgu/hash atilir, davet token'i {token} olur (ek savunma; sunucu da maskeler). */
+function sanitizePath(path: string): string {
+  const clean = path.split(/[?#]/)[0]
+  return clean.replace(/^(\/invitations\/)[^/]+/i, '$1{token}')
+}
+
 /** Frontend hata raporu -- ayri, batch'lenmeyen bir istek (nadir, kayip yine tolere edilir). */
 export function reportError(errorType: string, message: string | undefined, path: string) {
   if (!isAuthenticated()) return
-  api.post('/api/v1/telemetry/errors', { errorType, message, path }).catch(() => {
+  const safePath = sanitizePath(path)
+  api.post('/api/v1/telemetry/errors', { errorType, message, path: safePath }).catch(() => {
     /* best-effort */
   })
 }
