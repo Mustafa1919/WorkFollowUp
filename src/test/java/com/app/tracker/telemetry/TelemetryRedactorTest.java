@@ -116,6 +116,31 @@ class TelemetryRedactorTest {
   }
 
   @Test
+  void attackInputsOf4000CharsRepeatedFinishUnder500ms() {
+    String[] inputs = {"a.".repeat(2000), "a".repeat(4000)};
+    for (String in : inputs) {
+      r.redactMessage(in);
+      r.redactMessage(in);
+    }
+    long start = System.nanoTime();
+    for (int i = 0; i < 20; i++) {
+      for (String in : inputs) {
+        r.redactMessage(in);
+      }
+    }
+    long ms = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(ms < 500, "yavas: " + ms + " ms");
+  }
+
+  @Test
+  void longLocalPartEmailLeavesNoAtSignOrDomain() {
+    String out = r.redactMessage("x " + "a".repeat(100) + "@alt.example.com y");
+    assertFalse(out.contains("@"));
+    assertFalse(out.contains("example.com"));
+    assertTrue(out.contains("[email]"));
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   void publisherSendsMaskedPayload() throws Exception {
     KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);

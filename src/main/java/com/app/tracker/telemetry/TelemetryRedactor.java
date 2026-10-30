@@ -23,7 +23,8 @@ public class TelemetryRedactor {
   static final int MAX_MESSAGE_LENGTH = 4000;
 
   private static final Pattern EMAIL_PATTERN =
-      Pattern.compile("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9\\-]+(?:\\.[A-Za-z0-9\\-]+)+");
+      Pattern.compile(
+          "[A-Za-z0-9._%+\\-]{1,64}@[A-Za-z0-9\\-]{1,63}(?:\\.[A-Za-z0-9\\-]{1,63}){1,8}");
   private static final Pattern PAT_PATTERN = Pattern.compile("wf_pat_[A-Za-z0-9_\\-]+");
   private static final Pattern JWT_PATTERN =
       Pattern.compile("eyJ[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]*");
