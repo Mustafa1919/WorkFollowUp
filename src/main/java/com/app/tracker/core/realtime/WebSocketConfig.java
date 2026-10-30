@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 /**
  * PHASE_2_DETAILED_DESIGN.md Bolum 4/5.3 — native WebSocket + STOMP (SockJS fallback yok, bu yuzden
@@ -57,6 +58,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   public void configureMessageBroker(MessageBrokerRegistry registry) {
     registry.enableSimpleBroker("/topic", "/queue");
     registry.setUserDestinationPrefix("/user");
+  }
+
+  @Override
+  public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+    // Spring WebSocket 7.0.10 etkin varsayilanlari: 64 KiB, 512 KiB, 10 saniye.
+    registration
+        .setMessageSizeLimit(64 * 1024)
+        .setSendBufferSizeLimit(512 * 1024)
+        .setSendTimeLimit(10_000);
   }
 
   @Override

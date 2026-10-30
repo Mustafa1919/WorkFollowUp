@@ -2,6 +2,7 @@ package com.app.tracker.core.security;
 
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.notification.EmailNotificationPublisher;
+import com.app.tracker.core.ratelimit.RateLimiter;
 import com.app.tracker.core.security.model.RefreshToken;
 import com.app.tracker.core.security.model.VerificationToken;
 import com.app.tracker.core.security.repository.RefreshTokenRepository;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class AuthService {
   private final RefreshTokenFamilyRevoker familyRevoker;
   private final String dummyHash;
   private final Clock clock;
+  private final PasswordResetMailBudget passwordResetMailBudget;
 
   public AuthService(
       UserRepository userRepository,
@@ -59,6 +62,39 @@ public class AuthService {
       SystemAdminProperties systemAdminProperties,
       RefreshTokenFamilyRevoker familyRevoker,
       Clock clock) {
+    this(
+        userRepository,
+        refreshTokenRepository,
+        verificationTokenRepository,
+        passwordEncoder,
+        jwtService,
+        jwtProperties,
+        bruteForceGuard,
+        emailNotificationPublisher,
+        redisTemplate,
+        systemAdminProperties,
+        familyRevoker,
+        clock,
+        new PasswordResetMailBudget(
+            new RateLimiter(redisTemplate), new PasswordResetMailProperties()));
+  }
+
+  @Autowired
+  public AuthService(
+      UserRepository userRepository,
+      RefreshTokenRepository refreshTokenRepository,
+      VerificationTokenRepository verificationTokenRepository,
+      PasswordEncoder passwordEncoder,
+      JwtService jwtService,
+      JwtProperties jwtProperties,
+      BruteForceGuard bruteForceGuard,
+      EmailNotificationPublisher emailNotificationPublisher,
+      StringRedisTemplate redisTemplate,
+      SystemAdminProperties systemAdminProperties,
+      RefreshTokenFamilyRevoker familyRevoker,
+      Clock clock,
+      PasswordResetMailBudget passwordResetMailBudget) {
+    this.passwordResetMailBudget = passwordResetMailBudget;
     this.clock = clock;
     this.familyRevoker = familyRevoker;
     this.userRepository = userRepository;
@@ -167,6 +203,7 @@ public class AuthService {
     // metot kayitli olmayan e-posta icin sessizce hicbir sey yapmaz.
     userRepository
         .findByEmail(email)
+        .filter(user -> passwordResetMailBudget.tryAcquire(user.getId()))
         .ifPresent(
             user -> issueVerificationToken(user.getId(), "PASSWORD_RESET", Duration.ofMinutes(30)));
   }

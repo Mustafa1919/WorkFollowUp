@@ -1,6 +1,7 @@
 package com.app.tracker.core.datasource;
 
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
@@ -71,7 +72,31 @@ public class RoutingDataSourceConfig {
     // spring.datasource.hikari.* (Boot'un otomatik havuzuyla ayni kaynak) her iki havuza uygulanir.
     Binder.get(environment).bind("spring.datasource.hikari", Bindable.ofInstance(pool));
     pool.setPoolName(poolName);
+    configureStatementTimeout(
+        pool,
+        Binder.get(environment)
+            .bind("app.datasource.statement-timeout", Duration.class)
+            .orElse(Duration.ofSeconds(30)));
     return pool;
+  }
+
+  static void configureStatementTimeout(HikariDataSource pool, Duration timeout) {
+    if (timeout.isNegative()) {
+      throw new IllegalArgumentException("statement-timeout negatif olamaz");
+    }
+    if (timeout.isZero()) {
+      return;
+    }
+    long millis = timeout.toMillis();
+    if (millis == 0) {
+      throw new IllegalArgumentException("statement-timeout en az 1ms olmali");
+    }
+    // Oturum ayari: RLS icin kullanilan SET LOCAL bunu degistirmez. Mevcut SQL korunur.
+    String existing = pool.getConnectionInitSql();
+    pool.setConnectionInitSql(
+        (existing == null || existing.isBlank() ? "" : existing + "\n;\n")
+            + "SET statement_timeout = "
+            + millis);
   }
 
   /**

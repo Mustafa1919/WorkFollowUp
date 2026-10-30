@@ -6,6 +6,9 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tracker}
     username: ${DB_USER:app_runtime}
     password: ${DB_PASSWORD:app_runtime}
+    hikari:
+      # HikariCP 7.0.2 etkin varsayilani; yazma ve okuma havuzuna uygulanir.
+      maximum-pool-size: 10
 
   flyway:
     enabled: false # Migration'lar ayrı bir Kubernetes Job olarak koşar (bkz. PHASE_0), uygulama startup'ında çalışmaz.
@@ -46,13 +49,21 @@ spring:
         spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
 
 app:
+  auth:
+    password-reset-mail:
+      limit: 3
+      window: PT15M
   datasource:
+    # Uygulama havuzlarinda oturum zaman asimi; 0 = kapali, migrate etkilenmez.
+    statement-timeout: 30s
     # Analitik okumalar icin (@ReadReplica) ayri havuz. Bos url = ayri havuz YOK, okuma da yazma
     # havuzunu kullanir (bkz. ReadReplicaProperties). Gercek replica Faz4/5'te baglanacak.
     read:
       url: ${DB_READ_URL:}
       username: ${DB_READ_USER:}
       password: ${DB_READ_PASSWORD:}
+      # Varsayilan okuma boyutu yazma havuzundan miras alinir (HikariCP: 10).
+      maximum-pool-size: ${spring.datasource.hikari.maximum-pool-size}
   jwt:
     # DEV-ONLY anahtarlar (bkz. JwtKeyProvider) — staging/prod bu iki degiskeni gercek
     # anahtarlarina (K8s secret dosya yolu) isaret edecek sekilde override eder.
@@ -122,6 +133,12 @@ app:
 
 server:
   shutdown: graceful
+  tomcat:
+    # Spring Boot 4.1.2 TomcatServerProperties etkin varsayilanlari.
+    threads:
+      max: 200
+    max-connections: 8192
+    accept-count: 100
 
 management:
   endpoints:
