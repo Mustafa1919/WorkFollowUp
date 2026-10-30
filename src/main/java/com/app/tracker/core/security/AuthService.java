@@ -12,7 +12,6 @@ import com.app.tracker.user.repository.UserRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +42,7 @@ public class AuthService {
   private final EmailNotificationPublisher emailNotificationPublisher;
   private final StringRedisTemplate redisTemplate;
   private final SystemAdminProperties systemAdminProperties;
+  private final RefreshTokenFamilyRevoker familyRevoker;
   private final String dummyHash;
   private final Clock clock;
 
@@ -57,8 +57,10 @@ public class AuthService {
       EmailNotificationPublisher emailNotificationPublisher,
       StringRedisTemplate redisTemplate,
       SystemAdminProperties systemAdminProperties,
+      RefreshTokenFamilyRevoker familyRevoker,
       Clock clock) {
     this.clock = clock;
+    this.familyRevoker = familyRevoker;
     this.userRepository = userRepository;
     this.refreshTokenRepository = refreshTokenRepository;
     this.verificationTokenRepository = verificationTokenRepository;
@@ -132,8 +134,8 @@ public class AuthService {
       if (token.getUsedAt().plus(REUSE_GRACE_PERIOD).isAfter(Instant.now())) {
         return reissueWithinGracePeriod(token);
       }
-      revokeFamily(token.getFamilyId());
-      throw new BusinessRuleException(
+      familyRevoker.revokeFamily(token.getFamilyId());
+      throw new RefreshTokenReuseException(
           "Guvenlik ihlali tespit edildi, tum oturumlar sonlandirildi. Lutfen yeniden giris yapin.");
     }
 
@@ -214,26 +216,6 @@ public class AuthService {
     // fazladan bir cift uretimi kabul edilebilir bir maliyettir).
     User user = requireUser(usedToken.getUserId());
     return issueTokenPair(user, usedToken.getFamilyId());
-  }
-
-  private void revokeFamily(UUID familyId) {
-    List<RefreshToken> family = refreshTokenRepository.findByFamilyId(familyId);
-    List<String> jtisToBlacklist = new ArrayList<>();
-    UUID userId = null;
-    for (RefreshToken t : family) {
-      t.revoke();
-      userId = t.getUserId();
-      if (t.getAccessJti() != null) {
-        jtisToBlacklist.add(t.getAccessJti());
-      }
-    }
-    refreshTokenRepository.saveAll(family);
-    for (String jti : jtisToBlacklist) {
-      blacklistAccessToken(jti, jwtProperties.getAccessTokenTtl());
-    }
-    if (userId != null) {
-      emailNotificationPublisher.publishSecurityAlert(userId, "refresh_token_reuse_detected");
-    }
   }
 
   private void revokeAllFamiliesForUser(UUID userId) {

@@ -1,6 +1,7 @@
 package com.app.tracker.core.exception;
 
 import com.app.tracker.core.security.CurrentUser;
+import com.app.tracker.core.security.RefreshTokenReuseException;
 import com.app.tracker.core.tenancy.TenantContext;
 import com.app.tracker.telemetry.TelemetryEventPublisher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +51,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     problem.setType(URI.create("https://api.app.com/errors/business-rule-violation"));
     problem.setTitle("Is Kurali Ihlali");
+    return problem;
+  }
+
+  @ExceptionHandler(RefreshTokenReuseException.class)
+  public ProblemDetail handleRefreshTokenReuse(RefreshTokenReuseException ex) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    problem.setType(URI.create("https://api.app.com/errors/refresh-token-reuse"));
+    problem.setTitle("Oturum Sonlandirildi");
     return problem;
   }
 
