@@ -54,18 +54,18 @@ public class TelemetryConsumer {
             eventId,
             workspaceId,
             userId,
-            required(payload, "feature"),
-            required(payload, "action"),
+            truncate(required(payload, "feature"), 60),
+            truncate(required(payload, "action"), 60),
             occurredAt);
       } else {
         repository.insertErrorEvent(
             eventId,
             workspaceId,
             userId,
-            required(payload, "source"),
-            required(payload, "errorType"),
+            truncate(required(payload, "source"), 20),
+            truncate(required(payload, "errorType"), 200),
             payload.path("message").asString(null),
-            payload.path("path").asString(null),
+            truncate(payload.path("path").asString(null), 255),
             occurredAt);
       }
     } catch (DateTimeParseException e) {
@@ -87,6 +87,19 @@ public class TelemetryConsumer {
       throw new IllegalArgumentException("Eksik alan: " + field);
     }
     return value;
+  }
+
+  /** Sutun sinirina (UTF-16 birimi) kirpar; surrogate ciftini ortadan bolmez. */
+  static String truncate(String value, int max) {
+    if (value == null || value.length() <= max) {
+      return value;
+    }
+    int end = max;
+    if (Character.isHighSurrogate(value.charAt(end - 1))
+        && Character.isLowSurrogate(value.charAt(end))) {
+      end--;
+    }
+    return value.substring(0, end);
   }
 
   private static UUID optionalUuid(JsonNode node, String field) {
