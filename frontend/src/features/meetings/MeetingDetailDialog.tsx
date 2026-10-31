@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { useMeetingActions } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { fmt } from '@/lib/dates'
+import { isHttpsUrl } from '@/lib/safeUrl'
 import type { Meeting, MeetingOccurrence } from '@/lib/types'
 import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
@@ -38,7 +39,10 @@ export function MeetingDetailDialog({ occurrence, meeting, canManage, onOpenChan
             {occurrence.startTime.slice(0, 5)} · {occurrence.durationMinutes} dakika
           </div>
 
-          {occurrence.meetingUrl && (
+          {occurrence.meetingUrl && !isHttpsUrl(occurrence.meetingUrl) && (
+            <p className="break-all text-sm text-muted">{occurrence.meetingUrl}</p>
+          )}
+          {occurrence.meetingUrl && isHttpsUrl(occurrence.meetingUrl) && (
             <a
               href={occurrence.meetingUrl}
               target="_blank"

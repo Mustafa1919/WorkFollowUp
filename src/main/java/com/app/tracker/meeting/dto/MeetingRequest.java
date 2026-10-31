@@ -19,7 +19,7 @@ import java.util.List;
 public record MeetingRequest(
     @NotBlank @Size(max = 200) String title,
     @Size(max = 1000) String description,
-    @Size(max = 500) String meetingUrl,
+    @Size(max = 500) @HttpsUrl String meetingUrl,
     @NotNull LocalDate startDate,
     @NotNull LocalTime startTime,
     @Min(5) @Max(480) int durationMinutes,

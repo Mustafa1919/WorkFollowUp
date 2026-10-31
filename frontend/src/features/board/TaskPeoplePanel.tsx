@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Markdown from 'react-markdown'
+import { markdownUrlTransform } from '@/lib/safeUrl'
 import remarkGfm from 'remark-gfm'
 import { Bell, BellOff, Pencil, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -174,6 +175,7 @@ export function DescriptionField({ task, canWrite }: { task: Task; canWrite: boo
       ) : description ? (
         <div className="markdown rounded-xl border border-border bg-surface-2/40 px-3 py-2 text-sm">
           <Markdown
+            urlTransform={markdownUrlTransform}
             remarkPlugins={[remarkGfm]}
             components={{
               a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,

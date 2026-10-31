@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useMeetingActions, type MeetingPayload } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { todayIso } from '@/lib/dates'
+import { isHttpsUrl } from '@/lib/safeUrl'
 import { cn } from '@/lib/cn'
 import type { Meeting, MeetingFrequency, Weekday } from '@/lib/types'
 import { Dialog } from '@/components/ui/Dialog'
@@ -108,6 +109,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
   }
 
   const pending = create.isPending || update.isPending
+  const urlInvalid = meetingUrl.trim() !== '' && !isHttpsUrl(meetingUrl.trim())
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -135,6 +137,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
           value={meetingUrl}
           onChange={(e) => setMeetingUrl(e.target.value)}
         />
+        {urlInvalid && <p className="mt-1 text-xs text-danger">Toplanti linki https:// ile baslamali.</p>}
       </Field>
 
       <div className="grid grid-cols-3 gap-3">
@@ -260,7 +263,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
           Vazgeç
         </Button>
-        <Button type="submit" loading={pending}>
+        <Button type="submit" loading={pending} disabled={urlInvalid}>
           {editing ? 'Kaydet' : 'Oluştur'}
         </Button>
       </div>

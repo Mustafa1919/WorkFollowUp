@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import Markdown from 'react-markdown'
+import { markdownUrlTransform } from '@/lib/safeUrl'
 import remarkGfm from 'remark-gfm'
 import { AtSign, Pencil, Send, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -154,6 +155,7 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                 ) : (
                   <div className="markdown mt-1 text-sm">
                     <Markdown
+                      urlTransform={markdownUrlTransform}
                       remarkPlugins={[remarkGfm]}
                       components={{
                         a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
