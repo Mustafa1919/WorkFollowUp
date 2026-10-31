@@ -68,6 +68,7 @@ public class RetroItemService {
 
   @Transactional(readOnly = true)
   public List<RetroItemResponse> list(UUID sprintId) {
+    requireSprint(sprintId);
     List<Row> rows = retroItemRepository.findBySprintId(sprintId);
     Map<UUID, String> names = resolveAuthorNames(rows);
     return rows.stream()

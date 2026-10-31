@@ -8,6 +8,8 @@ import java.time.Clock;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -41,6 +43,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
+
+  private static final Logger log = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
 
   /** {@link WebSocketDeliveryGuard} ayni tam capali deseni kullanir. */
   static final Pattern PROJECT_TOPIC_PATTERN =
@@ -120,11 +124,13 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
     Matcher matcher = PROJECT_TOPIC_PATTERN.matcher(destination);
     if (!matcher.matches()) {
-      throw new MessagingException("Gecersiz kanal: " + destination);
+      log.debug("STOMP abonelik reddedildi, gecersiz hedef: {}", destination);
+      throw new MessagingException("Gecersiz kanal.");
     }
     UUID workspaceId = UUID.fromString(matcher.group(1));
     if (membershipService.findRole(principal.userId(), workspaceId).isEmpty()) {
-      throw new MessagingException("Bu workspace'e uye degilsiniz: " + workspaceId);
+      log.debug("STOMP abonelik reddedildi, uye degil: workspace={}", workspaceId);
+      throw new MessagingException("Bu kanala erisim yetkiniz yok.");
     }
     WebSocketSessionState state = sessionRegistry.get(accessor.getSessionId());
     if (state != null) {

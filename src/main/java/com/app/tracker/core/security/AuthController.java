@@ -139,5 +139,15 @@ public class AuthController {
         && !corsProperties.getAllowedOrigins().contains(origin)) {
       throw new BusinessRuleException("Gecersiz istek kaynagi.");
     }
+    if (origin == null) {
+      // Origin yoksa tarayicinin Sec-Fetch-Site basligina bak: yalniz iki bilinen capraz deger
+      // reddedilir; baslik yoksa (native istemci) ya da taninmiyorsa gecer.
+      String site = request.getHeader("Sec-Fetch-Site");
+      if (site != null
+          && ("same-site".equalsIgnoreCase(site.trim())
+              || "cross-site".equalsIgnoreCase(site.trim()))) {
+        throw new BusinessRuleException("Gecersiz istek kaynagi.");
+      }
+    }
   }
 }

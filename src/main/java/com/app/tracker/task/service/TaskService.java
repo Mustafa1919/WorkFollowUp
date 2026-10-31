@@ -540,6 +540,7 @@ public class TaskService {
   /** TaskDialog'un alt gorev listesi icin — tam gorev alani gerekir, sadece sayi degil. */
   @Transactional(readOnly = true)
   public List<Task> listChildren(UUID taskId) {
+    requireTask(taskId);
     return taskRepository.findByParentTaskIdOrderByTaskNumber(taskId);
   }
 
