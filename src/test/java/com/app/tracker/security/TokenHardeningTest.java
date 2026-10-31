@@ -161,6 +161,25 @@ class TokenHardeningTest extends AbstractIntegrationTest {
   // =========================================================================================
 
   @Test
+  @DisplayName("AUTH-04 | yalniz harf buyuklugu farkli e-posta ikinci hesap acamaz")
+  void auth04_caseVariantEmailCannotCreateSecondAccount() throws Exception {
+    String suffix = UUID.randomUUID().toString();
+    String mixed = "Sec-Auth04-" + suffix + "@X.test";
+    String lower = mixed.toLowerCase();
+    assertEquals(201, httpRegister(mixed).statusCode(), "ilk kayit");
+    assertEquals(1L, countUsersIgnoringCase(mixed), "ilk kayit sonrasi tek satir");
+
+    HttpResponse<String> second = httpRegister(lower);
+    assertAll(
+        () ->
+            assertTrue(
+                is4xx(second),
+                "harf buyuklugu varyanti reddedilmeli (409/422 ya da esdeger), gozlenen "
+                    + second.statusCode()),
+        () -> assertEquals(1L, countUsersIgnoringCase(mixed), "kullanici tablosunda ikinci satir"));
+  }
+
+  @Test
   @DisplayName("AUTH-04 | gercekten farkli e-postayla kayit basarili (kabul esigi)")
   void auth04_differentEmailRegisters() throws Exception {
     String a = "sec-auth04k-a-" + UUID.randomUUID() + "@tracker.local";
@@ -815,6 +834,10 @@ class TokenHardeningTest extends AbstractIntegrationTest {
     Set<String> d = new TreeSet<>(a);
     d.removeAll(b);
     return d;
+  }
+
+  private long countUsersIgnoringCase(String email) throws SQLException {
+    return queryLong("SELECT count(*) FROM users WHERE lower(email) = lower(?)", email);
   }
 
   private static String sha256(String raw) {

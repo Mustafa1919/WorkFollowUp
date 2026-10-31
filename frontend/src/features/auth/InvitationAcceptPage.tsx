@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { ArrowRight, CheckCircle2, MailWarning, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAcceptInvitation, useInvitationPreview } from '@/api/queries'
+import { useAcceptInvitation, useInvitationPreview, useMe, useResendVerificationEmail } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
 import { useSession } from '@/stores/session'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +35,18 @@ export function InvitationAcceptPage() {
   const accept = useAcceptInvitation()
   const [accepting, setAccepting] = useState(false)
   const accessToken = useSession((s) => s.accessToken)
+
+  const { data: me } = useMe(!!accessToken)
+  const resend = useResendVerificationEmail()
+
+  async function handleResend() {
+    try {
+      await resend.mutateAsync()
+      toast.success('Doğrulama postası gönderildi. Bağlantıya tıkladıktan sonra bu sayfaya dön.')
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
 
   async function handleAccept() {
     setAccepting(true)
@@ -89,7 +101,19 @@ export function InvitationAcceptPage() {
                   <span className="font-medium text-fg">{ROLE_LABEL[preview.role] ?? preview.role}</span> rolüyle davet edildi.
                 </p>
               </div>
-              {accessToken ? (
+              {accessToken && me?.emailVerified === false ? (
+                <div className="w-full space-y-3">
+                  <p className="text-sm text-muted">Daveti kabul etmek için önce e-posta adresini doğrula.</p>
+                  <Button
+                    variant="outline"
+                    onClick={handleResend}
+                    loading={resend.isPending}
+                    className="w-full justify-center"
+                  >
+                    Doğrulama postasını yeniden gönder
+                  </Button>
+                </div>
+              ) : accessToken ? (
                 <Button onClick={handleAccept} loading={accepting} className="w-full justify-center">
                   Daveti kabul et <ArrowRight size={16} />
                 </Button>

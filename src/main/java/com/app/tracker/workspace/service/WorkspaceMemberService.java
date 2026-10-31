@@ -3,6 +3,7 @@ package com.app.tracker.workspace.service;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.tenancy.TenantContext;
+import com.app.tracker.user.model.EmailAddresses;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
 import com.app.tracker.workspace.dto.WorkspaceMemberResponse;
@@ -63,7 +64,7 @@ public class WorkspaceMemberService {
     validateRole(role);
     User user =
         userRepository
-            .findByEmail(email)
+            .findByEmail(EmailAddresses.canonical(email))
             .orElseThrow(() -> new ResourceNotFoundException("Kullanici bulunamadi."));
     if (workspaceUserRepository.findByWorkspaceIdAndUserId(workspaceId, user.getId()).isPresent()) {
       throw new BusinessRuleException("Kullanici zaten bu workspace'in uyesi.");

@@ -52,4 +52,12 @@ public class MeController {
   public void acceptPrivacyNotice(@Valid @RequestBody PrivacyNoticeAcceptanceRequest request) {
     meService.acceptPrivacyNotice(CurrentUser.id(), request.version());
   }
+
+  /** Her durumda 202 (dogrulanmis hesap / dolu butce de): posta gidip gitmedigi sizdirilmaz. */
+  @PostMapping("/verification-email")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  @PreAuthorize("!hasAuthority('AUTH_PAT')")
+  public void resendVerificationEmail() {
+    meService.resendVerificationEmail(CurrentUser.id());
+  }
 }

@@ -10,7 +10,8 @@ public record MeResponse(
     String email,
     String fullName,
     String privacyNoticeVersion,
-    Instant privacyNoticeAcceptedAt) {
+    Instant privacyNoticeAcceptedAt,
+    boolean emailVerified) {
 
   public static MeResponse from(User user) {
     return new MeResponse(
@@ -18,6 +19,7 @@ public record MeResponse(
         user.getEmail(),
         user.getFullName(),
         user.getPrivacyNoticeVersion(),
-        user.getPrivacyNoticeAcceptedAt());
+        user.getPrivacyNoticeAcceptedAt(),
+        user.isEmailVerified());
   }
 }

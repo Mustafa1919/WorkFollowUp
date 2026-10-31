@@ -20,4 +20,14 @@ public class PasswordResetMailBudget {
         .hit("pwreset_mail:" + userId, properties.getLimit(), properties.getWindow())
         .allowed();
   }
+
+  /**
+   * Kullanicinin istedigi dogrulama postasi icin AYNI limit/pencere, AYRI anahtar: parola sifirlama
+   * bu butceyi tuketmez.
+   */
+  public boolean tryAcquireVerification(UUID userId) {
+    return rateLimiter
+        .hit("verify_mail:" + userId, properties.getLimit(), properties.getWindow())
+        .allowed();
+  }
 }

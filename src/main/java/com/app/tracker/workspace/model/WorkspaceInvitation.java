@@ -1,5 +1,6 @@
 package com.app.tracker.workspace.model;
 
+import com.app.tracker.user.model.EmailAddresses;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -55,7 +56,7 @@ public class WorkspaceInvitation {
     WorkspaceInvitation invitation = new WorkspaceInvitation();
     invitation.id = id;
     invitation.workspaceId = workspaceId;
-    invitation.email = email;
+    invitation.email = EmailAddresses.canonical(email);
     invitation.role = role;
     invitation.tokenHash = tokenHash;
     invitation.invitedBy = invitedBy;

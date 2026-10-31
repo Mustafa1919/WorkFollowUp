@@ -6,6 +6,7 @@ import com.app.tracker.core.notification.EmailNotificationPublisher;
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.security.TokenHasher;
 import com.app.tracker.core.tenancy.TenantContext;
+import com.app.tracker.user.model.EmailAddresses;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
 import com.app.tracker.workspace.dto.AcceptInvitationResponse;
@@ -75,7 +76,7 @@ public class WorkspaceInvitationService {
     UUID workspaceId = requireWorkspace();
     UUID inviterId = CurrentUser.id();
     validateRole(role);
-    String normalizedEmail = email.trim();
+    String normalizedEmail = EmailAddresses.canonical(email);
 
     userRepository
         .findByEmail(normalizedEmail)
@@ -160,11 +161,16 @@ public class WorkspaceInvitationService {
         userRepository
             .findById(userId)
             .orElseThrow(() -> new BusinessRuleException("Kullanici bulunamadi."));
-    if (!invitation.getEmail().equalsIgnoreCase(user.getEmail())) {
+    if (!EmailAddresses.canonical(invitation.getEmail())
+        .equals(EmailAddresses.canonical(user.getEmail()))) {
       throw new BusinessRuleException(
           "Bu davet farkli bir e-posta adresine gonderildi. Lutfen "
               + invitation.getEmail()
               + " ile giris yap.");
+    }
+    // Davet token'i e-posta sahipligi kaniti SAYILMAZ: iletilen linkle baskasi uye olamasin.
+    if (!user.isEmailVerified()) {
+      throw new BusinessRuleException("Daveti kabul etmek icin once e-posta adresini dogrula.");
     }
 
     UUID workspaceId = invitation.getWorkspaceId();

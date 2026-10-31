@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -54,6 +55,7 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
   @Autowired private WorkspaceMembershipService membershipService;
   @Autowired private AuthService authService;
   @Autowired private TenantExecutor tenantExecutor;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private UUID workspaceId;
   private String adminToken;
@@ -105,7 +107,12 @@ class WorkspaceInvitationIntegrationTest extends AbstractIntegrationTest {
     assertTrue(previewBody.contains("Invite WS"), previewBody);
 
     // Henuz kayitsiz: register + login, sonra kabul et.
-    authService.register(inviteeEmail, PASSWORD, "Davetli", PrivacyNotice.CURRENT_VERSION);
+    UUID inviteeId =
+        authService
+            .register(inviteeEmail, PASSWORD, "Davetli", PrivacyNotice.CURRENT_VERSION)
+            .getId();
+    // Kabul icin dogrulanmis e-posta sart (BL-03): dogrulama akisi bu testin konusu degil.
+    jdbcTemplate.update("UPDATE users SET email_verified = true WHERE id = ?", inviteeId);
     String inviteeToken = authService.login(inviteeEmail, PASSWORD, "127.0.0.1").accessToken();
 
     String acceptBody =

@@ -161,6 +161,8 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             "/api/v1/me/privacy-notice-acceptance",
             "{\"version\":\"" + PrivacyNotice.CURRENT_VERSION + "\"}",
             ALL_ROLES),
+        // MeController.resendVerificationEmail: !hasAuthority('AUTH_PAT'); rol siniri yok, 202.
+        Endpoint.of(HttpMethod.POST, "/api/v1/me/verification-email", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects", null, ALL_ROLES),
         // Sprint yasam dongusu: yalniz ADMIN/MANAGER.
         Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/sprints", SPRINT_JSON, MANAGE),

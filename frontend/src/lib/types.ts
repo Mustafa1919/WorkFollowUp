@@ -32,6 +32,7 @@ export interface Me {
   fullName: string | null
   privacyNoticeVersion: string | null
   privacyNoticeAcceptedAt: string | null
+  emailVerified: boolean
 }
 
 export interface MyPermissions {

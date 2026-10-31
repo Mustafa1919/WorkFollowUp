@@ -41,7 +41,7 @@ public class User {
   public static User newUser(UUID id, String email, String passwordHash, String fullName) {
     User user = new User();
     user.id = id;
-    user.email = email;
+    user.email = EmailAddresses.canonical(email);
     user.passwordHash = passwordHash;
     user.fullName = fullName;
     user.emailVerified = false;

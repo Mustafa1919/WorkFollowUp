@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.app.tracker.core.security.AuthService;
 import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
@@ -26,7 +27,10 @@ class MePrivacyNoticeServiceTest {
     Instant now = Instant.parse("2026-10-29T10:15:30Z");
     MeService service =
         new MeService(
-            repository, mock(WorkspaceMembershipService.class), Clock.fixed(now, ZoneOffset.UTC));
+            repository,
+            mock(WorkspaceMembershipService.class),
+            Clock.fixed(now, ZoneOffset.UTC),
+            mock(AuthService.class));
 
     service.acceptPrivacyNotice(user.getId(), PrivacyNotice.CURRENT_VERSION);
 

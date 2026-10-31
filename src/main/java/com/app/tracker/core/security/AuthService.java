@@ -7,6 +7,7 @@ import com.app.tracker.core.security.model.RefreshToken;
 import com.app.tracker.core.security.model.VerificationToken;
 import com.app.tracker.core.security.repository.RefreshTokenRepository;
 import com.app.tracker.core.security.repository.VerificationTokenRepository;
+import com.app.tracker.user.model.EmailAddresses;
 import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
@@ -14,6 +15,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,14 +124,16 @@ public class AuthService {
           "Aydinlatma metni guncellendi; sayfayi yenileyip yeniden onaylayin.");
     }
     requireMinLength(rawPassword);
+    String canonicalEmail = EmailAddresses.canonical(email);
     userRepository
-        .findByEmail(email)
+        .findByEmail(canonicalEmail)
         .ifPresent(
             u -> {
               throw new BusinessRuleException("Bu e-posta zaten kayitli.");
             });
     User user =
-        User.newUser(UUID.randomUUID(), email, passwordEncoder.encode(rawPassword), fullName);
+        User.newUser(
+            UUID.randomUUID(), canonicalEmail, passwordEncoder.encode(rawPassword), fullName);
     user.acceptPrivacyNotice(privacyNoticeVersion, Instant.now(clock));
     userRepository.save(user);
     issueVerificationToken(user.getId(), "EMAIL_VERIFICATION", Duration.ofHours(24));
@@ -137,7 +141,9 @@ public class AuthService {
   }
 
   @Transactional
-  public LoginResult login(String email, String rawPassword, String clientIp) {
+  public LoginResult login(String rawEmail, String rawPassword, String clientIp) {
+    // SEC-14: sayaclar ve arama kanonik e-postaya baglidir (harf degistirerek kilit atlatilamaz).
+    String email = EmailAddresses.canonical(rawEmail);
     BruteForceGuard.CheckResult check = bruteForceGuard.checkBeforeAttempt(email, clientIp);
     if (check.locked()) {
       throw new BusinessRuleException(
@@ -202,10 +208,25 @@ public class AuthService {
     // Enumeration korumasi: caller (controller) her durumda AYNI generic yaniti dondurur; bu
     // metot kayitli olmayan e-posta icin sessizce hicbir sey yapmaz.
     userRepository
-        .findByEmail(email)
+        .findByEmail(EmailAddresses.canonical(email))
         .filter(user -> passwordResetMailBudget.tryAcquire(user.getId()))
         .ifPresent(
             user -> issueVerificationToken(user.getId(), "PASSWORD_RESET", Duration.ofMinutes(30)));
+  }
+
+  /**
+   * Kimlikli kullanicinin kendi dogrulama postasini yeniden istemesi. Dogrulanmis hesapta ya da
+   * butce doluyken sessizce hicbir sey yapmaz (caller her durumda 202 doner).
+   */
+  @Transactional
+  public void resendVerificationEmail(UUID userId) {
+    userRepository
+        .findById(userId)
+        .filter(user -> !user.isEmailVerified())
+        .filter(user -> passwordResetMailBudget.tryAcquireVerification(user.getId()))
+        .ifPresent(
+            user ->
+                issueVerificationToken(user.getId(), "EMAIL_VERIFICATION", Duration.ofHours(24)));
   }
 
   @Transactional
@@ -268,11 +289,19 @@ public class AuthService {
    * isaretlenir.
    */
   private void syncSystemAdminFlag(User user) {
-    if (!user.isSystemAdmin()
-        && systemAdminProperties.getSystemAdminEmails().contains(user.getEmail())) {
+    if (!user.isSystemAdmin() && isConfiguredSystemAdmin(user.getEmail())) {
       user.grantSystemAdmin();
       userRepository.save(user);
     }
+  }
+
+  /** SEC-14: env listesindeki degerler de kanoniklestirilerek karsilastirilir. */
+  private boolean isConfiguredSystemAdmin(String email) {
+    String canonicalEmail = EmailAddresses.canonical(email);
+    return systemAdminProperties.getSystemAdminEmails().stream()
+        .filter(Objects::nonNull)
+        .map(EmailAddresses::canonical)
+        .anyMatch(canonicalEmail::equals);
   }
 
   private void blacklistAccessToken(String jti, Duration ttl) {

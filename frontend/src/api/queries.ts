@@ -871,10 +871,20 @@ export function useCurrentRole() {
   return data?.find((w) => w.id === workspaceId)?.role
 }
 
-export function useMe() {
+export function useMe(enabled = true) {
   return useQuery({
     queryKey: keys.me,
     queryFn: async () => (await api.get<Me>('/api/v1/me')).data,
+    enabled,
+  })
+}
+
+/** Kullanicinin kendi dogrulama postasini yeniden istemesi (her durumda 202). */
+export function useResendVerificationEmail() {
+  return useMutation({
+    mutationFn: async () => {
+      await api.post('/api/v1/me/verification-email')
+    },
   })
 }
 

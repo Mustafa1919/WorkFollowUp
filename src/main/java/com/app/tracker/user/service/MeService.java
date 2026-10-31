@@ -2,6 +2,7 @@ package com.app.tracker.user.service;
 
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
+import com.app.tracker.core.security.AuthService;
 import com.app.tracker.user.model.PrivacyNotice;
 import com.app.tracker.user.model.User;
 import com.app.tracker.user.repository.UserRepository;
@@ -18,9 +19,14 @@ public class MeService {
   private final UserRepository userRepository;
   private final WorkspaceMembershipService membershipService;
   private final Clock clock;
+  private final AuthService authService;
 
   public MeService(
-      UserRepository userRepository, WorkspaceMembershipService membershipService, Clock clock) {
+      UserRepository userRepository,
+      WorkspaceMembershipService membershipService,
+      Clock clock,
+      AuthService authService) {
+    this.authService = authService;
     this.userRepository = userRepository;
     this.membershipService = membershipService;
     this.clock = clock;
@@ -34,6 +40,11 @@ public class MeService {
     }
     User user = getUser(userId);
     user.acceptPrivacyNotice(version, Instant.now(clock));
+  }
+
+  @Transactional
+  public void resendVerificationEmail(UUID userId) {
+    authService.resendVerificationEmail(userId);
   }
 
   @Transactional(readOnly = true)
