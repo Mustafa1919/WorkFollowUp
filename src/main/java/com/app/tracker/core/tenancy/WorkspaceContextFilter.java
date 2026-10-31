@@ -7,7 +7,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -28,6 +31,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class WorkspaceContextFilter extends OncePerRequestFilter {
 
   private static final String WORKSPACE_HEADER = "X-Workspace-Id";
+  private static final Pattern CANONICAL_UUID =
+      Pattern.compile(
+          "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
   private final WorkspaceMembershipService membershipService;
 
@@ -40,10 +46,14 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     try {
-      String header = request.getHeader(WORKSPACE_HEADER);
+      List<String> values = Collections.list(request.getHeaders(WORKSPACE_HEADER));
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-      if (header != null && authentication != null && authentication.isAuthenticated()) {
-        UUID workspaceId = UUID.fromString(header);
+      if (!values.isEmpty() && authentication != null && authentication.isAuthenticated()) {
+        if (values.size() != 1 || !CANONICAL_UUID.matcher(values.get(0)).matches()) {
+          writeBadRequest(response);
+          return;
+        }
+        UUID workspaceId = UUID.fromString(values.get(0));
         UUID userId = (UUID) authentication.getPrincipal();
         if (membershipService.findRole(userId, workspaceId).isEmpty()) {
           writeForbidden(response);
@@ -55,6 +65,17 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
     } finally {
       TenantContext.clear();
     }
+  }
+
+  private static void writeBadRequest(HttpServletResponse response) throws IOException {
+    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    response.setContentType("application/problem+json");
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response
+        .getWriter()
+        .write(
+            "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Gecersiz Istek\","
+                + "\"status\":400,\"detail\":\"X-Workspace-Id basligi gecersiz.\"}");
   }
 
   private static void writeForbidden(HttpServletResponse response) throws IOException {

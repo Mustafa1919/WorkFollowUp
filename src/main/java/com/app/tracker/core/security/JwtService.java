@@ -3,7 +3,9 @@ package com.app.tracker.core.security;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.Signature;
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +48,9 @@ public class JwtService {
   }
 
   public DecodedJwt verify(String token) {
+    if (token == null) {
+      throw new JwtValidationException("Token formati gecersiz.");
+    }
     String[] parts = token.split("\\.");
     if (parts.length != 3) {
       throw new JwtValidationException("Token formati gecersiz.");
@@ -55,17 +60,50 @@ public class JwtService {
       throw new JwtValidationException("Token imzasi gecersiz.");
     }
     Map<String, Object> payload = readPayload(parts[1]);
-    long exp = ((Number) payload.get("exp")).longValue();
+    if (!(payload.get("exp") instanceof Number expNumber)) {
+      throw new JwtValidationException("Token exp talebi gecersiz.");
+    }
+    long exp = expNumber.longValue();
     if (Instant.now().getEpochSecond() > exp) {
       throw new JwtValidationException("Token suresi dolmus.");
     }
-    @SuppressWarnings("unchecked")
-    List<String> roles = (List<String>) payload.get("roles");
-    return new DecodedJwt(
-        UUID.fromString((String) payload.get("sub")),
-        roles,
-        (String) payload.get("jti"),
-        Instant.ofEpochSecond(exp));
+    UUID userId = parseSubject(payload.get("sub"));
+    List<String> roles = parseRoles(payload.get("roles"));
+    if (!(payload.get("jti") instanceof String jti) || jti.isEmpty()) {
+      throw new JwtValidationException("Token jti talebi gecersiz.");
+    }
+    Instant expiresAt;
+    try {
+      expiresAt = Instant.ofEpochSecond(exp);
+    } catch (DateTimeException e) {
+      throw new JwtValidationException("Token exp talebi gecersiz.");
+    }
+    return new DecodedJwt(userId, roles, jti, expiresAt);
+  }
+
+  private static UUID parseSubject(Object sub) {
+    if (!(sub instanceof String subject)) {
+      throw new JwtValidationException("Token sub talebi gecersiz.");
+    }
+    try {
+      return UUID.fromString(subject);
+    } catch (IllegalArgumentException e) {
+      throw new JwtValidationException("Token sub talebi gecersiz.");
+    }
+  }
+
+  private static List<String> parseRoles(Object value) {
+    if (!(value instanceof List<?> list)) {
+      throw new JwtValidationException("Token roles talebi gecersiz.");
+    }
+    List<String> roles = new ArrayList<>(list.size());
+    for (Object element : list) {
+      if (!(element instanceof String role)) {
+        throw new JwtValidationException("Token roles talebi gecersiz.");
+      }
+      roles.add(role);
+    }
+    return roles;
   }
 
   private String sign(Map<String, Object> payload) {
@@ -93,7 +131,7 @@ public class JwtService {
       signature.initVerify(keyProvider.getPublicKey());
       signature.update(signingInput.getBytes(StandardCharsets.UTF_8));
       return signature.verify(base64UrlDecode(signaturePartBase64Url));
-    } catch (GeneralSecurityException e) {
+    } catch (GeneralSecurityException | IllegalArgumentException e) {
       return false;
     }
   }
@@ -103,8 +141,11 @@ public class JwtService {
       @SuppressWarnings("unchecked")
       Map<String, Object> payload =
           objectMapper.readValue(base64UrlDecode(payloadPartBase64Url), Map.class);
+      if (payload == null) {
+        throw new JwtValidationException("Token govdesi okunamadi.");
+      }
       return payload;
-    } catch (JacksonException e) {
+    } catch (JacksonException | IllegalArgumentException e) {
       throw new JwtValidationException("Token govdesi okunamadi.");
     }
   }
