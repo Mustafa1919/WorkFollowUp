@@ -1,5 +1,7 @@
 package com.app.tracker.core.exception;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.core.security.CurrentUser;
 import com.app.tracker.core.security.RefreshTokenReuseException;
 import com.app.tracker.core.tenancy.TenantContext;
@@ -8,11 +10,13 @@ import com.app.tracker.telemetry.TelemetryEventPublisher;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -43,8 +47,36 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   private final TelemetryEventPublisher telemetryEventPublisher;
 
+  private final SecurityAuditLog auditLog;
+
   public GlobalExceptionHandler(TelemetryEventPublisher telemetryEventPublisher) {
+    this(telemetryEventPublisher, new SecurityAuditLog());
+  }
+
+  @Autowired
+  public GlobalExceptionHandler(
+      TelemetryEventPublisher telemetryEventPublisher, SecurityAuditLog auditLog) {
     this.telemetryEventPublisher = telemetryEventPublisher;
+    this.auditLog = auditLog;
+  }
+
+  private void auditAccessDenied(HttpServletRequest request) {
+    try {
+      Map<String, String> attributes = new HashMap<>();
+      attributes.put("method", request.getMethod());
+      attributes.put("path", request.getRequestURI());
+      UUID workspaceId = TenantContext.getWorkspaceId();
+      if (workspaceId != null) {
+        attributes.put("workspace", workspaceId.toString());
+      }
+      SecurityAuditLog.safeRecord(
+          auditLog,
+          SecurityAuditEvent.ACCESS_DENIED,
+          SecurityAuditLog.currentActorOrNull(),
+          attributes);
+    } catch (RuntimeException e) {
+      // Audit asil yaniti bozmaz.
+    }
   }
 
   @ExceptionHandler(BusinessRuleException.class)
@@ -74,7 +106,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @ExceptionHandler(AccessDeniedException.class)
-  public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+  public ProblemDetail handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+    auditAccessDenied(request);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.FORBIDDEN, "Bu islemi yapmak icin yetkiniz yok.");

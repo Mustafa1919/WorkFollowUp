@@ -1,9 +1,12 @@
 package com.app.tracker.core.realtime;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -57,17 +60,29 @@ public class WebSocketDeliveryGuard implements ChannelInterceptor {
   private final Predicate<String> jtiRevoked;
   private final BiPredicate<UUID, UUID> isMember;
 
-  @Autowired
+  private final SecurityAuditLog auditLog;
+
   public WebSocketDeliveryGuard(
       WebSocketSessionRegistry registry,
       Clock clock,
       StringRedisTemplate redisTemplate,
       WorkspaceMembershipService membershipService) {
+    this(registry, clock, redisTemplate, membershipService, new SecurityAuditLog());
+  }
+
+  @Autowired
+  public WebSocketDeliveryGuard(
+      WebSocketSessionRegistry registry,
+      Clock clock,
+      StringRedisTemplate redisTemplate,
+      WorkspaceMembershipService membershipService,
+      SecurityAuditLog auditLog) {
     this(
         registry,
         clock,
         jti -> Boolean.TRUE.equals(redisTemplate.hasKey("jwt:blacklist:" + jti)),
-        (userId, workspaceId) -> membershipService.findRole(userId, workspaceId).isPresent());
+        (userId, workspaceId) -> membershipService.findRole(userId, workspaceId).isPresent(),
+        auditLog);
   }
 
   WebSocketDeliveryGuard(
@@ -75,10 +90,20 @@ public class WebSocketDeliveryGuard implements ChannelInterceptor {
       Clock clock,
       Predicate<String> jtiRevoked,
       BiPredicate<UUID, UUID> isMember) {
+    this(registry, clock, jtiRevoked, isMember, new SecurityAuditLog());
+  }
+
+  WebSocketDeliveryGuard(
+      WebSocketSessionRegistry registry,
+      Clock clock,
+      Predicate<String> jtiRevoked,
+      BiPredicate<UUID, UUID> isMember,
+      SecurityAuditLog auditLog) {
     this.registry = registry;
     this.clock = clock;
     this.jtiRevoked = jtiRevoked;
     this.isMember = isMember;
+    this.auditLog = auditLog;
   }
 
   @Override
@@ -111,6 +136,11 @@ public class WebSocketDeliveryGuard implements ChannelInterceptor {
     if (!state.markClosing()) {
       return null;
     }
+    SecurityAuditLog.safeRecord(
+        auditLog,
+        SecurityAuditEvent.WS_SESSION_TERMINATED,
+        state.userId(),
+        Map.of("reason", EXPIRED_MESSAGE.equals(violation) ? "expired" : "revoked"));
     return errorFrame(sessionId, violation);
   }
 

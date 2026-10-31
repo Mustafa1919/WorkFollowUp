@@ -2,6 +2,8 @@ package com.app.tracker.accesstoken.service;
 
 import com.app.tracker.accesstoken.model.PersonalAccessToken;
 import com.app.tracker.accesstoken.repository.PersonalAccessTokenRepository;
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.security.PatTokenFormat;
@@ -9,6 +11,7 @@ import com.app.tracker.core.security.TokenHasher;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -27,8 +30,12 @@ public class PersonalAccessTokenService {
 
   private final PersonalAccessTokenRepository repository;
 
-  public PersonalAccessTokenService(PersonalAccessTokenRepository repository) {
+  private final SecurityAuditLog auditLog;
+
+  public PersonalAccessTokenService(
+      PersonalAccessTokenRepository repository, SecurityAuditLog auditLog) {
     this.repository = repository;
+    this.auditLog = auditLog;
   }
 
   public record IssuedToken(PersonalAccessToken entity, String rawToken) {}
@@ -51,7 +58,13 @@ public class PersonalAccessTokenService {
             TokenHasher.sha256Hex(rawToken),
             PatTokenFormat.previewOf(rawToken),
             expiresAt);
-    return new IssuedToken(repository.save(token), rawToken);
+    PersonalAccessToken saved = repository.save(token);
+    SecurityAuditLog.safeRecord(
+        auditLog,
+        SecurityAuditEvent.PAT_CREATED,
+        userId,
+        Map.of("token", String.valueOf(token.getId())));
+    return new IssuedToken(saved, rawToken);
   }
 
   @Transactional(readOnly = true)
@@ -67,6 +80,8 @@ public class PersonalAccessTokenService {
             .filter(t -> t.getUserId().equals(userId))
             .orElseThrow(() -> new ResourceNotFoundException("Token bulunamadi."));
     token.revoke();
+    SecurityAuditLog.safeRecord(
+        auditLog, SecurityAuditEvent.PAT_REVOKED, userId, Map.of("token", String.valueOf(tokenId)));
   }
 
   /**

@@ -1,5 +1,7 @@
 package com.app.tracker.core.tenancy;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.workspace.service.WorkspaceMembershipService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -9,8 +11,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -37,8 +41,17 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
 
   private final WorkspaceMembershipService membershipService;
 
+  private final SecurityAuditLog auditLog;
+
   public WorkspaceContextFilter(WorkspaceMembershipService membershipService) {
+    this(membershipService, new SecurityAuditLog());
+  }
+
+  @Autowired
+  public WorkspaceContextFilter(
+      WorkspaceMembershipService membershipService, SecurityAuditLog auditLog) {
     this.membershipService = membershipService;
+    this.auditLog = auditLog;
   }
 
   @Override
@@ -56,6 +69,17 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
         UUID workspaceId = UUID.fromString(values.get(0));
         UUID userId = (UUID) authentication.getPrincipal();
         if (membershipService.findRole(userId, workspaceId).isEmpty()) {
+          SecurityAuditLog.safeRecord(
+              auditLog,
+              SecurityAuditEvent.ACCESS_DENIED,
+              userId,
+              Map.of(
+                  "method",
+                  String.valueOf(request.getMethod()),
+                  "path",
+                  String.valueOf(request.getRequestURI()),
+                  "workspace",
+                  workspaceId.toString()));
           writeForbidden(response);
           return;
         }

@@ -1,7 +1,13 @@
 package com.app.tracker.core.security;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,8 +29,16 @@ public class BruteForceGuard {
 
   private final StringRedisTemplate redisTemplate;
 
+  private final SecurityAuditLog auditLog;
+
   public BruteForceGuard(StringRedisTemplate redisTemplate) {
+    this(redisTemplate, new SecurityAuditLog());
+  }
+
+  @Autowired
+  public BruteForceGuard(StringRedisTemplate redisTemplate, SecurityAuditLog auditLog) {
     this.redisTemplate = redisTemplate;
+    this.auditLog = auditLog;
   }
 
   public record CheckResult(boolean locked, boolean throttled, boolean captchaRequired) {}
@@ -37,6 +51,11 @@ public class BruteForceGuard {
   }
 
   public void recordFailure(String email, String clientIp) {
+    recordFailure(email, clientIp, null);
+  }
+
+  /** {@code actorId}: hesap biliniyorsa kullanici id'si (yalniz ACCOUNT_LOCKED audit'i icin). */
+  public void recordFailure(String email, String clientIp, @Nullable UUID actorId) {
     long userFailCount = increment(userKey(email));
     redisTemplate
         .opsForValue()
@@ -44,6 +63,13 @@ public class BruteForceGuard {
     increment(ipKey(clientIp));
     if (userFailCount >= USER_LOCK_THRESHOLD) {
       redisTemplate.opsForValue().set(lockKey(email), "1", LOCK_DURATION);
+      if (userFailCount == USER_LOCK_THRESHOLD) {
+        SecurityAuditLog.safeRecord(
+            auditLog,
+            SecurityAuditEvent.ACCOUNT_LOCKED,
+            actorId,
+            Map.of("ip", String.valueOf(clientIp)));
+      }
       // TODO Faz2/3: notification.email Kafka olayi ("hesabiniz gecici olarak kilitlendi").
     }
   }

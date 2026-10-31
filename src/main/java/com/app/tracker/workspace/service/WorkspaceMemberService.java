@@ -1,5 +1,7 @@
 package com.app.tracker.workspace.service;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.exception.ResourceNotFoundException;
 import com.app.tracker.core.tenancy.TenantContext;
@@ -11,12 +13,15 @@ import com.app.tracker.workspace.model.WorkspaceRole;
 import com.app.tracker.workspace.model.WorkspaceUser;
 import com.app.tracker.workspace.repository.WorkspaceUserRepository;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,10 +51,32 @@ public class WorkspaceMemberService {
   private final WorkspaceUserRepository workspaceUserRepository;
   private final UserRepository userRepository;
 
+  private final SecurityAuditLog auditLog;
+
   public WorkspaceMemberService(
       WorkspaceUserRepository workspaceUserRepository, UserRepository userRepository) {
+    this(workspaceUserRepository, userRepository, new SecurityAuditLog());
+  }
+
+  @Autowired
+  public WorkspaceMemberService(
+      WorkspaceUserRepository workspaceUserRepository,
+      UserRepository userRepository,
+      SecurityAuditLog auditLog) {
     this.workspaceUserRepository = workspaceUserRepository;
     this.userRepository = userRepository;
+    this.auditLog = auditLog;
+  }
+
+  private void audit(
+      SecurityAuditEvent event, UUID workspaceId, UUID targetUserId, @Nullable String role) {
+    Map<String, String> attributes = new HashMap<>();
+    attributes.put("workspace", String.valueOf(workspaceId));
+    attributes.put("target", String.valueOf(targetUserId));
+    if (role != null) {
+      attributes.put("role", role);
+    }
+    SecurityAuditLog.safeRecord(auditLog, event, SecurityAuditLog.currentActorOrNull(), attributes);
   }
 
   /**
@@ -70,6 +97,7 @@ public class WorkspaceMemberService {
       throw new BusinessRuleException("Kullanici zaten bu workspace'in uyesi.");
     }
     workspaceUserRepository.save(WorkspaceUser.of(workspaceId, user.getId(), role));
+    audit(SecurityAuditEvent.MEMBER_ADDED, workspaceId, user.getId(), role);
     return toResponse(user, role);
   }
 
@@ -100,7 +128,9 @@ public class WorkspaceMemberService {
     }
     member.changeRole(newRole);
     workspaceUserRepository.save(member);
-    return toResponse(requireUser(userId), newRole);
+    WorkspaceMemberResponse response = toResponse(requireUser(userId), newRole);
+    audit(SecurityAuditEvent.MEMBER_ROLE_CHANGED, workspaceId, userId, newRole);
+    return response;
   }
 
   /** Son ADMIN'i cikarmak reddedilir. */
@@ -112,6 +142,7 @@ public class WorkspaceMemberService {
       rejectIfLastAdmin(workspaceId);
     }
     workspaceUserRepository.delete(member);
+    audit(SecurityAuditEvent.MEMBER_REMOVED, workspaceId, userId, null);
   }
 
   private void rejectIfLastAdmin(UUID workspaceId) {

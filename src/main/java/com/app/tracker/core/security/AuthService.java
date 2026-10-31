@@ -1,5 +1,7 @@
 package com.app.tracker.core.security;
 
+import com.app.tracker.core.audit.SecurityAuditEvent;
+import com.app.tracker.core.audit.SecurityAuditLog;
 import com.app.tracker.core.exception.BusinessRuleException;
 import com.app.tracker.core.notification.EmailNotificationPublisher;
 import com.app.tracker.core.ratelimit.RateLimiter;
@@ -15,9 +17,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -50,6 +54,7 @@ public class AuthService {
   private final String dummyHash;
   private final Clock clock;
   private final PasswordResetMailBudget passwordResetMailBudget;
+  private final SecurityAuditLog auditLog;
 
   public AuthService(
       UserRepository userRepository,
@@ -81,7 +86,6 @@ public class AuthService {
             new RateLimiter(redisTemplate), new PasswordResetMailProperties()));
   }
 
-  @Autowired
   public AuthService(
       UserRepository userRepository,
       RefreshTokenRepository refreshTokenRepository,
@@ -96,6 +100,41 @@ public class AuthService {
       RefreshTokenFamilyRevoker familyRevoker,
       Clock clock,
       PasswordResetMailBudget passwordResetMailBudget) {
+    this(
+        userRepository,
+        refreshTokenRepository,
+        verificationTokenRepository,
+        passwordEncoder,
+        jwtService,
+        jwtProperties,
+        bruteForceGuard,
+        emailNotificationPublisher,
+        redisTemplate,
+        systemAdminProperties,
+        familyRevoker,
+        clock,
+        passwordResetMailBudget,
+        new SecurityAuditLog());
+  }
+
+  /** Spring kurucusu: audit bean'i yoksa (dar test baglamlari) sessiz varsayilan kullanilir. */
+  @Autowired
+  public AuthService(
+      UserRepository userRepository,
+      RefreshTokenRepository refreshTokenRepository,
+      VerificationTokenRepository verificationTokenRepository,
+      PasswordEncoder passwordEncoder,
+      JwtService jwtService,
+      JwtProperties jwtProperties,
+      BruteForceGuard bruteForceGuard,
+      EmailNotificationPublisher emailNotificationPublisher,
+      StringRedisTemplate redisTemplate,
+      SystemAdminProperties systemAdminProperties,
+      RefreshTokenFamilyRevoker familyRevoker,
+      Clock clock,
+      PasswordResetMailBudget passwordResetMailBudget,
+      @Nullable SecurityAuditLog auditLog) {
+    this.auditLog = auditLog == null ? new SecurityAuditLog() : auditLog;
     this.passwordResetMailBudget = passwordResetMailBudget;
     this.clock = clock;
     this.familyRevoker = familyRevoker;
@@ -146,10 +185,12 @@ public class AuthService {
     String email = EmailAddresses.canonical(rawEmail);
     BruteForceGuard.CheckResult check = bruteForceGuard.checkBeforeAttempt(email, clientIp);
     if (check.locked()) {
+      auditLoginFailed(email, clientIp, "locked");
       throw new BusinessRuleException(
           "Hesap gecici olarak kilitlendi. Lutfen 15 dakika sonra tekrar deneyin.");
     }
     if (check.throttled()) {
+      auditLoginFailed(email, clientIp, "throttled");
       throw new BusinessRuleException(
           "Cok fazla basarisiz deneme. Lutfen biraz sonra tekrar deneyin.");
     }
@@ -159,7 +200,17 @@ public class AuthService {
     boolean matches = passwordEncoder.matches(rawPassword, hashToCheck);
 
     if (userOpt.isEmpty() || !matches) {
-      bruteForceGuard.recordFailure(email, clientIp);
+      UUID knownUserId = userOpt.map(User::getId).orElse(null);
+      if (knownUserId == null) {
+        bruteForceGuard.recordFailure(email, clientIp);
+      } else {
+        bruteForceGuard.recordFailure(email, clientIp, knownUserId);
+      }
+      SecurityAuditLog.safeRecord(
+          auditLog,
+          SecurityAuditEvent.LOGIN_FAILED,
+          knownUserId,
+          Map.of("ip", String.valueOf(clientIp), "reason", "bad_credentials"));
       // Enumeration korumasi (Bolum 1.4.1): kullanici var/yok her durumda AYNI mesaj.
       throw new BusinessRuleException("E-posta veya sifre hatali.");
     }
@@ -177,6 +228,11 @@ public class AuthService {
         return reissueWithinGracePeriod(token);
       }
       familyRevoker.revokeFamily(token.getFamilyId());
+      SecurityAuditLog.safeRecord(
+          auditLog,
+          SecurityAuditEvent.REFRESH_TOKEN_REUSE,
+          token.getUserId(),
+          Map.of("family", String.valueOf(token.getFamilyId())));
       throw new RefreshTokenReuseException(
           "Guvenlik ihlali tespit edildi, tum oturumlar sonlandirildi. Lutfen yeniden giris yapin.");
     }
@@ -238,6 +294,21 @@ public class AuthService {
     userRepository.save(user);
     revokeAllFamiliesForUser(user.getId());
     emailNotificationPublisher.publishSecurityAlert(user.getId(), "password_changed");
+    SecurityAuditLog.safeRecord(
+        auditLog, SecurityAuditEvent.PASSWORD_RESET_COMPLETED, user.getId(), Map.of());
+  }
+
+  private void auditLoginFailed(String email, String clientIp, String reason) {
+    try {
+      UUID userId = userRepository.findByEmail(email).map(User::getId).orElse(null);
+      SecurityAuditLog.safeRecord(
+          auditLog,
+          SecurityAuditEvent.LOGIN_FAILED,
+          userId,
+          Map.of("ip", String.valueOf(clientIp), "reason", reason));
+    } catch (RuntimeException e) {
+      // Audit asil akisi bozmaz.
+    }
   }
 
   @Transactional
