@@ -11,6 +11,15 @@ x-logging: &default-logging
       max-size: "10m"
       max-file: "5"
 
+# SEC-11/INF-07: uygulama container'lari root olmayan kullaniciyla, salt-okunur kok dosya
+# sistemiyle, butun Linux yetenekleri dusurulmus ve yeni ayricalik kazanimi kapali calisir.
+# Yazilabilir tek yer tmpfs /tmp (Tomcat calisma dizini, nginx pid ve gecici dosyalari).
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+
 services:
   postgres:
     # docker-compose.yml'deki "ports: 5432:5432" burada TAMAMEN kaldiriliyor (bos liste degil,
@@ -33,12 +42,23 @@ services:
     ports: !reset []
     <<: *default-logging
 
+  mailpit:
+    # Gelistirme posta kutusu (docker-compose.yml); prod'da SMTP_HOST gercek saglayiciya gider ama
+    # backend'in depends_on'u yuzunden container yine kalkar. Dogrulama/sifirlama postalarini
+    # gosteren arayuz (8025) ve SMTP (1025) disariya yayinlanmaz.
+    ports: !reset []
+
   migrate:
+    <<: [*hardening, *default-logging]
+    tmpfs:
+      - /tmp
     environment:
       DB_PASSWORD: ${DB_MIGRATOR_PASSWORD:?DB_MIGRATOR_PASSWORD gerekli}
-    <<: *default-logging
 
   backend:
+    <<: [*hardening, *default-logging]
+    tmpfs:
+      - /tmp
     image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER gerekli}/tracker:${IMAGE_TAG:?IMAGE_TAG (commit SHA) gerekli}
     # docker-compose.app.yml'deki host portu (8080:8080) burada kaldiriliyor: backend'e yalniz
     # ayni Docker aginda oturan frontend/nginx erisir, disariya dogrudan acik degil.
@@ -66,14 +86,16 @@ services:
       - ./deploy/jwt:/etc/tracker/jwt:ro
     restart: unless-stopped
     mem_limit: 1536m
-    <<: *default-logging
 
   frontend:
-    # docker-compose.app.yml'de "3000:80" tum arayuzlere (0.0.0.0) acikti -- Caddy'yi (host
+    <<: [*hardening, *default-logging]
+    tmpfs:
+      - /tmp
+    # docker-compose.app.yml'de "3000:8080" tum arayuzlere (0.0.0.0) acik -- Caddy'yi (host
     # surecinde, TLS terminasyonu) bypass edip dogrudan HTTP'ye erisilebilirdi. Yalniz
-    # localhost'a baglayarak Caddy'nin arkasina kapatiyoruz.
-    ports:
-      - "127.0.0.1:3000:80"
+    # localhost'a baglayarak Caddy'nin arkasina kapatiyoruz. "!override" sart: compose port
+    # listelerini birlestirir ve host IP'si farkli girdiyi ayri sayar, duz liste 0.0.0.0'i silmezdi.
+    ports: !override
+      - "127.0.0.1:3000:8080"
     restart: unless-stopped
     mem_limit: 256m
-    <<: *default-logging

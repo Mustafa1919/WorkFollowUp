@@ -20,9 +20,29 @@ spec:
         app: core-api
     spec:
       terminationGracePeriodSeconds: 30
+      # SEC-11/INF-09: imajdaki "app" kullanicisi uid 100 / gid 101 (Dockerfile'da sabit);
+      # runAsNonRoot sayisal kullanici ister. Kok dosya sistemi salt-okunur, yazilabilir tek yer
+      # /tmp emptyDir'i (Tomcat calisma dizini).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: core-api
           image: tracker:local
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
               containerPort: 8080

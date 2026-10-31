@@ -13,9 +13,27 @@ spec:
         app: core-api-migrate
     spec:
       restartPolicy: Never
+      # SEC-11/INF-09: deployment.yaml ile ayni kisitlar (uid 100 / gid 101, salt-okunur kok, /tmp emptyDir).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: migrate
           image: tracker:local
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: migrate

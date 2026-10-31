@@ -15,7 +15,8 @@ RUN ./mvnw package -DskipTests -B \
 
 # --- Run stage ---------------------------------------------------------------
 FROM eclipse-temurin:21.0.13_9-jre-alpine-3.24 AS run
-RUN addgroup -S app && adduser -S app -G app
+# uid/gid sabit (SEC-11/INF-09): K8s runAsUser/runAsGroup sayisal ister ve bu degerlere baglidir.
+RUN addgroup -S -g 101 app && adduser -S -u 100 -G app app
 WORKDIR /app
 
 # Ayrı katmanlar: bağımlılıklar (nadiren değişir) kod katmanından (her build'de değişir) ayrılır.

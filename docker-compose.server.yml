@@ -8,6 +8,15 @@ x-logging: &logging
     max-size: "10m"
     max-file: "5"
 
+# SEC-11/INF-07: uygulama container'lari root olmayan kullaniciyla, salt-okunur kok dosya
+# sistemiyle, butun Linux yetenekleri dusurulmus ve yeni ayricalik kazanimi kapali calisir.
+# Yazilabilir tek yer tmpfs /tmp (Tomcat calisma dizini, nginx pid ve gecici dosyalari).
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+
 x-app-env: &app-env
   DB_HOST: postgres
   DB_PORT: "5432"
@@ -54,6 +63,9 @@ services:
     logging: *logging
 
   migrate:
+    <<: *hardening
+    tmpfs:
+      - /tmp
     build: .
     image: workfollowup-backend:${IMAGE_TAG:?required}
     pull_policy: never
@@ -69,6 +81,9 @@ services:
     logging: *logging
 
   backend:
+    <<: *hardening
+    tmpfs:
+      - /tmp
     image: workfollowup-backend:${IMAGE_TAG:?required}
     pull_policy: never
     environment:
@@ -106,11 +121,14 @@ services:
     logging: *logging
 
   frontend:
+    <<: *hardening
+    tmpfs:
+      - /tmp
     build: ./frontend
     image: workfollowup-frontend:${IMAGE_TAG:?required}
     pull_policy: never
     ports:
-      - "127.0.0.1:3000:80"
+      - "127.0.0.1:3000:8080"
     depends_on:
       - backend
     restart: unless-stopped
