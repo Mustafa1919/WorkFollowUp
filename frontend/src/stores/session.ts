@@ -53,9 +53,11 @@ export const useSession = create<SessionState>((set) => ({
     set({ workspaceId })
   },
   setBootstrapped: () => set({ bootstrapped: true }),
+  // Cikista cihazda hesaba ait tercih kalmasin (PRIV-06): e-posta ve secili workspace silinir.
   clear: () => {
     write(EMAIL_KEY, null)
-    set({ accessToken: null, email: null })
+    write(WS_KEY, null)
+    set({ accessToken: null, email: null, workspaceId: null })
   },
 }))
 

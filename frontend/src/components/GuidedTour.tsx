@@ -73,16 +73,17 @@ export function GuidedTour() {
   // onay verilip /me yenilenince acilir.
   const me = useMe()
   const noticeAccepted = me.isSuccess && me.data.privacyNoticeVersion === PRIVACY_NOTICE_VERSION
+  const userId = me.data?.id ?? null
 
   // Sayfa/nav/proje listesi yerlesene kadar kisa bir gecikmeyle, kullanici basina bir kere.
   useEffect(() => {
-    if (!noticeAccepted || hasTourBeenSeen(email)) return
+    if (!noticeAccepted || !userId || hasTourBeenSeen(userId, email)) return
     const timer = setTimeout(() => {
       setStep(0)
       setOpen(true)
     }, 800)
     return () => clearTimeout(timer)
-  }, [email, noticeAccepted])
+  }, [email, userId, noticeAccepted])
 
   useEffect(() => {
     if (!open) return
@@ -98,7 +99,7 @@ export function GuidedTour() {
 
   function close() {
     setOpen(false)
-    markTourSeen(email)
+    if (userId) markTourSeen(userId, email)
   }
 
   function next() {
