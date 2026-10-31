@@ -276,9 +276,17 @@ class MeControllerIntegrationTest extends AbstractIntegrationTest {
     assertStatus(200, response);
     JsonNode body = objectMapper.readTree(response.body());
     assertEquals(
-        List.of("id", "email", "fullName", "privacyNoticeVersion", "privacyNoticeAcceptedAt"),
+        List.of(
+            "id",
+            "email",
+            "fullName",
+            "privacyNoticeVersion",
+            "privacyNoticeAcceptedAt",
+            "emailVerified"),
         body.propertyNames().stream().toList(),
         response.body());
+    // Davet kabulu dogrulanmis e-posta ister; arayuz bu alanla yeniden gonderimi sunar.
+    assertTrue(body.get("emailVerified").isBoolean(), response.body());
     assertEquals(actor.id().toString(), body.get("id").asText(), response.body());
     assertEquals(actor.email(), body.get("email").asText(), response.body());
     assertEquals(actor.fullName(), body.get("fullName").asText(), response.body());
