@@ -11,7 +11,7 @@ app.example.com {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		# connect-src'e kendi alan adinizi wss:// ile ekleyin (STOMP, /ws/ ayni origin'den).
-		Content-Security-Policy "default-src 'self'; connect-src 'self' wss://app.example.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		Content-Security-Policy "default-src 'self'; connect-src 'self' wss://app.example.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-qxFfF27k4Zc2A6eBkmF8JizPkh0CKBGswlC3UB1KHcc='; frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
 		-Server
 	}
 

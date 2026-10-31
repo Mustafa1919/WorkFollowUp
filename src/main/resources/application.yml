@@ -159,3 +159,17 @@ management:
       enabled: true
     livenessstate:
       enabled: true
+
+---
+# Korumali profillerde (JwtKeyProvider/WebhookSecretService/AppPublicUrlGuard ile ayni kume) API
+# dokumani kimliksiz yayinlanmaz (CFG-03). SecurityConfig'teki permitAll yollari kalir; uclar
+# kapali oldugu icin 404 doner. Dev ve testte Swagger UI acik kalir.
+spring:
+  config:
+    activate:
+      on-profile: "staging | prod"
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
