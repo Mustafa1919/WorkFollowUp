@@ -276,6 +276,12 @@ DB-10) — hiç test edilmemiş bir yedek, yedek değildir.
 `docker-compose.prod.yml`, tüm servislere `json-file` log driver için `max-size`/`max-file`
 tanımlar (Docker varsayılanı sınırsız büyür, diski doldurabilir).
 
+Backend konsol logları staging/prod'da olay başına tek satır ECS JSON'dur (INJ-07); CR/LF JSON içinde kaçırılır.
+Ham `docker logs <backend-container>` çıktısı JSON'dur; dev/test düz metin kalır.
+Mesajları okumak için (`...` = §14'teki compose katmanları; açılış banner'ı JSON olmadığı için `fromjson?` ile atlanır):
+`docker compose ... logs --no-log-prefix --no-color backend | jq -rR 'fromjson? | .message'`.
+Boot 4.1.2 alanları: `.log.level`, `.message`, `.error.message`, `.error.stack_trace` (iç içe nesneler).
+
 ## 14. Güncelleme
 
 ```bash

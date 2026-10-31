@@ -168,6 +168,11 @@ spring:
   config:
     activate:
       on-profile: "staging | prod"
+# INJ-07: JSON, mesaj ve yigin izindeki satir sonlarini kacirir; dev/test duz metin kalir.
+logging:
+  structured:
+    format:
+      console: ecs
 springdoc:
   api-docs:
     enabled: false
