@@ -124,6 +124,38 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
             MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/me", null, ALL_ROLES),
         Endpoint.of(HttpMethod.GET, "/api/v1/me/permissions", null, ALL_ROLES),
+        // AccessTokenController: !hasAuthority('AUTH_PAT'); JWT ile tum workspace rolleri gecer.
+        Endpoint.of(HttpMethod.GET, "/api/v1/access-tokens", null, ALL_ROLES),
+        // AccessTokenController: !hasAuthority('AUTH_PAT'); olusturmada workspace rol siniri yok.
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/access-tokens",
+            "{\"name\":\"Authz token\",\"expiresInDays\":1}",
+            ALL_ROLES),
+        // AccessTokenController: !hasAuthority('AUTH_PAT'); iptalde workspace rol siniri yok.
+        Endpoint.of(HttpMethod.DELETE, "/api/v1/access-tokens/{id}", null, ALL_ROLES),
+        // FeedbackController: FEEDBACK_READ izni RolePermissions'ta yalniz ADMIN/MANAGER'a ait.
+        Endpoint.of(HttpMethod.GET, "/api/v1/feedback", null, MANAGE),
+        // FeedbackController.submit: rol anotasyonu yok, her workspace uyesi gonderebilir.
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/feedback",
+            "{\"message\":\"Authz feedback\",\"pagePath\":\"/board\"}",
+            ALL_ROLES),
+        // TelemetryController.error: rol anotasyonu yok, kimligi dogrulanmis tum roller gecer.
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/telemetry/errors",
+            "{\"errorType\":\"AuthzTestError\",\"message\":\"Authz error\",\"path\":\"/board\"}",
+            ALL_ROLES),
+        // TelemetryController.usage: rol anotasyonu yok, kimligi dogrulanmis tum roller gecer.
+        Endpoint.of(
+            HttpMethod.POST,
+            "/api/v1/telemetry/usage",
+            "{\"events\":[{\"feature\":\"board\",\"action\":\"view\"}]}",
+            ALL_ROLES),
+        // WorkspaceController.listMine: yalniz kimlik gerekir, workspace rol siniri yok.
+        Endpoint.of(HttpMethod.GET, "/api/v1/workspaces", null, ALL_ROLES),
         Endpoint.of(
             HttpMethod.POST,
             "/api/v1/me/privacy-notice-acceptance",
@@ -141,6 +173,12 @@ class HttpAuthorizationIntegrationTest extends AbstractIntegrationTest {
         // bitis tarihi) ADR-0019 geregi yalniz ADMIN/MANAGER (TASK_CREATE/TASK_PLAN); VIEWER okur.
         Endpoint.of(HttpMethod.POST, "/api/v1/projects/{id}/tasks", "{\"title\":\"T\"}", MANAGE),
         Endpoint.of(HttpMethod.GET, "/api/v1/projects/{id}/tasks", null, ALL_ROLES),
+        // TimeMachineController.boardAt: rol anotasyonu yok, tum workspace uyeleri okuyabilir.
+        Endpoint.of(
+            HttpMethod.GET,
+            "/api/v1/projects/{id}/tasks/snapshot?cutoff=2026-09-26T10:00:00Z",
+            null,
+            ALL_ROLES),
         Endpoint.of(HttpMethod.PATCH, "/api/v1/tasks/{id}", "{\"status\":\"Done\"}", WRITE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/sprint", "{\"sprintId\":null}", MANAGE),
         Endpoint.of(HttpMethod.PUT, "/api/v1/tasks/{id}/story-point", "{\"storyPoint\":3}", MANAGE),
