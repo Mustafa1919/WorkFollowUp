@@ -726,8 +726,8 @@ class DatabaseSecurityFitnessTest extends AbstractIntegrationTest {
       assertTrue(SHA256_HEX.matcher(h).matches(), "verification token_hash 64 hex degil");
     }
     // Her amac icin ayri ayri: duz deger Mailpit'ten okunur, tablodaki deger sha256(duz) olmali.
-    assertPurposeHashedOnly(s, "EMAIL_VERIFICATION", "dogrula");
-    assertPurposeHashedOnly(s, "PASSWORD_RESET", "sifirlama");
+    assertPurposeHashedOnly(s, "EMAIL_VERIFICATION", "doğrula");
+    assertPurposeHashedOnly(s, "PASSWORD_RESET", "sıfırlama");
   }
 
   private void assertPurposeHashedOnly(Secrets s, String purpose, String subjectPart)

@@ -199,7 +199,7 @@ class CursorPrecisionContractTest {
               BusinessRuleException.class,
               () -> decode(type, rejected),
               type.getName() + " input=" + rejected);
-      assertEquals("Gecersiz cursor.", failure.getMessage());
+      assertEquals("Geçersiz sayfalama anahtarı.", failure.getMessage());
     }
   }
 
@@ -469,7 +469,7 @@ class CursorPrecisionContractTest {
         }
         HttpResponse<String> response = get(endpoint, rejected);
         assertEquals(400, response.statusCode(), name + " " + rejected + ": " + response.body());
-        assertTrue(response.body().contains("Gecersiz cursor."), response.body());
+        assertTrue(response.body().contains("Geçersiz sayfalama anahtarı."), response.body());
       }
       assertEquals(2, page(endpoint, good).path("data").size());
     }

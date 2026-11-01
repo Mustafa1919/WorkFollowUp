@@ -28,11 +28,11 @@ public class TimeMachineService {
   @Transactional(readOnly = true)
   public List<TaskSnapshotResponse> boardAt(UUID projectId, Instant cutoff) {
     if (cutoff.isAfter(Instant.now())) {
-      throw new BusinessRuleException("Kesit zamani gelecekte olamaz.");
+      throw new BusinessRuleException("Kesit zamanı gelecekte olamaz.");
     }
     projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
     return taskSnapshotRepository.boardAt(projectId, cutoff).stream()
         .map(TaskSnapshotResponse::from)
         .toList();

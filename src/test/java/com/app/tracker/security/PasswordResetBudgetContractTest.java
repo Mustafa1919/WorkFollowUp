@@ -346,11 +346,11 @@ class PasswordResetBudgetContractTest {
     void exactMails(User user, int expected) throws Exception {
       MailpitInbox inbox = new MailpitInbox(p -> mailpitApiUrl(p), mapper);
       long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-      while (inbox.count(user.getEmail(), "sifirlama") < expected && System.nanoTime() < deadline)
+      while (inbox.count(user.getEmail(), "sıfırlama") < expected && System.nanoTime() < deadline)
         Thread.sleep(250);
-      assertEquals(expected, inbox.count(user.getEmail(), "sifirlama"));
+      assertEquals(expected, inbox.count(user.getEmail(), "sıfırlama"));
       Thread.sleep(3000);
-      assertEquals(expected, inbox.count(user.getEmail(), "sifirlama"));
+      assertEquals(expected, inbox.count(user.getEmail(), "sıfırlama"));
     }
 
     int tokenCount(User user) throws Exception {

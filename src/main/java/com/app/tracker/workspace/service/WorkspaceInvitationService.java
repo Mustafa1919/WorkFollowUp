@@ -87,7 +87,7 @@ public class WorkspaceInvitationService {
                     .isPresent())
         .ifPresent(
             u -> {
-              throw new BusinessRuleException("Kullanici zaten bu workspace'in uyesi.");
+              throw new BusinessRuleException("Kullanıcı zaten bu çalışma alanının üyesi.");
             });
 
     invitationRepository
@@ -131,9 +131,9 @@ public class WorkspaceInvitationService {
         invitationRepository
             .findById(invitationId)
             .filter(inv -> inv.getWorkspaceId().equals(workspaceId))
-            .orElseThrow(() -> new ResourceNotFoundException("Davet bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Davet bulunamadı."));
     if (!invitation.isPending()) {
-      throw new BusinessRuleException("Yalniz bekleyen bir davet iptal edilebilir.");
+      throw new BusinessRuleException("Yalnız bekleyen bir davet iptal edilebilir.");
     }
     invitation.revoke();
   }
@@ -155,22 +155,22 @@ public class WorkspaceInvitationService {
   public AcceptInvitationResponse accept(String rawToken, UUID userId) {
     WorkspaceInvitation invitation = requireByToken(rawToken);
     if (!invitation.isPending() || invitation.isExpired(Instant.now())) {
-      throw new BusinessRuleException("Gecersiz veya suresi dolmus davet.");
+      throw new BusinessRuleException("Geçersiz veya süresi dolmuş davet.");
     }
     User user =
         userRepository
             .findById(userId)
-            .orElseThrow(() -> new BusinessRuleException("Kullanici bulunamadi."));
+            .orElseThrow(() -> new BusinessRuleException("Kullanıcı bulunamadı."));
     if (!EmailAddresses.canonical(invitation.getEmail())
         .equals(EmailAddresses.canonical(user.getEmail()))) {
       throw new BusinessRuleException(
-          "Bu davet farkli bir e-posta adresine gonderildi. Lutfen "
+          "Bu davet farklı bir e-posta adresine gönderildi. Lütfen "
               + invitation.getEmail()
-              + " ile giris yap.");
+              + " ile giriş yap.");
     }
     // Davet token'i e-posta sahipligi kaniti SAYILMAZ: iletilen linkle baskasi uye olamasin.
     if (!user.isEmailVerified()) {
-      throw new BusinessRuleException("Daveti kabul etmek icin once e-posta adresini dogrula.");
+      throw new BusinessRuleException("Daveti kabul etmek için önce e-posta adresini doğrula.");
     }
 
     UUID workspaceId = invitation.getWorkspaceId();
@@ -186,7 +186,7 @@ public class WorkspaceInvitationService {
   private WorkspaceInvitation requireByToken(String rawToken) {
     return invitationRepository
         .findByTokenHash(TokenHasher.sha256Hex(rawToken))
-        .orElseThrow(() -> new BusinessRuleException("Gecersiz davet baglantisi."));
+        .orElseThrow(() -> new BusinessRuleException("Geçersiz davet bağlantısı."));
   }
 
   private String deriveStatus(WorkspaceInvitation invitation) {
@@ -199,7 +199,7 @@ public class WorkspaceInvitationService {
   private Workspace requireWorkspaceEntity(UUID workspaceId) {
     return workspaceRepository
         .findById(workspaceId)
-        .orElseThrow(() -> new ResourceNotFoundException("Workspace bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Çalışma alanı bulunamadı."));
   }
 
   private WorkspaceInvitationResponse toResponse(WorkspaceInvitation invitation) {
@@ -214,14 +214,15 @@ public class WorkspaceInvitationService {
 
   private static void validateRole(String role) {
     if (!VALID_ROLES.contains(role)) {
-      throw new BusinessRuleException("Gecersiz rol: " + role);
+      throw new BusinessRuleException("Geçersiz rol: " + role);
     }
   }
 
   private static UUID requireWorkspace() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("Once bir workspace secmelisiniz (X-Workspace-Id header).");
+      throw new BusinessRuleException(
+          "Önce bir çalışma alanı seçmelisiniz (X-Workspace-Id başlığı).");
     }
     return workspaceId;
   }

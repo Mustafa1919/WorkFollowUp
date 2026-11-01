@@ -20,6 +20,6 @@ public class RequestBodyTooLargeException extends IOException {
   }
 
   public String detail() {
-    return "Istek govdesi en fazla " + limitBytes + " bayt olabilir.";
+    return "İstek gövdesi en fazla " + limitBytes + " bayt olabilir.";
   }
 }

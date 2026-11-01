@@ -101,7 +101,7 @@ public class TaskController {
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
     if (ChronoUnit.DAYS.between(from, to) > MAX_CALENDAR_RANGE_DAYS) {
       throw new BusinessRuleException(
-          "Takvim araligi en fazla " + MAX_CALENDAR_RANGE_DAYS + " gun olabilir.");
+          "Takvim aralığı en fazla " + MAX_CALENDAR_RANGE_DAYS + " gün olabilir.");
     }
     return toResponses(taskService.listTasksByDueDate(projectId, from, to));
   }

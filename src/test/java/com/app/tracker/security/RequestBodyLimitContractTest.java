@@ -345,7 +345,7 @@ class RequestBodyLimitContractTest extends AbstractIntegrationTest {
       HttpResponse<String> response, long limit, ObjectMapper mapper) {
     JsonNode problem = assertProblemEnvelope(response, mapper);
     assertAll(
-        () -> assertEquals("Istek Govdesi Cok Buyuk", problem.path("title").asString()),
+        () -> assertEquals("İstek Gövdesi Çok Büyük", problem.path("title").asString()),
         () ->
             assertTrue(
                 problem.path("detail").asString("").contains(Long.toString(limit)),

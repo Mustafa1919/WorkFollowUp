@@ -57,23 +57,24 @@ public class TaskDependencyService {
   @Transactional
   public Task link(UUID blockedTaskId, UUID blockingTaskId, UUID actorId) {
     if (blockedTaskId.equals(blockingTaskId)) {
-      throw new BusinessRuleException("Bir gorev kendisini bloklayamaz.");
+      throw new BusinessRuleException("Bir görev kendisini bloklayamaz.");
     }
     Task blocked = requireTask(blockedTaskId);
     Task blocking = requireTask(blockingTaskId);
     if (!blocked.getWorkspaceId().equals(blocking.getWorkspaceId())) {
-      throw new BusinessRuleException("Farkli workspace'lerdeki gorevler birbirini bloklayamaz.");
+      throw new BusinessRuleException(
+          "Farklı çalışma alanlarındaki görevler birbirini bloklayamaz.");
     }
     rejectIfApproved(blocked);
     rejectIfApproved(blocking);
     if (taskDependencyRepository.existsReverse(blockingTaskId, blockedTaskId)) {
       throw new BusinessRuleException(
-          "Bu iki gorev zaten ters yonde birbirini bloklu — dongu olusturulamaz.");
+          "Bu iki görev zaten ters yönde birbirini bloklu — döngü oluşturulamaz.");
     }
     // ADR-0020: tamamlanma kuralinin tersi — Done gorevin "acik bloklayani" olamaz.
     if (TaskStatus.DONE.equals(blocked.getStatus())
         && !TaskStatus.DONE.equals(blocking.getStatus())) {
-      throw new BusinessRuleException("Tamamlanmis bir goreve acik bir bloklayan eklenemez.");
+      throw new BusinessRuleException("Tamamlanmış bir göreve açık bir bloklayan eklenemez.");
     }
     if (taskDependencyRepository.link(blockingTaskId, blockedTaskId, blocked.getWorkspaceId())) {
       taskEventRepository.recordDependencyChanged(blockedTaskId, blockingTaskId, actorId, true);
@@ -142,7 +143,7 @@ public class TaskDependencyService {
   /** TaskService/TagService'teki AYNI kilit kurali: onaylanmis gorev donuk. */
   private static void rejectIfApproved(Task task) {
     if (task.isApproved()) {
-      throw new BusinessRuleException("Onaylanmis gorevin bagimliliklari degistirilemez.");
+      throw new BusinessRuleException("Onaylanmış görevin bağımlılıkları değiştirilemez.");
     }
   }
 
@@ -168,6 +169,6 @@ public class TaskDependencyService {
     return taskRepository
         .findById(taskId)
         .filter(task -> !task.isDeleted())
-        .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Görev bulunamadı."));
   }
 }

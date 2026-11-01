@@ -240,7 +240,7 @@ class SubresourceAndHeaderContractTest extends AbstractIntegrationTest {
     HttpResponse<String> rejected = cookiePost(endpoint, cookie, site);
     assertEquals(400, rejected.statusCode(), rejected.body());
     assertEquals(
-        "Gecersiz istek kaynagi.", mapper.readTree(rejected.body()).path("detail").asString());
+        "Geçersiz istek kaynağı.", mapper.readTree(rejected.body()).path("detail").asString());
     assertTrue(
         rejected.headers().allValues("Set-Cookie").isEmpty(), "ret cookie'yi degistirmemeli");
     if (endpoint.equals("logout")) {
@@ -667,7 +667,7 @@ class SubresourceAndHeaderServiceContractTest {
     if (reject) {
       BusinessRuleException error =
           assertThrows(BusinessRuleException.class, () -> cookieCall(endpoint, request));
-      assertEquals("Gecersiz istek kaynagi.", error.getMessage());
+      assertEquals("Geçersiz istek kaynağı.", error.getMessage());
       verifyNoInteractions(auth);
       // Rejection must happen before rotating/revoking the token; acceptance pair uses same cookie.
       request.removeHeader("Origin");

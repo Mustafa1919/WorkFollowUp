@@ -105,7 +105,7 @@ class CoverageGapContractTest extends AbstractIntegrationTest {
     var rejected = accept(token);
     assert4xx(rejected);
     assertEquals(
-        "Gecersiz veya suresi dolmus davet.",
+        "Geçersiz veya süresi dolmuş davet.",
         mapper.readTree(rejected.body()).path("detail").asString());
     assertEquals("0", membershipCount());
   }

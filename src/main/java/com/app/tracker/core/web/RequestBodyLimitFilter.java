@@ -67,7 +67,7 @@ public class RequestBodyLimitFilter extends OncePerRequestFilter {
         .getWriter()
         .write(
             "{\"type\":\"https://api.app.com/errors/payload-too-large\","
-                + "\"title\":\"Istek Govdesi Cok Buyuk\",\"status\":413,\"detail\":\""
+                + "\"title\":\"İstek Gövdesi Çok Büyük\",\"status\":413,\"detail\":\""
                 + ex.detail()
                 + "\"}");
   }

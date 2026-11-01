@@ -30,14 +30,14 @@ class SlackMessageFormatterTest {
   @Test
   void statusChangeShowsKeyTitleAndTransition() {
     assertEquals(
-        "*ENG-12* Login sayfasi: To Do → In Progress",
+        "*ENG-12* Login sayfasi: Yapılacak → Devam ediyor",
         statusMessage(TASK, "To Do", "In Progress").orElseThrow());
   }
 
   @Test
   void createdShowsKeyAndTitle() {
     assertEquals(
-        "New task *ENG-12*: Login sayfasi",
+        "Yeni görev *ENG-12*: Login sayfasi",
         SlackMessageFormatter.format(
                 SlackMessageFormatter.TASK_CREATED, MAPPER.readTree("{}"), TASK)
             .orElseThrow());

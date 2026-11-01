@@ -23,7 +23,7 @@ record NotificationCursor(Instant createdAt, UUID id) {
       String[] parts = raw.split(":", 2);
       return new NotificationCursor(CursorInstantCodec.decode(parts[0]), UUID.fromString(parts[1]));
     } catch (RuntimeException e) {
-      throw new BusinessRuleException("Gecersiz cursor.");
+      throw new BusinessRuleException("Geçersiz sayfalama anahtarı.");
     }
   }
 }

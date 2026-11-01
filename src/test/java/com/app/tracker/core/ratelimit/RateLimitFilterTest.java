@@ -87,7 +87,7 @@ class RateLimitFilterTest {
     assertTrue(res.getContentType().startsWith("application/problem+json"));
     String body = res.getContentAsString();
     assertTrue(body.contains("\"type\":\"https://api.app.com/errors/rate-limited\""), body);
-    assertTrue(body.contains("\"title\":\"Cok Fazla Istek\""), body);
+    assertTrue(body.contains("\"title\":\"Çok Fazla İstek\""), body);
     assertTrue(body.contains("\"status\":429"), body);
     assertFalse(body.contains("127.0.0.1") || body.contains("rate:"), body);
     assertNull(res.getErrorMessage());

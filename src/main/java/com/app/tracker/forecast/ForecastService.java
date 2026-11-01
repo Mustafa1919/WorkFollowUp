@@ -58,7 +58,7 @@ public class ForecastService {
     Project project =
         projectRepository
             .findById(projectId)
-            .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
     return cacheService
         .getProject(project.getWorkspaceId(), projectId)
         .orElseGet(
@@ -74,7 +74,7 @@ public class ForecastService {
     Sprint sprint =
         sprintRepository
             .findById(sprintId)
-            .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadı."));
     return cacheService
         .getSprint(sprint.getWorkspaceId(), sprint.getProjectId(), sprintId)
         .orElseGet(

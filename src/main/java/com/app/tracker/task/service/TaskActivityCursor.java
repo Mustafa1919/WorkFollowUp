@@ -27,7 +27,7 @@ record TaskActivityCursor(Instant createdAt, UUID id) {
       String[] parts = raw.split(":", 2);
       return new TaskActivityCursor(CursorInstantCodec.decode(parts[0]), UUID.fromString(parts[1]));
     } catch (RuntimeException e) {
-      throw new BusinessRuleException("Gecersiz cursor.");
+      throw new BusinessRuleException("Geçersiz sayfalama anahtarı.");
     }
   }
 }

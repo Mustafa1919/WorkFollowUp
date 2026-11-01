@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 public record RegisterRequest(
     @NotBlank @Email String email,
-    @NotBlank @Size(min = 12, message = "Parola en az 12 karakter olmalidir.") String password,
+    @NotBlank @Size(min = 12, message = "Parola en az 12 karakter olmalıdır.") String password,
     @NotBlank String fullName,
     @NotNull @AssertTrue Boolean privacyNoticeAccepted,
     @NotBlank @Size(max = 20) String privacyNoticeVersion) {}

@@ -49,7 +49,7 @@ public class AgingWipService {
   @Transactional(readOnly = true)
   public AgingWipResponse aging(UUID projectId) {
     if (!projectRepository.existsById(projectId)) {
-      throw new ResourceNotFoundException("Proje bulunamadi.");
+      throw new ResourceNotFoundException("Proje bulunamadı.");
     }
     CycleTimeStats stats = projectMetricsRepository.cycleTimeStats(projectId, Instant.EPOCH);
     if (stats.sampleSize() < AgingWipLevels.MIN_SAMPLE_SIZE || stats.p85() == null) {

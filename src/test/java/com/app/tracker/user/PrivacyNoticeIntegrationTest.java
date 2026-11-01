@@ -175,7 +175,7 @@ class PrivacyNoticeIntegrationTest extends AbstractIntegrationTest {
       assertTrue(
           duplicate
               .body()
-              .contains("Aydinlatma metni guncellendi; sayfayi yenileyip yeniden onaylayin."),
+              .contains("Aydınlatma metni güncellendi; sayfayı yenileyip yeniden onaylayın."),
           duplicate.body());
       assertEquals(before, userRow(email));
       assertUserCount(email, 1);

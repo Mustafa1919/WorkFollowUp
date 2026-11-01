@@ -18,29 +18,29 @@ public final class EmailTemplates {
 
   public static EmailContent verificationEmail(String publicUrl, String rawToken) {
     String link = publicUrl + "/verify-email?token=" + urlEncode(rawToken);
-    String subject = "E-posta adresini dogrula";
-    String text = "WorkFollowUp'a hos geldin. E-posta adresini dogrulamak icin: " + link;
+    String subject = "E-posta adresini doğrula";
+    String text = "WorkFollowUp'a hoş geldin. E-posta adresini doğrulamak için: " + link;
     String html =
         wrap(
-            "E-posta adresini dogrula",
-            "WorkFollowUp'a hos geldin. Devam etmek icin e-posta adresini dogrula.",
+            "E-posta adresini doğrula",
+            "WorkFollowUp'a hoş geldin. Devam etmek için e-posta adresini doğrula.",
             link,
-            "E-postami dogrula");
+            "E-postamı doğrula");
     return new EmailContent(subject, text, html);
   }
 
   public static EmailContent passwordResetEmail(String publicUrl, String rawToken) {
     String link = publicUrl + "/reset-password?token=" + urlEncode(rawToken);
-    String subject = "Parola sifirlama";
+    String subject = "Parola sıfırlama";
     String text =
-        "Parolani sifirlamak istedin. Bu istegi sen yapmadiysan bu e-postayi yok sayabilirsin. "
-            + "Yeni parola belirlemek icin (30 dakika gecerli): "
+        "Parolanı sıfırlamak istedin. Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin. "
+            + "Yeni parola belirlemek için (30 dakika geçerli): "
             + link;
     String html =
         wrap(
-            "Parola sifirlama",
-            "Parolani sifirlamak istedin. Bu istegi sen yapmadiysan bu e-postayi yok sayabilirsin. "
-                + "Baglanti 30 dakika gecerlidir.",
+            "Parola sıfırlama",
+            "Parolanı sıfırlamak istedin. Bu isteği sen yapmadıysan bu e-postayı yok sayabilirsin. "
+                + "Bağlantı 30 dakika geçerlidir.",
             link,
             "Yeni parola belirle");
     return new EmailContent(subject, text, html);
@@ -48,12 +48,12 @@ public final class EmailTemplates {
 
   public static EmailContent securityAlertEmail(String reason) {
     String description = securityReasonText(reason);
-    String subject = "Guvenlik uyarisi";
-    String text = description + " Bu sen degilsen hemen parolani degistir.";
+    String subject = "Güvenlik uyarısı";
+    String text = description + " Bu sen değilsen hemen parolanı değiştir.";
     String html =
         wrap(
-            "Guvenlik uyarisi",
-            description + " Bu sen degilsen hemen parolani degistir.",
+            "Güvenlik uyarısı",
+            description + " Bu sen değilsen hemen parolanı değiştir.",
             null,
             null);
     return new EmailContent(subject, text, html);
@@ -68,15 +68,16 @@ public final class EmailTemplates {
       String title) {
     String link = taskLink(publicUrl, projectId, taskId);
     String taskRef = escape(projectKey) + "-" + taskNumber;
-    String subject = "Sana bir gorev atandi: " + taskRef;
+    String subject =
+        "Sana bir görev atandı: " + singleLineSubject(escape(projectKey)) + "-" + taskNumber;
     String safeTitle = escape(truncate(title));
-    String text = taskRef + " \"" + title + "\" sana atandi: " + link;
+    String text = taskRef + " \"" + title + "\" sana atandı: " + link;
     String html =
         wrap(
-            "Sana bir gorev atandi",
+            "Sana bir görev atandı",
             "<strong>" + taskRef + "</strong> — " + safeTitle,
             link,
-            "Gorevi ac");
+            "Görevi aç");
     return new EmailContent(subject, text, html);
   }
 
@@ -89,15 +90,16 @@ public final class EmailTemplates {
       String title) {
     String link = taskLink(publicUrl, projectId, taskId);
     String taskRef = escape(projectKey) + "-" + taskNumber;
-    String subject = "Bir yorumda etiketlendin: " + taskRef;
+    String subject =
+        "Bir yorumda etiketlendin: " + singleLineSubject(escape(projectKey)) + "-" + taskNumber;
     String safeTitle = escape(truncate(title));
-    String text = taskRef + " \"" + title + "\" gorevindeki bir yorumda etiketlendin: " + link;
+    String text = taskRef + " \"" + title + "\" görevindeki bir yorumda etiketlendin: " + link;
     String html =
         wrap(
             "Bir yorumda etiketlendin",
             "<strong>" + taskRef + "</strong> — " + safeTitle,
             link,
-            "Yorumu ac");
+            "Yorumu aç");
     return new EmailContent(subject, text, html);
   }
 
@@ -106,24 +108,28 @@ public final class EmailTemplates {
     String link = publicUrl + "/invitations/" + urlEncode(rawToken);
     String safeWorkspace = escape(truncate(workspaceName));
     String roleLabel = roleLabel(role);
-    String subject = safeWorkspace + " workspace'ine davet edildin";
+    String subject = singleLineSubject(safeWorkspace + " çalışma alanına davet edildin");
     String text =
         safeWorkspace
-            + " workspace'ine "
+            + " çalışma alanına "
             + roleLabel
             + " rolüyle davet edildin (7 gün geçerli): "
             + link;
     String html =
         wrap(
-            "Bir workspace davetin var",
+            "Bir çalışma alanı davetin var",
             "<strong>"
                 + safeWorkspace
-                + "</strong> workspace'ine <strong>"
+                + "</strong> çalışma alanına <strong>"
                 + roleLabel
                 + "</strong> rolüyle davet edildin. Bağlantı 7 gün geçerlidir.",
             link,
             "Daveti görüntüle");
     return new EmailContent(subject, text, html);
+  }
+
+  private static String singleLineSubject(String subject) {
+    return subject.replaceAll("[\\p{javaISOControl}\\u2028\\u2029 ]+", " ").trim();
   }
 
   private static String roleLabel(String role) {
@@ -142,10 +148,10 @@ public final class EmailTemplates {
 
   private static String securityReasonText(String reason) {
     return switch (reason) {
-      case "password_changed" -> "Parolan degistirildi.";
+      case "password_changed" -> "Parolan değiştirildi.";
       case "refresh_token_reuse_detected" ->
-          "Hesabinda supheli oturum etkinligi tespit edildi, tum oturumlarin sonlandirildi.";
-      default -> "Hesabinla ilgili bir guvenlik olayi kaydedildi.";
+          "Hesabında şüpheli oturum etkinliği tespit edildi, tüm oturumların sonlandırıldı.";
+      default -> "Hesabınla ilgili bir güvenlik olayı kaydedildi.";
     };
   }
 

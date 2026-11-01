@@ -520,7 +520,7 @@ class RateLimitContractTest extends AbstractIntegrationTest {
               .startsWith("application/problem+json"));
       var json = mapper.readTree(response.body());
       assertEquals("https://api.app.com/errors/rate-limited", json.path("type").asString());
-      assertEquals("Cok Fazla Istek", json.path("title").asString());
+      assertEquals("Çok Fazla İstek", json.path("title").asString());
       assertEquals(429, json.path("status").asInt());
       assertFalse(json.path("detail").asString("").isBlank());
       assertFalse(response.body().contains(secret), response.body());

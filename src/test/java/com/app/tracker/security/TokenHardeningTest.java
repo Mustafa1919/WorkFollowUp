@@ -263,7 +263,7 @@ class TokenHardeningTest extends AbstractIntegrationTest {
   @DisplayName("AUTH-09 | taze dogrulama token'i kabul, tekrar kullanim reddedilir")
   void auth09_verificationTokenIsSingleUse() throws Exception {
     User user = newUser("auth09a");
-    String token = mail.rawToken(user.email(), "dogrula");
+    String token = mail.rawToken(user.email(), "doğrula");
 
     HttpResponse<String> first = verifyEmail(token);
     assertEquals(204, first.statusCode(), "taze token kabul (kabul esigi): " + first.body());
@@ -277,7 +277,7 @@ class TokenHardeningTest extends AbstractIntegrationTest {
   @DisplayName("AUTH-09 | 24 saatten eski dogrulama token'i reddedilir; omur en fazla 24 saat")
   void auth09_expiredVerificationTokenRejected() throws Exception {
     User user = newUser("auth09b");
-    String token = mail.rawToken(user.email(), "dogrula");
+    String token = mail.rawToken(user.email(), "doğrula");
     long secondsLeft =
         queryLong(
             "SELECT EXTRACT(EPOCH FROM (expires_at - now()))::bigint FROM verification_tokens"
@@ -544,7 +544,7 @@ class TokenHardeningTest extends AbstractIntegrationTest {
         () -> assertEquals(400, newest.statusCode(), "R3: " + snippet(newest)),
         () ->
             assertEquals(
-                "Gecersiz refresh token.",
+                "Geçersiz oturum yenileme anahtarı.",
                 mapper.readTree(newest.body()).path("detail").asString("")),
         () ->
             assertTrue(
@@ -557,7 +557,7 @@ class TokenHardeningTest extends AbstractIntegrationTest {
         () -> assertEquals(401, mapper.readTree(replay.body()).path("status").asInt()),
         () ->
             assertEquals(
-                "Guvenlik ihlali tespit edildi, tum oturumlar sonlandirildi. Lutfen yeniden giris yapin.",
+                "Güvenlik ihlali tespit edildi, tüm oturumlar sonlandırıldı. Lütfen yeniden giriş yapın.",
                 mapper.readTree(replay.body()).path("detail").asString("")));
   }
 
@@ -760,7 +760,7 @@ class TokenHardeningTest extends AbstractIntegrationTest {
         anonymousPost(
             "/api/v1/auth/password-reset/request", "{\"email\":\"" + user.email() + "\"}");
     assertEquals(202, r.statusCode(), r.body());
-    return mail.rawToken(user.email(), "sifirlama");
+    return mail.rawToken(user.email(), "sıfırlama");
   }
 
   private HttpResponse<String> confirmReset(String token, String newPassword) {

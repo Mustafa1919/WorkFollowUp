@@ -201,7 +201,7 @@ class SubtaskCreationIntegrationTest extends AbstractIntegrationTest {
     JsonNode error =
         response(assertRejectedWithoutWrites(() -> create(manager, child, request), 400));
     // setParent da 400 verebilir. Sozlesmedeki metin, erken createSubtask korumasini ayirir.
-    assertEquals("Alt gorevin altina alt gorev acilamaz.", error.path("detail").asString());
+    assertEquals("Alt görevin altına alt görev açılamaz.", error.path("detail").asString());
   }
 
   @Test
@@ -244,8 +244,7 @@ class SubtaskCreationIntegrationTest extends AbstractIntegrationTest {
         response(assertRejectedWithoutWrites(() -> update(child, "story-point", points), 400));
 
     assertEquals(
-        "Alt goreve story point verilemez; puan ust gorevde tutulur.",
-        error.path("detail").asString());
+        "Alt göreve puan verilemez; puan üst görevde tutulur.", error.path("detail").asString());
     assertEquals(before, storedTask(child));
     assertEquals(Integer.valueOf(3), storedTask(parent).storyPoint());
   }
@@ -309,7 +308,7 @@ class SubtaskCreationIntegrationTest extends AbstractIntegrationTest {
     JsonNode error = response(assertRejectedWithoutWrites(() -> attach(pointed, parent), 400));
 
     assertEquals(
-        "Puanli bir gorev alt gorev yapilamaz; once puani kaldirin.",
+        "Puanlı bir görev alt görev yapılamaz; önce puanı kaldırın.",
         error.path("detail").asString());
     assertAll(
         () -> assertEquals(taskBefore, storedTask(pointed)),

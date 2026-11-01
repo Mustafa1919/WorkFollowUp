@@ -71,7 +71,7 @@ public class TaskActivityService {
                 new TaskActivityResponse(
                     e.id(),
                     e.actorId(),
-                    actorNames.getOrDefault(e.actorId(), "Bilinmeyen kullanici"),
+                    actorNames.getOrDefault(e.actorId(), "Bilinmeyen kullanıcı"),
                     e.eventType(),
                     e.field(),
                     e.oldValue(),
@@ -97,6 +97,6 @@ public class TaskActivityService {
     taskRepository
         .findById(taskId)
         .filter(task -> !task.isDeleted())
-        .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Görev bulunamadı."));
   }
 }

@@ -76,8 +76,8 @@ import tools.jackson.databind.json.JsonMapper;
 class MalformedTokenAndWorkspaceHeaderContractTest {
 
   private static final String PROBLEM =
-      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Gecersiz Istek\","
-          + "\"status\":400,\"detail\":\"X-Workspace-Id basligi gecersiz.\"}";
+      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Geçersiz İstek\","
+          + "\"status\":400,\"detail\":\"X-Workspace-Id başlığı geçersiz.\"}";
   private static final UUID USER = UUID.fromString("7a8b9c0d-1111-4222-8333-123456abcdef");
   private static final UUID WORKSPACE = UUID.fromString("abcdef12-3456-4789-abcd-123456abcdef");
   private static final String JTI = "contract-sensitive-jti-canary";
@@ -407,7 +407,7 @@ class MalformedTokenAndWorkspaceHeaderContractTest {
         .doFilter(request(WORKSPACE.toString()), response, (rq, rs) -> reached.set(true));
     assertEquals(403, response.getStatus());
     assertEquals(
-        "{\"type\":\"https://api.app.com/errors/forbidden\",\"title\":\"Erisim Reddedildi\",\"status\":403,\"detail\":\"Bu workspace'e uye degilsiniz.\"}",
+        "{\"type\":\"https://api.app.com/errors/forbidden\",\"title\":\"Erişim Reddedildi\",\"status\":403,\"detail\":\"Bu çalışma alanına üye değilsiniz.\"}",
         response.getContentAsString(StandardCharsets.UTF_8));
     assertNull(response.getErrorMessage(), "sendError must not start /error dispatch");
     assertFalse(reached.get());

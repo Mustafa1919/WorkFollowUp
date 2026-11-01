@@ -138,7 +138,7 @@ public class CommentService {
       throw new AccessDeniedException("Yalniz yazan kendi yorumunu duzenleyebilir.");
     }
     if (comment.isDeleted()) {
-      throw new BusinessRuleException("Silinmis yorum duzenlenemez.");
+      throw new BusinessRuleException("Silinmiş yorum düzenlenemez.");
     }
     String normalized = normalize(body);
     List<UUID> oldMentions = resolveMentions(task.getWorkspaceId(), comment.getBody(), actorId);
@@ -237,11 +237,11 @@ public class CommentService {
 
   private static String normalize(String body) {
     if (body == null) {
-      throw new BusinessRuleException("Yorum govdesi bos olamaz.");
+      throw new BusinessRuleException("Yorum gövdesi boş olamaz.");
     }
     String trimmed = body.trim();
     if (trimmed.isEmpty()) {
-      throw new BusinessRuleException("Yorum govdesi bos olamaz.");
+      throw new BusinessRuleException("Yorum gövdesi boş olamaz.");
     }
     if (trimmed.length() > MAX_BODY_LENGTH) {
       throw new BusinessRuleException("Yorum en fazla " + MAX_BODY_LENGTH + " karakter olabilir.");
@@ -252,7 +252,7 @@ public class CommentService {
   private Comment requireComment(UUID commentId) {
     return commentRepository
         .findById(commentId)
-        .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı."));
   }
 
   /** TaskService#requireTask ile AYNI: silinmis gorevlere yorum yazilamaz/okunamaz. */
@@ -260,6 +260,6 @@ public class CommentService {
     return taskRepository
         .findById(taskId)
         .filter(task -> !task.isDeleted())
-        .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Görev bulunamadı."));
   }
 }

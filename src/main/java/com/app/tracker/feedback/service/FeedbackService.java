@@ -37,7 +37,8 @@ public class FeedbackService {
   private static UUID requireWorkspace() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("Once bir workspace secmelisiniz (X-Workspace-Id header).");
+      throw new BusinessRuleException(
+          "Önce bir çalışma alanı seçmelisiniz (X-Workspace-Id başlığı).");
     }
     return workspaceId;
   }

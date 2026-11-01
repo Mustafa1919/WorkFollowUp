@@ -197,7 +197,8 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
     consumer.onMessage(envelope); // at-least-once: ayni olay yeniden teslim
 
     assertEquals(
-        List.of("*ENG-1* Gorev 1: To Do → In Progress"), RecordingSlackSender.textsSentTo(url));
+        List.of("*ENG-1* Gorev 1: Yapılacak → Devam ediyor"),
+        RecordingSlackSender.textsSentTo(url));
     assertEquals(1L, deliveredMarkerCount(eventId));
   }
 
@@ -209,7 +210,7 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
 
     consumer.onMessage(createdEnvelope(UUID.randomUUID(), tenant, task));
 
-    assertEquals(List.of("New task *ENG-1*: Gorev 1"), RecordingSlackSender.textsSentTo(url));
+    assertEquals(List.of("Yeni görev *ENG-1*: Gorev 1"), RecordingSlackSender.textsSentTo(url));
   }
 
   @Test
@@ -358,14 +359,13 @@ class SlackNotificationIntegrationTest extends AbstractIntegrationTest {
     Task task =
         tenantExecutor.runAs(
             tenant.workspaceId(), () -> taskService.createTask(tenant.projectId(), "E2E gorev"));
-    String created = "New task *ENG-" + task.getTaskNumber() + "*: E2E gorev";
+    String created = "Yeni görev *ENG-" + task.getTaskNumber() + "*: E2E gorev";
     await(() -> RecordingSlackSender.textsSentTo(url).contains(created), "TASK_CREATED gelmedi");
 
     tenantExecutor.runAs(
         tenant.workspaceId(),
         () -> taskService.updateStatus(task.getId(), TaskStatus.IN_PROGRESS, tenant.adminUserId()));
-    String moved =
-        "*ENG-" + task.getTaskNumber() + "* E2E gorev: To Do → " + TaskStatus.IN_PROGRESS;
+    String moved = "*ENG-" + task.getTaskNumber() + "* E2E gorev: Yapılacak → Devam ediyor";
     await(() -> RecordingSlackSender.textsSentTo(url).contains(moved), "durum degisikligi gelmedi");
 
     long occurrences = RecordingSlackSender.textsSentTo(url).stream().filter(moved::equals).count();

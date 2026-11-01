@@ -95,7 +95,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
           response,
           HttpServletResponse.SC_BAD_REQUEST,
           "bad-request",
-          "Gecersiz Istek",
+          "Geçersiz İstek",
           "Idempotency-Key en fazla 255 karakter olabilir.");
       return;
     }
@@ -215,8 +215,8 @@ public class IdempotencyFilter extends OncePerRequestFilter {
           response,
           422,
           "idempotency-key-reuse",
-          "Islenemeyen Istek",
-          "Ayni Idempotency-Key farkli bir istek govdesiyle kullanildi.");
+          "İşlenemeyen İstek",
+          "Aynı Idempotency-Key farklı bir istek gövdesiyle kullanıldı.");
       return;
     }
     if (IN_PROGRESS_MARKER.equals(parts[0]) || parts.length < 3) {
@@ -234,8 +234,8 @@ public class IdempotencyFilter extends OncePerRequestFilter {
         response,
         HttpServletResponse.SC_CONFLICT,
         "conflict",
-        "Cakisma",
-        "Ayni Idempotency-Key ile bir istek zaten isleniyor.");
+        "Çakışma",
+        "Aynı Idempotency-Key ile bir istek zaten işleniyor.");
   }
 
   private static void writeTooLarge(HttpServletResponse response) throws IOException {
@@ -243,8 +243,8 @@ public class IdempotencyFilter extends OncePerRequestFilter {
         response,
         413,
         "payload-too-large",
-        "Istek Cok Buyuk",
-        "Idempotency-Key kullanilan isteklerde govde en fazla 1 MiB olabilir.");
+        "İstek Çok Büyük",
+        "Idempotency-Key kullanılan isteklerde gövde en fazla 1 MiB olabilir.");
   }
 
   private static void writeProblem(

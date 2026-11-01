@@ -41,7 +41,7 @@ public class MeController {
   public MyPermissionsResponse permissions() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("X-Workspace-Id header'i zorunludur.");
+      throw new BusinessRuleException("X-Workspace-Id başlığı zorunludur.");
     }
     return MyPermissionsResponse.of(meService.getRole(CurrentUser.id(), workspaceId));
   }

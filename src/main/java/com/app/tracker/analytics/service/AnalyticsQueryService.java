@@ -105,7 +105,7 @@ public class AnalyticsQueryService {
 
   private void requireProject(UUID projectId) {
     if (!projectRepository.existsById(projectId)) {
-      throw new ResourceNotFoundException("Proje bulunamadi.");
+      throw new ResourceNotFoundException("Proje bulunamadı.");
     }
   }
 }

@@ -86,6 +86,6 @@ public class AutomationRuleService {
   private Project requireProject(UUID projectId) {
     return projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
   }
 }

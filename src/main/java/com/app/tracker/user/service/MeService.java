@@ -36,7 +36,7 @@ public class MeService {
   public void acceptPrivacyNotice(UUID userId, String version) {
     if (!PrivacyNotice.CURRENT_VERSION.equals(version)) {
       throw new BusinessRuleException(
-          "Aydinlatma metni guncellendi; sayfayi yenileyip yeniden onaylayin.");
+          "Aydınlatma metni güncellendi; sayfayı yenileyip yeniden onaylayın.");
     }
     User user = getUser(userId);
     user.acceptPrivacyNotice(version, Instant.now(clock));
@@ -51,7 +51,7 @@ public class MeService {
   public User getUser(UUID userId) {
     return userRepository
         .findById(userId)
-        .orElseThrow(() -> new ResourceNotFoundException("Kullanici bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı."));
   }
 
   /** Uye degilse bos doner; filtre bunu zaten 403'ler, savunma amacli. */
@@ -59,6 +59,6 @@ public class MeService {
   public String getRole(UUID userId, UUID workspaceId) {
     return membershipService
         .findRole(userId, workspaceId)
-        .orElseThrow(() -> new ResourceNotFoundException("Workspace uyeligi bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Çalışma alanı üyeliği bulunamadı."));
   }
 }

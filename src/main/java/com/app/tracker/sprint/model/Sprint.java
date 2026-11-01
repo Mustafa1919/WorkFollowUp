@@ -66,7 +66,7 @@ public class Sprint {
 
   public void start(Instant now) {
     if (!SprintStatus.PLANNED.equals(status)) {
-      throw new BusinessRuleException("Yalnizca 'planned' durumdaki sprint baslatilabilir.");
+      throw new BusinessRuleException("Yalnızca 'planned' durumdaki sprint başlatılabilir.");
     }
     this.status = SprintStatus.ACTIVE;
     this.startedAt = now;
@@ -74,7 +74,7 @@ public class Sprint {
 
   public void complete(Instant now) {
     if (!SprintStatus.ACTIVE.equals(status)) {
-      throw new BusinessRuleException("Yalnizca 'active' durumdaki sprint kapatilabilir.");
+      throw new BusinessRuleException("Yalnızca 'active' durumdaki sprint kapatılabilir.");
     }
     this.status = SprintStatus.COMPLETED;
     this.completedAt = now;

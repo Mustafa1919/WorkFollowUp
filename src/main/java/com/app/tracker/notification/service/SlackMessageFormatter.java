@@ -1,5 +1,6 @@
 package com.app.tracker.notification.service;
 
+import com.app.tracker.task.model.TaskStatus;
 import java.util.Optional;
 import tools.jackson.databind.JsonNode;
 
@@ -36,7 +37,7 @@ public final class SlackMessageFormatter {
     String key = "*" + escape(task.projectKey()) + "-" + task.taskNumber() + "*";
     String title = escape(truncate(task.title()));
     if (TASK_CREATED.equals(eventType)) {
-      return Optional.of("New task " + key + ": " + title);
+      return Optional.of("Yeni görev " + key + ": " + title);
     }
     if (TASK_STATUS_UPDATED.equals(eventType)) {
       String oldStatus = payload.path("oldStatus").asString(null);
@@ -44,7 +45,14 @@ public final class SlackMessageFormatter {
       if (oldStatus == null || newStatus == null) {
         return Optional.empty();
       }
-      return Optional.of(key + " " + title + ": " + escape(oldStatus) + ARROW + escape(newStatus));
+      return Optional.of(
+          key
+              + " "
+              + title
+              + ": "
+              + escape(TaskStatus.label(oldStatus))
+              + ARROW
+              + escape(TaskStatus.label(newStatus)));
     }
     return Optional.empty();
   }

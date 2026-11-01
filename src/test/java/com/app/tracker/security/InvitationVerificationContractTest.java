@@ -83,7 +83,7 @@ import tools.jackson.databind.ObjectMapper;
 class InvitationVerificationContractTest extends AbstractIntegrationTest {
   private static final String RESEND = "/api/v1/me/verification-email";
   private static final String NEED_VERIFICATION =
-      "Daveti kabul etmek icin once e-posta adresini dogrula.";
+      "Daveti kabul etmek için önce e-posta adresini doğrula.";
   @LocalServerPort private int port;
   @Autowired private ApplicationContext context;
   @Autowired private ObjectMapper mapper;
@@ -122,7 +122,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     Set<String> oldIds = verificationMessageIds(actor.email());
     long tokensBefore = tokenCount(actor);
     assertAcceptedEmpty(http.post(RESEND, actor, null, null));
-    waitUntil(() -> inbox.count(actor.email(), "dogrula") == oldIds.size() + 1);
+    waitUntil(() -> inbox.count(actor.email(), "doğrula") == oldIds.size() + 1);
     assertEquals(tokensBefore + 1, tokenCount(actor));
     String raw = newVerificationToken(actor.email(), oldIds);
     assertEquals(
@@ -149,7 +149,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     Actor actor = register();
     execute("UPDATE users SET email_verified=true WHERE id=?", actor.userId());
     long tokensBefore = tokenCount(actor);
-    int mailBefore = inbox.count(actor.email(), "dogrula");
+    int mailBefore = inbox.count(actor.email(), "doğrula");
     for (int i = 0; i < 4; i++) {
       assertAcceptedEmpty(http.post(RESEND, actor, null, null));
     }
@@ -159,7 +159,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     // Acceptance twin: the same authenticated endpoint works after reverting only verification.
     execute("UPDATE users SET email_verified=false WHERE id=?", actor.userId());
     assertAcceptedEmpty(http.post(RESEND, actor, null, null));
-    waitUntil(() -> inbox.count(actor.email(), "dogrula") == mailBefore + 1);
+    waitUntil(() -> inbox.count(actor.email(), "doğrula") == mailBefore + 1);
     assertEquals(tokensBefore + 1, tokenCount(actor));
   }
 
@@ -200,7 +200,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     assertEquals(400, rejected.statusCode(), rejected.body());
     String detail = mapper.readTree(rejected.body()).path("detail").asString();
     if (scenario.equals("mismatch")) {
-      assertTrue(detail.contains("farkli bir e-posta adresine"), detail);
+      assertTrue(detail.contains("farklı bir e-posta adresine"), detail);
     }
     assertEquals(expected, detail);
     assertEquals("0", membershipCount(tenant, actor));
@@ -217,7 +217,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
   void R3_threeMailsFourthSuppressedAndPasswordResetAndOtherUserHaveSeparateBudgets()
       throws Exception {
     Actor actor = register();
-    int before = inbox.count(actor.email(), "dogrula");
+    int before = inbox.count(actor.email(), "doğrula");
     long tokensBefore = tokenCount(actor);
     // Exhausting the reset budget must not spend any verification budget.
     for (int i = 0; i < 3; i++) {
@@ -228,7 +228,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     for (int i = 1; i <= 3; i++) {
       assertAcceptedEmpty(http.post(RESEND, actor, null, null));
       int expected = before + i;
-      waitUntil(() -> inbox.count(actor.email(), "dogrula") == expected);
+      waitUntil(() -> inbox.count(actor.email(), "doğrula") == expected);
       assertEquals(tokensBefore + i, tokenCount(actor));
     }
     assertEquals("3", redis.opsForValue().get("pwreset_mail:" + actor.userId()));
@@ -241,7 +241,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     assertMailCountRemains(actor.email(), before + 3);
     Actor other = register();
     assertAcceptedEmpty(http.post(RESEND, other, null, null));
-    waitUntil(() -> inbox.count(other.email(), "dogrula") == 2);
+    waitUntil(() -> inbox.count(other.email(), "doğrula") == 2);
     assertEquals("1", redis.opsForValue().get("verify_mail:" + other.userId()));
   }
 
@@ -258,7 +258,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     assertEquals(before, tokenCount(actor));
     assertMailCountRemains(actor.email(), 1);
     assertAcceptedEmpty(http.post(RESEND, actor, null, null));
-    waitUntil(() -> inbox.count(actor.email(), "dogrula") == 2);
+    waitUntil(() -> inbox.count(actor.email(), "doğrula") == 2);
     assertEquals(before + 1, tokenCount(actor));
   }
 
@@ -288,7 +288,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
             UUID.fromString(scalar("SELECT id FROM users WHERE email=?", email)),
             email,
             mapper.readTree(loggedIn.body()).path("accessToken").asString());
-    waitUntil(() -> inbox.count(email, "dogrula") == 1);
+    waitUntil(() -> inbox.count(email, "doğrula") == 1);
     return actor;
   }
 
@@ -394,7 +394,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
       for (JsonNode to : message.path("To")) {
         recipient |= email.equalsIgnoreCase(to.path("Address").asString());
       }
-      if (recipient && message.path("Subject").asString().contains("dogrula")) {
+      if (recipient && message.path("Subject").asString().contains("doğrula")) {
         messages.add(message);
       }
     }
@@ -428,7 +428,7 @@ class InvitationVerificationContractTest extends AbstractIntegrationTest {
     // Negative evidence is observed across the asynchronous mail delivery interval.
     long deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos();
     do {
-      assertEquals(expected, inbox.count(email, "dogrula"));
+      assertEquals(expected, inbox.count(email, "doğrula"));
       Thread.sleep(100);
     } while (System.nanoTime() < deadline);
   }
@@ -480,7 +480,7 @@ class InvitationVerificationServiceContractTest {
   private WorkspaceInvitation invitation;
   private static final String RAW = "contract-invitation";
   private static final String NEED_VERIFICATION =
-      "Daveti kabul etmek icin once e-posta adresini dogrula.";
+      "Daveti kabul etmek için önce e-posta adresini doğrula.";
 
   @BeforeEach
   void setUp() {
@@ -586,7 +586,7 @@ class InvitationVerificationServiceContractTest {
     assertFalse(expected.isBlank());
     assertNotEquals(NEED_VERIFICATION, expected);
     if (scenario.equals("mismatch")) {
-      assertTrue(expected.contains("farkli bir e-posta adresine"), expected);
+      assertTrue(expected.contains("farklı bir e-posta adresine"), expected);
     }
     ReflectionTestUtils.setField(user, "emailVerified", false);
     assertEquals(

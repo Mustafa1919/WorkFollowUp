@@ -57,7 +57,7 @@ class WorkspaceContextFilterTest {
     MockHttpServletResponse res = run(req, chained);
     assertEquals(400, res.getStatus());
     assertTrue(res.getContentType().startsWith("application/problem+json"));
-    assertTrue(res.getContentAsString().contains("X-Workspace-Id basligi gecersiz."));
+    assertTrue(res.getContentAsString().contains("X-Workspace-Id başlığı geçersiz."));
     assertTrue(!chained.get());
     assertNull(TenantContext.getWorkspaceId());
   }

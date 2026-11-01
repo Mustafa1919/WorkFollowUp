@@ -43,10 +43,10 @@ public class PersonalAccessTokenService {
   @Transactional
   public IssuedToken create(UUID userId, String name, Duration ttl) {
     if (name == null || name.isBlank()) {
-      throw new BusinessRuleException("Token adi bos olamaz.");
+      throw new BusinessRuleException("Anahtar adı boş olamaz.");
     }
     if (ttl != null && (ttl.isNegative() || ttl.isZero() || ttl.compareTo(MAX_TTL) > 0)) {
-      throw new BusinessRuleException("Gecerlilik suresi 1 gun ile 365 gun arasinda olmalidir.");
+      throw new BusinessRuleException("Geçerlilik süresi 1 gün ile 365 gün arasında olmalıdır.");
     }
     String rawToken = PatTokenFormat.generateRawToken();
     Instant expiresAt = ttl == null ? null : Instant.now().plus(ttl);
@@ -78,7 +78,7 @@ public class PersonalAccessTokenService {
         repository
             .findById(tokenId)
             .filter(t -> t.getUserId().equals(userId))
-            .orElseThrow(() -> new ResourceNotFoundException("Token bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Anahtar bulunamadı."));
     token.revoke();
     SecurityAuditLog.safeRecord(
         auditLog, SecurityAuditEvent.PAT_REVOKED, userId, Map.of("token", String.valueOf(tokenId)));

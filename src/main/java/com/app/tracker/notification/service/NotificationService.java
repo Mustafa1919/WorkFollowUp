@@ -64,7 +64,7 @@ public class NotificationService {
     Notification notification =
         notificationRepository
             .findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Bildirim bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Bildirim bulunamadı."));
     if (notification.isUnread()) {
       notification.markRead(Instant.now());
       notificationRepository.save(notification);

@@ -55,7 +55,7 @@ public class SprintService {
       UUID projectId, String name, String goal, LocalDate startDate, LocalDate endDate) {
     rejectPastStartDate(startDate);
     if (!endDate.isAfter(startDate)) {
-      throw new BusinessRuleException("Bitis tarihi baslangic tarihinden sonra olmalidir.");
+      throw new BusinessRuleException("Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
     }
     // RLS: baska tenant'in projesi burada BULUNAMAZ (bkz. TaskService.requireProject).
     Project project = requireProject(projectId);
@@ -109,7 +109,7 @@ public class SprintService {
    */
   private void rejectPastStartDate(LocalDate startDate) {
     if (startDate.isBefore(LocalDate.now(clock))) {
-      throw new BusinessRuleException("Sprint baslangic tarihi gecmiste olamaz.");
+      throw new BusinessRuleException("Sprint başlangıç tarihi geçmişte olamaz.");
     }
   }
 
@@ -130,12 +130,12 @@ public class SprintService {
   private Project requireProject(UUID projectId) {
     return projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
   }
 
   private Sprint requireSprint(UUID sprintId) {
     return sprintRepository
         .findById(sprintId)
-        .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadı."));
   }
 }

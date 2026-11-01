@@ -57,7 +57,7 @@ public class GoalService {
     // hesaplanir; sinirsiz hedef sayfayi da sorguyu da anlamsizca sisirirdi.
     if (listByPeriod(period).size() >= MAX_GOALS_PER_PERIOD) {
       throw new BusinessRuleException(
-          "Bir donemde en fazla " + MAX_GOALS_PER_PERIOD + " hedef tanimlanabilir.");
+          "Bir dönemde en fazla " + MAX_GOALS_PER_PERIOD + " hedef tanımlanabilir.");
     }
     return goalRepository.save(
         Goal.of(
@@ -87,10 +87,10 @@ public class GoalService {
     Goal goal = requireGoal(goalId);
     if (goal.getMetricType() != GoalMetricType.CUSTOM) {
       throw new BusinessRuleException(
-          "Bu hedefin ilerlemesi otomatik hesaplanir, elle guncellenemez.");
+          "Bu hedefin ilerlemesi otomatik hesaplanır, elle güncellenemez.");
     }
     if (value < 0) {
-      throw new BusinessRuleException("Ilerleme negatif olamaz.");
+      throw new BusinessRuleException("İlerleme negatif olamaz.");
     }
     goal.updateManualValue(value);
     return goal;
@@ -104,26 +104,27 @@ public class GoalService {
   private Goal requireGoal(UUID goalId) {
     return goalRepository
         .findById(goalId)
-        .orElseThrow(() -> new ResourceNotFoundException("Hedef bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Hedef bulunamadı."));
   }
 
   private void requireProjectIfPresent(UUID projectId) {
     // RLS sayesinde baska tenant'in projesi de "yok" gorunur.
     if (projectId != null && !projectRepository.existsById(projectId)) {
-      throw new ResourceNotFoundException("Proje bulunamadi.");
+      throw new ResourceNotFoundException("Proje bulunamadı.");
     }
   }
 
   private static void requirePositiveTarget(long targetValue) {
     if (targetValue <= 0) {
-      throw new BusinessRuleException("Hedef deger sifirdan buyuk olmalidir.");
+      throw new BusinessRuleException("Hedef değer sıfırdan büyük olmalıdır.");
     }
   }
 
   private static UUID requireWorkspace() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("Once bir workspace secmelisiniz (X-Workspace-Id header).");
+      throw new BusinessRuleException(
+          "Önce bir çalışma alanı seçmelisiniz (X-Workspace-Id başlığı).");
     }
     return workspaceId;
   }

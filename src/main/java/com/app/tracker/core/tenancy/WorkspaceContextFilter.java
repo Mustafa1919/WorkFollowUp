@@ -98,8 +98,8 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
     response
         .getWriter()
         .write(
-            "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Gecersiz Istek\","
-                + "\"status\":400,\"detail\":\"X-Workspace-Id basligi gecersiz.\"}");
+            "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Geçersiz İstek\","
+                + "\"status\":400,\"detail\":\"X-Workspace-Id başlığı geçersiz.\"}");
   }
 
   private static void writeForbidden(HttpServletResponse response) throws IOException {
@@ -109,7 +109,7 @@ public class WorkspaceContextFilter extends OncePerRequestFilter {
     response
         .getWriter()
         .write(
-            "{\"type\":\"https://api.app.com/errors/forbidden\",\"title\":\"Erisim Reddedildi\","
-                + "\"status\":403,\"detail\":\"Bu workspace'e uye degilsiniz.\"}");
+            "{\"type\":\"https://api.app.com/errors/forbidden\",\"title\":\"Erişim Reddedildi\","
+                + "\"status\":403,\"detail\":\"Bu çalışma alanına üye değilsiniz.\"}");
   }
 }

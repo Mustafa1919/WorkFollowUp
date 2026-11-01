@@ -501,7 +501,7 @@ class DependencyCompletionRuleIntegrationTest extends AbstractIntegrationTest {
             .map(match -> match.group())
             .toList();
     assertTrue(visibleKeys.contains(blockerKeys.get(0)), "K6b: ilk bloklayan anahtari gorunmeli");
-    Matcher remaining = Pattern.compile(" ve ([1-9][0-9]*) gorev daha$").matcher(body);
+    Matcher remaining = Pattern.compile(" ve ([1-9][0-9]*) görev daha$").matcher(body);
     assertTrue(remaining.find(), "K6b: sigmayan gorevler sayilariyla ozetlenmeli");
     assertEquals(80, visibleKeys.size() + Integer.parseInt(remaining.group(1)));
     assertEquals(blockerKeys.subList(0, visibleKeys.size()), visibleKeys);
@@ -534,7 +534,7 @@ class DependencyCompletionRuleIntegrationTest extends AbstractIntegrationTest {
 
     ResultActions result = linkHttp(blocked, blocker).andExpect(status().isBadRequest());
 
-    assertEquals("Tamamlanmis bir goreve acik bir bloklayan eklenemez.", detail(result));
+    assertEquals("Tamamlanmış bir göreve açık bir bloklayan eklenemez.", detail(result));
     assertEquals(0L, dependencyCount(blocked, blocker));
     assertTrue(
         inWorkspace(() -> dependencyService.dependenciesForTask(blocked.getId()))
@@ -650,12 +650,12 @@ class DependencyCompletionRuleIntegrationTest extends AbstractIntegrationTest {
 
   private String blockedDetail(Task task, List<String> blockerKeys) {
     return key(project, task)
-        + " tamamlanamaz; once bitmesi gereken gorevler: "
+        + " tamamlanamaz; önce bitmesi gereken görevler: "
         + String.join(", ", blockerKeys);
   }
 
   private String blockedBody(List<String> blockerKeys) {
-    return "PR merge edildi ama gorev Done'a tasinmadi; once bitmesi gereken: "
+    return "PR birleştirildi ama görev Tamamlandı durumuna taşınmadı; önce bitmesi gereken: "
         + String.join(", ", blockerKeys);
   }
 

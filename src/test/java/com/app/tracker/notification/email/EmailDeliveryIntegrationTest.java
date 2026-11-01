@@ -71,7 +71,7 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
     String email = "verify-" + UUID.randomUUID() + "@tracker.local";
     authService.register(email, PASSWORD, "Yeni Kullanici", PrivacyNotice.CURRENT_VERSION);
 
-    assertEquals(1, messagesTo(email, "dogrula", 1).size());
+    assertEquals(1, messagesTo(email, "doğrula", 1).size());
   }
 
   @Test
@@ -85,7 +85,7 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
     deliveryConsumer.onMessage(envelope);
     deliveryConsumer.onMessage(envelope); // at-least-once: ayni olay yeniden teslim
 
-    assertEquals(1, messagesTo(email, "Guvenlik", 1).size());
+    assertEquals(1, messagesTo(email, "Güvenlik", 1).size());
   }
 
   @Test
@@ -96,10 +96,10 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
     taskEventConsumer.onMessage(
         assignedEnvelope(UUID.randomUUID(), tenant, task, tenant.adminId(), tenant.developerId()));
 
-    assertEquals(1, messagesTo(userEmails.get(tenant.developerId()), "atandi", 1).size());
+    assertEquals(1, messagesTo(userEmails.get(tenant.developerId()), "atandı", 1).size());
     assertEquals(
         0,
-        messagesTo(userEmails.get(tenant.adminId()), "atandi", 0).size(),
+        messagesTo(userEmails.get(tenant.adminId()), "atandı", 0).size(),
         "aktore e-posta gitmemeli");
   }
 
@@ -112,7 +112,7 @@ class EmailDeliveryIntegrationTest extends AbstractIntegrationTest {
     taskEventConsumer.onMessage(
         assignedEnvelope(UUID.randomUUID(), tenant, task, tenant.adminId(), tenant.developerId()));
 
-    assertEquals(0, messagesTo(userEmails.get(tenant.developerId()), "atandi", 0).size());
+    assertEquals(0, messagesTo(userEmails.get(tenant.developerId()), "atandı", 0).size());
   }
 
   @Test

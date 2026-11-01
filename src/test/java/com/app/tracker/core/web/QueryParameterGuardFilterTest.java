@@ -35,7 +35,7 @@ class QueryParameterGuardFilterTest {
     MockHttpServletResponse res = run(request("q=a%00b"), seen);
     assertEquals(400, res.getStatus());
     assertTrue(res.getContentType().startsWith("application/problem+json"));
-    assertTrue(res.getContentAsString().contains("Sorgu parametresi gecersiz karakter iceriyor."));
+    assertTrue(res.getContentAsString().contains("Sorgu parametresi geçersiz karakter içeriyor."));
     assertNull(seen.get());
   }
 
@@ -88,7 +88,7 @@ class QueryParameterGuardFilterTest {
       req.setContentType(ct);
       MockHttpServletResponse res = run(req, seen);
       assertEquals(400, res.getStatus(), ct);
-      assertTrue(res.getContentAsString().contains("Sorgu parametresi gecersiz"));
+      assertTrue(res.getContentAsString().contains("Sorgu parametresi geçersiz"));
       assertNull(seen.get(), ct);
     }
   }

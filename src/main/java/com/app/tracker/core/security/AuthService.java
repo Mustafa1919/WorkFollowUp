@@ -160,7 +160,7 @@ public class AuthService {
       String email, String rawPassword, String fullName, String privacyNoticeVersion) {
     if (!PrivacyNotice.CURRENT_VERSION.equals(privacyNoticeVersion)) {
       throw new BusinessRuleException(
-          "Aydinlatma metni guncellendi; sayfayi yenileyip yeniden onaylayin.");
+          "Aydınlatma metni güncellendi; sayfayı yenileyip yeniden onaylayın.");
     }
     requireMinLength(rawPassword);
     String canonicalEmail = EmailAddresses.canonical(email);
@@ -168,7 +168,7 @@ public class AuthService {
         .findByEmail(canonicalEmail)
         .ifPresent(
             u -> {
-              throw new BusinessRuleException("Bu e-posta zaten kayitli.");
+              throw new BusinessRuleException("Bu e-posta zaten kayıtlı.");
             });
     User user =
         User.newUser(
@@ -187,12 +187,12 @@ public class AuthService {
     if (check.locked()) {
       auditLoginFailed(email, clientIp, "locked");
       throw new BusinessRuleException(
-          "Hesap gecici olarak kilitlendi. Lutfen 15 dakika sonra tekrar deneyin.");
+          "Hesap geçici olarak kilitlendi. Lütfen 15 dakika sonra tekrar deneyin.");
     }
     if (check.throttled()) {
       auditLoginFailed(email, clientIp, "throttled");
       throw new BusinessRuleException(
-          "Cok fazla basarisiz deneme. Lutfen biraz sonra tekrar deneyin.");
+          "Çok fazla başarısız deneme. Lütfen biraz sonra tekrar deneyin.");
     }
 
     Optional<User> userOpt = userRepository.findByEmail(email);
@@ -212,7 +212,7 @@ public class AuthService {
           knownUserId,
           Map.of("ip", String.valueOf(clientIp), "reason", "bad_credentials"));
       // Enumeration korumasi (Bolum 1.4.1): kullanici var/yok her durumda AYNI mesaj.
-      throw new BusinessRuleException("E-posta veya sifre hatali.");
+      throw new BusinessRuleException("E-posta veya şifre hatalı.");
     }
 
     bruteForceGuard.recordSuccess(email);
@@ -234,7 +234,7 @@ public class AuthService {
           token.getUserId(),
           Map.of("family", String.valueOf(token.getFamilyId())));
       throw new RefreshTokenReuseException(
-          "Guvenlik ihlali tespit edildi, tum oturumlar sonlandirildi. Lutfen yeniden giris yapin.");
+          "Güvenlik ihlali tespit edildi, tüm oturumlar sonlandırıldı. Lütfen yeniden giriş yapın.");
     }
 
     token.markUsed(Instant.now());
@@ -384,12 +384,12 @@ public class AuthService {
     RefreshToken token =
         refreshTokenRepository
             .findByTokenHash(hash)
-            .orElseThrow(() -> new BusinessRuleException("Gecersiz refresh token."));
+            .orElseThrow(() -> new BusinessRuleException("Geçersiz oturum yenileme anahtarı."));
     if (token.isRevoked()) {
-      throw new BusinessRuleException("Gecersiz refresh token.");
+      throw new BusinessRuleException("Geçersiz oturum yenileme anahtarı.");
     }
     if (token.getExpiresAt().isBefore(Instant.now())) {
-      throw new BusinessRuleException("Refresh token suresi dolmus.");
+      throw new BusinessRuleException("Oturum yenileme anahtarı süresi dolmuş.");
     }
     return token;
   }
@@ -400,9 +400,9 @@ public class AuthService {
         verificationTokenRepository
             .findByTokenHash(hash)
             .filter(t -> t.getPurpose().equals(expectedPurpose))
-            .orElseThrow(() -> new BusinessRuleException("Gecersiz veya suresi dolmus token."));
+            .orElseThrow(() -> new BusinessRuleException("Geçersiz veya süresi dolmuş bağlantı."));
     if (token.getUsedAt() != null || token.getExpiresAt().isBefore(Instant.now())) {
-      throw new BusinessRuleException("Gecersiz veya suresi dolmus token.");
+      throw new BusinessRuleException("Geçersiz veya süresi dolmuş bağlantı.");
     }
     token.markUsed(Instant.now());
     verificationTokenRepository.save(token);
@@ -425,13 +425,13 @@ public class AuthService {
   private User requireUser(UUID userId) {
     return userRepository
         .findById(userId)
-        .orElseThrow(() -> new BusinessRuleException("Kullanici bulunamadi."));
+        .orElseThrow(() -> new BusinessRuleException("Kullanıcı bulunamadı."));
   }
 
   private static void requireMinLength(String rawPassword) {
     if (rawPassword.length() < MIN_PASSWORD_LENGTH) {
       throw new BusinessRuleException(
-          "Parola en az " + MIN_PASSWORD_LENGTH + " karakter olmalidir.");
+          "Parola en az " + MIN_PASSWORD_LENGTH + " karakter olmalıdır.");
     }
   }
 }

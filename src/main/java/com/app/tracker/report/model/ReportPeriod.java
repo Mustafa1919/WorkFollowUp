@@ -25,10 +25,10 @@ public record ReportPeriod(int year, Integer quarter) {
 
   public ReportPeriod {
     if (year < MIN_YEAR || year > MAX_YEAR) {
-      throw new BusinessRuleException("Gecersiz rapor yili: " + year);
+      throw new BusinessRuleException("Geçersiz rapor yılı: " + year);
     }
     if (quarter != null && (quarter < 1 || quarter > 4)) {
-      throw new BusinessRuleException("Ceyrek 1-4 arasinda olmalidir.");
+      throw new BusinessRuleException("Çeyrek 1-4 arasında olmalıdır.");
     }
   }
 

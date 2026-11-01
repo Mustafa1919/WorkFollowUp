@@ -49,7 +49,7 @@ public class KafkaReplayService {
   public ReplayResult replay(String dltTopic, int partition, long fromOffset, long toOffset) {
     String originalTopic = originalTopicOf(dltTopic);
     if (fromOffset < 0 || toOffset < fromOffset) {
-      throw new BusinessRuleException("Gecersiz offset araligi.");
+      throw new BusinessRuleException("Geçersiz offset aralığı.");
     }
     long rangeSize = toOffset - fromOffset + 1;
     if (rangeSize > MAX_BATCH_SIZE) {

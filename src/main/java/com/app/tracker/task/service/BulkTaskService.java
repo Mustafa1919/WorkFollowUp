@@ -65,12 +65,12 @@ public class BulkTaskService {
     switch (operation) {
       case STATUS -> {
         if (status == null || status.isBlank()) {
-          throw new BusinessRuleException("STATUS islemi icin 'status' gerekli.");
+          throw new BusinessRuleException("STATUS işlemi için 'status' gerekli.");
         }
       }
       case ADD_TAG, REMOVE_TAG -> {
         if (tagId == null) {
-          throw new BusinessRuleException("Etiket islemi icin 'tagId' gerekli.");
+          throw new BusinessRuleException("Etiket işlemi için 'tagId' gerekli.");
         }
       }
       default -> {

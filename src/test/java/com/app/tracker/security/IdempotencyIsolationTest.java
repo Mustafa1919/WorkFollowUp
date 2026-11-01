@@ -160,7 +160,7 @@ class IdempotencyIsolationTest extends AbstractIntegrationTest {
 
     HttpResponse<String> second = postTag(a, a.admin(), name2, key);
     assertNotReplay(second, List.of(name1, tagId), name2);
-    assertProblem(second, 422, "Ayni Idempotency-Key farkli bir istek govdesiyle kullanildi.");
+    assertProblem(second, 422, "Aynı Idempotency-Key farklı bir istek gövdesiyle kullanıldı.");
     assertFalse(tagNames(a).contains(name2), "reddedilen ikinci etiket olusmamali");
   }
 
@@ -309,7 +309,7 @@ class IdempotencyIsolationTest extends AbstractIntegrationTest {
     redis.opsForValue().set(redisKey, value, Duration.ofHours(24));
     try {
       HttpResponse<String> conflict = postTag(a, a.admin(), name, key);
-      assertProblem(conflict, 409, "Ayni Idempotency-Key ile bir istek zaten isleniyor.");
+      assertProblem(conflict, 409, "Aynı Idempotency-Key ile bir istek zaten işleniyor.");
       assertEquals(value, redis.opsForValue().get(redisKey), "diger istegin kilidi korunmali");
       assertFalse(tagNames(a).contains(name), "409 zinciri calistirmamali");
     } finally {
@@ -509,7 +509,7 @@ class IdempotencyIsolationTest extends AbstractIntegrationTest {
     String body = paddedTagBody(name, 1024 * 1024 + 1);
     HttpResponse<String> rejected = sendTagBody(a, body, key, chunked);
     assertProblem(
-        rejected, 413, "Idempotency-Key kullanilan isteklerde govde en fazla 1 MiB olabilir.");
+        rejected, 413, "Idempotency-Key kullanılan isteklerde gövde en fazla 1 MiB olabilir.");
     assertFalse(tagNames(a).contains(name), "413 zinciri calistirmamali");
     assertFalse(
         Boolean.TRUE.equals(redis.hasKey(contractRedisKey(a, a.admin(), "/api/v1/tags", key))));

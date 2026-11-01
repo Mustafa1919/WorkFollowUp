@@ -40,8 +40,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class QueryParameterGuardFilter extends OncePerRequestFilter {
 
   private static final String BAD_REQUEST_BODY =
-      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Gecersiz Istek\","
-          + "\"status\":400,\"detail\":\"Sorgu parametresi gecersiz karakter iceriyor.\"}";
+      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Geçersiz İstek\","
+          + "\"status\":400,\"detail\":\"Sorgu parametresi geçersiz karakter içeriyor.\"}";
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {

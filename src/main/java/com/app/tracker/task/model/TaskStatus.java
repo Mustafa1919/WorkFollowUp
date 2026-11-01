@@ -13,4 +13,14 @@ public final class TaskStatus {
   public static final String IN_PROGRESS = "In Progress";
   public static final String REVIEW = "Review";
   public static final String DONE = "Done";
+
+  public static String label(String status) {
+    return switch (status) {
+      case TO_DO -> "Yapılacak";
+      case IN_PROGRESS -> "Devam ediyor";
+      case REVIEW -> "İncelemede";
+      case DONE -> "Tamamlandı";
+      default -> status;
+    };
+  }
 }

@@ -201,7 +201,7 @@ class CanonicalEmailContractTest {
                         SecurityFixture.PASSWORD,
                         "Duplicate",
                         PrivacyNotice.CURRENT_VERSION));
-        assertEquals("Bu e-posta zaten kayitli.", error.getMessage());
+        assertEquals("Bu e-posta zaten kayıtlı.", error.getMessage());
       }
       verify(users, never()).save(any());
     }
@@ -222,7 +222,7 @@ class CanonicalEmailContractTest {
           assertThrows(
               BusinessRuleException.class,
               () -> auth.login("UNKNOWN@X.TEST", SecurityFixture.PASSWORD, "ip"));
-      assertEquals("E-posta veya sifre hatali.", error.getMessage());
+      assertEquals("E-posta veya şifre hatalı.", error.getMessage());
       verify(guard).recordFailure("unknown@x.test", "ip");
     }
 
@@ -400,8 +400,8 @@ class CanonicalEmailContractTest {
       HttpResponse<String> response =
           anonymousPost("/api/v1/auth/password-reset/request", Map.of("email", upper(lower)));
       assertEquals(202, response.statusCode(), response.body());
-      assertFalse(mail.rawToken(lower, "sifirlama").isBlank());
-      assertEquals(1, inbox.count(lower, "sifirlama"));
+      assertFalse(mail.rawToken(lower, "sıfırlama").isBlank());
+      assertEquals(1, inbox.count(lower, "sıfırlama"));
       assertEquals(
           "1",
           scalar(
@@ -573,7 +573,7 @@ class CanonicalEmailContractTest {
       for (String variant : List.of(lower, upper(lower))) {
         HttpResponse<String> response = register(variant);
         assertEquals(400, response.statusCode(), response.body());
-        assertTrue(response.body().contains("Bu e-posta zaten kayitli."), response.body());
+        assertTrue(response.body().contains("Bu e-posta zaten kayıtlı."), response.body());
         assertEquals("1", scalar("SELECT count(*) FROM users WHERE lower(email)=?", lower));
       }
       assertEquals(201, register(email("distinct")).statusCode(), "distinct acceptance pair");
@@ -583,7 +583,7 @@ class CanonicalEmailContractTest {
     void R2_unknownEmailRetainsErrorAndKnownAccountLogsIn() {
       HttpResponse<String> response = login(email("absent"), PASSWORD);
       assertEquals(400, response.statusCode(), response.body());
-      assertTrue(response.body().contains("E-posta veya sifre hatali."), response.body());
+      assertTrue(response.body().contains("E-posta veya şifre hatalı."), response.body());
       String known = email("known");
       assertEquals(201, register(known).statusCode());
       assertEquals(200, login(known, PASSWORD).statusCode());
@@ -607,7 +607,7 @@ class CanonicalEmailContractTest {
       for (String variant : List.of(lower, mixed)) {
         HttpResponse<String> locked = login(variant, PASSWORD);
         assertEquals(400, locked.statusCode(), locked.body());
-        assertTrue(locked.body().contains("Hesap gecici olarak kilitlendi."), locked.body());
+        assertTrue(locked.body().contains("Hesap geçici olarak kilitlendi."), locked.body());
         assertFalse(locked.body().contains("accessToken"));
       }
     }

@@ -88,7 +88,7 @@ class NotificationIntegrationTest extends AbstractIntegrationTest {
     List<Notification> developerInbox = forUser(tenant, tenant.developerId());
     assertEquals(1, developerInbox.size());
     assertEquals("TASK_STATUS_UPDATED", developerInbox.get(0).getType());
-    assertTrue(developerInbox.get(0).getBody().contains("In Progress"));
+    assertTrue(developerInbox.get(0).getBody().contains("Devam ediyor"));
 
     assertTrue(forUser(tenant, tenant.adminId()).isEmpty(), "aktor kendine bildirim almaz");
     assertTrue(forUser(tenant, tenant.viewerId()).isEmpty(), "izlemeyen uye alici degildir");

@@ -165,12 +165,12 @@ public class TaskService {
   @Transactional
   public Task updateStatus(UUID taskId, String newStatus, UUID actorId) {
     if (!VALID_STATUSES.contains(newStatus)) {
-      throw new BusinessRuleException("Gecersiz durum: " + newStatus);
+      throw new BusinessRuleException("Geçersiz durum: " + newStatus);
     }
     Task task = requireTask(taskId);
     if (task.isApproved() && !TaskStatus.DONE.equals(newStatus)) {
       throw new BusinessRuleException(
-          "Onaylanmis gorevin durumu degistirilemez; once onay geri alinmali.");
+          "Onaylanmış görevin durumu değiştirilemez; önce onay geri alınmalı.");
     }
     // ADR-0020: acik (silinmemis, Done olmayan) bloklayani olan gorev Done'a gecemez. Done -> Done
     // bugunku gibi serbest (kontrol yok). Toplu islemde tek tx: biri takilirsa hepsi geri alinir.
@@ -179,7 +179,7 @@ public class TaskService {
       if (!blockerKeys.isEmpty()) {
         throw new BusinessRuleException(
             taskKey(task)
-                + " tamamlanamaz; once bitmesi gereken gorevler: "
+                + " tamamlanamaz; önce bitmesi gereken görevler: "
                 + String.join(", ", blockerKeys));
       }
     }
@@ -234,12 +234,12 @@ public class TaskService {
       Sprint sprint =
           sprintRepository
               .findById(sprintId)
-              .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadi."));
+              .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadı."));
       if (!sprint.getProjectId().equals(task.getProjectId())) {
-        throw new BusinessRuleException("Sprint, gorevin projesine ait degil.");
+        throw new BusinessRuleException("Sprint, görevin projesine ait değil.");
       }
       if (sprint.isCompleted()) {
-        throw new BusinessRuleException("Tamamlanmis bir sprint'e gorev eklenemez.");
+        throw new BusinessRuleException("Tamamlanmış bir sprint'e görev eklenemez.");
       }
     }
     UUID oldSprintId = task.getSprintId();
@@ -260,8 +260,7 @@ public class TaskService {
   public Task updateStoryPoint(UUID taskId, Integer storyPoint, UUID actorId) {
     Task task = requireTask(taskId);
     if (storyPoint != null && task.getParentTaskId() != null) {
-      throw new BusinessRuleException(
-          "Alt goreve story point verilemez; puan ust gorevde tutulur.");
+      throw new BusinessRuleException("Alt göreve puan verilemez; puan üst görevde tutulur.");
     }
     Integer oldStoryPoint = taskCustomFieldRepository.getStoryPoint(taskId);
     if (Objects.equals(oldStoryPoint, storyPoint)) {
@@ -288,7 +287,7 @@ public class TaskService {
     }
     rejectPastDueDate(dueDate);
     if (task.isApproved()) {
-      throw new BusinessRuleException("Onaylanmis gorevin tarihi degistirilemez.");
+      throw new BusinessRuleException("Onaylanmış görevin tarihi değiştirilemez.");
     }
     task.changeDueDate(dueDate);
     Task saved = taskRepository.save(task);
@@ -321,15 +320,16 @@ public class TaskService {
     if (Objects.equals(oldAssigneeId, assigneeId)) {
       return task;
     }
-    rejectIfApprovedTask(task, "Onaylanmis gorevin atanani degistirilemez.");
+    rejectIfApprovedTask(task, "Onaylanmış görevin atananı değiştirilemez.");
     if (assigneeId != null) {
       String role =
           workspaceUserRepository
               .findByWorkspaceIdAndUserId(task.getWorkspaceId(), assigneeId)
               .map(WorkspaceUser::getRole)
-              .orElseThrow(() -> new BusinessRuleException("Atanan kisi workspace uyesi degil."));
+              .orElseThrow(
+                  () -> new BusinessRuleException("Atanan kişi çalışma alanı üyesi değil."));
       if (WorkspaceRole.VIEWER.equals(role)) {
-        throw new BusinessRuleException("Salt-okunur (VIEWER) uyeye gorev atanamaz.");
+        throw new BusinessRuleException("Salt-okunur (VIEWER) üyeye görev atanamaz.");
       }
     }
     task.changeAssignee(assigneeId);
@@ -358,7 +358,7 @@ public class TaskService {
     if (Objects.equals(oldDescription, normalized)) {
       return task;
     }
-    rejectIfApprovedTask(task, "Onaylanmis gorevin aciklamasi degistirilemez.");
+    rejectIfApprovedTask(task, "Onaylanmış görevin açıklaması değiştirilemez.");
     task.changeDescription(normalized);
     Task saved = taskRepository.save(task);
     taskEventRepository.recordDescriptionChange(
@@ -443,7 +443,7 @@ public class TaskService {
   @Transactional(readOnly = true)
   public List<Task> listTasksByDueDate(UUID projectId, LocalDate from, LocalDate to) {
     if (to.isBefore(from)) {
-      throw new BusinessRuleException("'to', 'from' tarihinden once olamaz.");
+      throw new BusinessRuleException("'to', 'from' tarihinden önce olamaz.");
     }
     requireProject(projectId);
     return taskRepository.findByDueDateRange(projectId, from, to);
@@ -460,7 +460,7 @@ public class TaskService {
       return task;
     }
     if (!TaskStatus.DONE.equals(task.getStatus())) {
-      throw new BusinessRuleException("Yalniz 'Done' durumundaki gorev onaylanabilir.");
+      throw new BusinessRuleException("Yalnız 'Tamamlandı' durumundaki görev onaylanabilir.");
     }
     // Millisaniyeye kesilir: Tamamlananlar cursor'i epoch-milli tasir, esitlik karsilastirmasi
     // DB'deki degerle birebir tutmali.
@@ -502,21 +502,21 @@ public class TaskService {
       return removeParent(taskId, actorId);
     }
     if (taskId.equals(parentTaskId)) {
-      throw new BusinessRuleException("Bir gorev kendisinin alt gorevi olamaz.");
+      throw new BusinessRuleException("Bir görev kendisinin alt görevi olamaz.");
     }
     rejectIfApproved(task);
     Task parent = requireTask(parentTaskId);
     if (!parent.getProjectId().equals(task.getProjectId())) {
-      throw new BusinessRuleException("Alt gorev iliskisi ayni proje icinde kurulabilir.");
+      throw new BusinessRuleException("Alt görev ilişkisi aynı proje içinde kurulabilir.");
     }
     if (parent.getParentTaskId() != null) {
-      throw new BusinessRuleException("Bir alt gorev baska bir gorevin ust gorevi olamaz.");
+      throw new BusinessRuleException("Bir alt görev başka bir görevin üst görevi olamaz.");
     }
     if (!taskRepository.findByParentTaskIdOrderByTaskNumber(taskId).isEmpty()) {
-      throw new BusinessRuleException("Alt gorevi olan bir gorev subtask yapilamaz.");
+      throw new BusinessRuleException("Alt görevi olan bir görev alt görev yapılamaz.");
     }
     if (taskCustomFieldRepository.getStoryPoint(taskId) != null) {
-      throw new BusinessRuleException("Puanli bir gorev alt gorev yapilamaz; once puani kaldirin.");
+      throw new BusinessRuleException("Puanlı bir görev alt görev yapılamaz; önce puanı kaldırın.");
     }
     task.changeParent(parentTaskId);
     Task saved = taskRepository.save(task);
@@ -569,7 +569,7 @@ public class TaskService {
   /** TaskDependencyService'teki AYNI kilit kurali: onaylanmis gorev donuk. */
   private static void rejectIfApproved(Task task) {
     if (task.isApproved()) {
-      throw new BusinessRuleException("Onaylanmis gorevin ust gorevi degistirilemez.");
+      throw new BusinessRuleException("Onaylanmış görevin üst görevi değiştirilemez.");
     }
   }
 
@@ -583,7 +583,7 @@ public class TaskService {
     Task task = requireTask(taskId);
     if (!taskRepository.findByParentTaskIdOrderByTaskNumber(taskId).isEmpty()) {
       throw new BusinessRuleException(
-          "Alt gorevleri olan bir gorev silinemez, once alt gorevleri kaldirin.");
+          "Alt görevleri olan bir görev silinemez, önce alt görevleri kaldırın.");
     }
     if (task.getSprintId() != null) {
       taskEventRepository.recordSprintChange(taskId, actorId, task.getSprintId(), null);
@@ -625,7 +625,7 @@ public class TaskService {
    */
   private void rejectPastDueDate(LocalDate dueDate) {
     if (dueDate != null && dueDate.isBefore(LocalDate.now(clock))) {
-      throw new BusinessRuleException("Bitis tarihi gecmis bir gun olamaz.");
+      throw new BusinessRuleException("Bitiş tarihi geçmiş bir gün olamaz.");
     }
   }
 
@@ -666,7 +666,7 @@ public class TaskService {
     return taskRepository
         .findById(taskId)
         .filter(task -> !task.isDeleted())
-        .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Görev bulunamadı."));
   }
 
   private List<Task> queryFromCursor(UUID projectId, String cursor, Pageable pageable) {
@@ -677,6 +677,6 @@ public class TaskService {
   private Project requireProject(UUID projectId) {
     return projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
   }
 }

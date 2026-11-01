@@ -1,5 +1,6 @@
 package com.app.tracker.notification.service;
 
+import com.app.tracker.task.model.TaskStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +36,7 @@ public final class NotificationMessageFormatter {
   /**
    * {@code TASK_ASSIGNED}'in YENI atanana giden govdesi (digerleri {@link #format} govdesini alir).
    */
-  public static final String ASSIGNED_TO_YOU = "Gorev size atandi.";
+  public static final String ASSIGNED_TO_YOU = "Görev size atandı.";
 
   static final int MAX_TITLE_LENGTH = 200;
 
@@ -43,7 +44,7 @@ public final class NotificationMessageFormatter {
   static final int MAX_BODY_LENGTH = 500;
 
   private static final String BLOCKED_PREFIX =
-      "PR merge edildi ama gorev Done'a tasinmadi; once bitmesi gereken: ";
+      "PR birleştirildi ama görev Tamamlandı durumuna taşınmadı; önce bitmesi gereken: ";
   private static final String ARROW = " → ";
 
   public static boolean isNotifiable(String eventType) {
@@ -75,22 +76,26 @@ public final class NotificationMessageFormatter {
       if (oldStatus == null || newStatus == null) {
         return Optional.empty();
       }
-      return Optional.of(new String[] {header, "Durum degisti: " + oldStatus + ARROW + newStatus});
+      return Optional.of(
+          new String[] {
+            header,
+            "Durum değişti: " + TaskStatus.label(oldStatus) + ARROW + TaskStatus.label(newStatus)
+          });
     }
     if (TASK_APPROVED.equals(eventType)) {
-      return Optional.of(new String[] {header, "Onaylandi."});
+      return Optional.of(new String[] {header, "Onaylandı."});
     }
     if (TASK_APPROVAL_REVOKED.equals(eventType)) {
-      return Optional.of(new String[] {header, "Onayi geri alindi."});
+      return Optional.of(new String[] {header, "Onayı geri alındı."});
     }
     if (TASK_DUE_DATE_CHANGED.equals(eventType)) {
       String newDueDate = payload.path("newDueDate").asString(null);
-      String body = newDueDate == null ? "Bitis tarihi kaldirildi." : "Bitis tarihi: " + newDueDate;
+      String body = newDueDate == null ? "Bitiş tarihi kaldırıldı." : "Bitiş tarihi: " + newDueDate;
       return Optional.of(new String[] {header, body});
     }
     if (TASK_ASSIGNED.equals(eventType)) {
       String newAssigneeId = payload.path("newAssigneeId").asString(null);
-      String body = newAssigneeId == null ? "Atama kaldirildi." : "Atanan kisi degisti.";
+      String body = newAssigneeId == null ? "Atama kaldırıldı." : "Atanan kişi değişti.";
       return Optional.of(new String[] {header, body});
     }
     if (COMMENT_ADDED.equals(eventType)) {
@@ -112,7 +117,7 @@ public final class NotificationMessageFormatter {
    */
   static String transitionBlockedBody(List<String> keys) {
     int total = keys.size();
-    String best = BLOCKED_PREFIX + total + " gorev";
+    String best = BLOCKED_PREFIX + total + " görev";
     StringBuilder joined = new StringBuilder();
     for (int count = 1; count <= total; count++) {
       if (count > 1) {
@@ -123,11 +128,11 @@ public final class NotificationMessageFormatter {
       int length =
           BLOCKED_PREFIX.length()
               + joined.length()
-              + (remaining == 0 ? 0 : (" ve " + remaining + " gorev daha").length());
+              + (remaining == 0 ? 0 : (" ve " + remaining + " görev daha").length());
       if (length > MAX_BODY_LENGTH) {
         break;
       }
-      best = BLOCKED_PREFIX + joined + (remaining == 0 ? "" : " ve " + remaining + " gorev daha");
+      best = BLOCKED_PREFIX + joined + (remaining == 0 ? "" : " ve " + remaining + " görev daha");
     }
     return best;
   }

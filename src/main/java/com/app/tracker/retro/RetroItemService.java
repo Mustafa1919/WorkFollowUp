@@ -48,14 +48,14 @@ public class RetroItemService {
   @Transactional
   public RetroItemResponse create(UUID sprintId, String kind, String body, UUID authorId) {
     if (!VALID_KINDS.contains(kind)) {
-      throw new BusinessRuleException("Gecersiz madde turu: " + kind);
+      throw new BusinessRuleException("Geçersiz madde türü: " + kind);
     }
     Sprint sprint = requireSprint(sprintId);
     UUID id = UUID.randomUUID();
     retroItemRepository.insert(id, sprint.getWorkspaceId(), sprintId, kind, body.trim(), authorId);
     Row row = retroItemRepository.findById(id).orElseThrow();
     String authorName =
-        userRepository.findById(authorId).map(User::getFullName).orElse("Bilinmeyen kullanici");
+        userRepository.findById(authorId).map(User::getFullName).orElse("Bilinmeyen kullanıcı");
     return new RetroItemResponse(
         row.id(),
         row.kind(),
@@ -79,7 +79,7 @@ public class RetroItemService {
                     row.kind(),
                     row.body(),
                     row.authorId(),
-                    names.getOrDefault(row.authorId(), "Bilinmeyen kullanici"),
+                    names.getOrDefault(row.authorId(), "Bilinmeyen kullanıcı"),
                     row.taskId(),
                     row.createdAt()))
         .toList();
@@ -102,10 +102,10 @@ public class RetroItemService {
     Row row = requireItem(id);
     if (!RetroItemKind.ACTION.equals(row.kind())) {
       throw new BusinessRuleException(
-          "Yalniz 'action' turundeki maddeler goreve donusturulebilir.");
+          "Yalnız 'action' türündeki maddeler göreve dönüştürülebilir.");
     }
     if (row.taskId() != null) {
-      throw new BusinessRuleException("Bu madde zaten bir goreve donusturulmus.");
+      throw new BusinessRuleException("Bu madde zaten bir göreve dönüştürülmüş.");
     }
     Sprint sprint = requireSprint(row.sprintId());
     // Sprint bu noktada ZATEN tamamlanmis (retro yalniz tamamlanmis sprint'ler icin gorulur) —
@@ -120,13 +120,13 @@ public class RetroItemService {
   private Row requireItem(UUID id) {
     return retroItemRepository
         .findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException("Retro maddesi bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Retrospektif maddesi bulunamadı."));
   }
 
   private Sprint requireSprint(UUID sprintId) {
     return sprintRepository
         .findById(sprintId)
-        .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadı."));
   }
 
   private Map<UUID, String> resolveAuthorNames(List<Row> rows) {

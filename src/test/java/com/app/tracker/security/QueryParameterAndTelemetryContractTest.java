@@ -69,8 +69,8 @@ import tools.jackson.databind.ObjectMapper;
 class QueryParameterAndTelemetryContractTest {
 
   private static final String PROBLEM =
-      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Gecersiz Istek\","
-          + "\"status\":400,\"detail\":\"Sorgu parametresi gecersiz karakter iceriyor.\"}";
+      "{\"type\":\"https://api.app.com/errors/bad-request\",\"title\":\"Geçersiz İstek\","
+          + "\"status\":400,\"detail\":\"Sorgu parametresi geçersiz karakter içeriyor.\"}";
 
   @Test
   void R2_R3_filterHasRequiredRegistrationBeforeSecurity() {

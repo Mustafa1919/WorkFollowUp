@@ -66,7 +66,7 @@ public class AuthController {
       HttpServletRequest httpRequest) {
     verifyOriginForCookieEndpoints(httpRequest);
     if (refreshTokenCookie == null) {
-      throw new BusinessRuleException("Refresh token bulunamadi.");
+      throw new BusinessRuleException("Oturum yenileme anahtarı bulunamadı.");
     }
     return withRefreshCookie(authService.refresh(refreshTokenCookie));
   }
@@ -137,7 +137,7 @@ public class AuthController {
     if (origin != null
         && !corsProperties.getAllowedOrigins().isEmpty()
         && !corsProperties.getAllowedOrigins().contains(origin)) {
-      throw new BusinessRuleException("Gecersiz istek kaynagi.");
+      throw new BusinessRuleException("Geçersiz istek kaynağı.");
     }
     if (origin == null) {
       // Origin yoksa tarayicinin Sec-Fetch-Site basligina bak: yalniz iki bilinen capraz deger
@@ -146,7 +146,7 @@ public class AuthController {
       if (site != null
           && ("same-site".equalsIgnoreCase(site.trim())
               || "cross-site".equalsIgnoreCase(site.trim()))) {
-        throw new BusinessRuleException("Gecersiz istek kaynagi.");
+        throw new BusinessRuleException("Geçersiz istek kaynağı.");
       }
     }
   }

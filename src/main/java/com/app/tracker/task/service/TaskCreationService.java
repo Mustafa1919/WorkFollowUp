@@ -68,10 +68,10 @@ public class TaskCreationService {
     Task parent = taskService.getTask(parentTaskId);
     accessPolicy.checkCreateSubtask(parent, actorId);
     if (parent.getParentTaskId() != null) {
-      throw new BusinessRuleException("Alt gorevin altina alt gorev acilamaz.");
+      throw new BusinessRuleException("Alt görevin altına alt görev açılamaz.");
     }
     if (parent.isApproved()) {
-      throw new BusinessRuleException("Onaylanmis gorevin altina alt gorev acilamaz.");
+      throw new BusinessRuleException("Onaylanmış görevin altına alt görev açılamaz.");
     }
     UUID assigneeId = parent.getAssigneeId();
     if (request.assigneeId() != null) {

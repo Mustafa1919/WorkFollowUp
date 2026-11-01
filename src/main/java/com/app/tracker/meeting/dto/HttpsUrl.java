@@ -15,7 +15,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HttpsUrl {
 
-  String message() default "must be an absolute https URL";
+  String message() default
+      "Toplantı bağlantısı https:// ile başlamalı ve geçerli bir sunucu adı içermeli.";
 
   Class<?>[] groups() default {};
 

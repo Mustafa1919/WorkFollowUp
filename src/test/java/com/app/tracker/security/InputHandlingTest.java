@@ -1074,7 +1074,7 @@ class InputHandlingTest extends AbstractIntegrationTest {
     JsonNode notification = developerNotificationContaining("ZZINJ-2");
     assertNotNull(notification, "Bildirim yazilmadi");
     assertEquals(
-        "PR merge edildi ama gorev Done'a tasinmadi; once bitmesi gereken: ZZINJ-2, YYINJ-7",
+        "PR birleştirildi ama görev Tamamlandı durumuna taşınmadı; önce bitmesi gereken: ZZINJ-2, YYINJ-7",
         notification.path("body").asString(""));
   }
 
@@ -1782,7 +1782,7 @@ class InputHandlingTest extends AbstractIntegrationTest {
     assertEquals(202, status);
     JsonNode mail =
         awaitMail(
-            victim.email(), m -> m.path("Subject").asString("").contains("sifirlama"), "sifirlama");
+            victim.email(), m -> m.path("Subject").asString("").contains("sıfırlama"), "sıfırlama");
     assertLinksUsePublicUrl(mail, "parola sifirlama");
   }
 
@@ -1800,7 +1800,7 @@ class InputHandlingTest extends AbstractIntegrationTest {
     assertEquals(202, r.statusCode(), describe(r));
     JsonNode mail =
         awaitMail(
-            user.email(), m -> m.path("Subject").asString("").contains("sifirlama"), "sifirlama");
+            user.email(), m -> m.path("Subject").asString("").contains("sıfırlama"), "sıfırlama");
     assertLinksUsePublicUrl(mail, "normal sifirlama");
   }
 
@@ -1829,7 +1829,7 @@ class InputHandlingTest extends AbstractIntegrationTest {
               : http().post("/api/v1/auth/register", (String) null, null, body).statusCode();
       assertEquals(201, status);
       JsonNode mail =
-          awaitMail(email, m -> m.path("Subject").asString("").contains("dogrula"), "dogrulama");
+          awaitMail(email, m -> m.path("Subject").asString("").contains("doğrula"), "dogrulama");
       assertLinksUsePublicUrl(mail, "dogrulama (sahte=" + spoof + ")");
     }
   }

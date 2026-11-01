@@ -59,7 +59,7 @@ public class SlackIntegrationService {
   public SlackIntegration get() {
     return repository
         .findById(requireWorkspace())
-        .orElseThrow(() -> new ResourceNotFoundException("Slack entegrasyonu bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Slack entegrasyonu bulunamadı."));
   }
 
   @Transactional
@@ -67,7 +67,7 @@ public class SlackIntegrationService {
     repository.delete(
         repository
             .findById(requireWorkspace())
-            .orElseThrow(() -> new ResourceNotFoundException("Slack entegrasyonu bulunamadi.")));
+            .orElseThrow(() -> new ResourceNotFoundException("Slack entegrasyonu bulunamadı.")));
   }
 
   /**

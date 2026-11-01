@@ -29,10 +29,10 @@ public class OpenApiConfig {
             new Info()
                 .title("WorkFollowUp API")
                 .description(
-                    "Cok kiracili is takip ve analiz SaaS - Core API. "
-                        + "Kimlik dogrulama: /api/v1/auth/login ile alinan access token "
-                        + "Authorization: Bearer header'inda gonderilir. Workspace'e bagli "
-                        + "endpoint'ler ayrica X-Workspace-Id header'i gerektirir.")
+                    "Çok kiracılı iş takip ve analiz SaaS - Çekirdek API. "
+                        + "Kimlik doğrulama: /api/v1/auth/login ile alınan erişim anahtarı "
+                        + "Authorization: Bearer başlığında gönderilir. Çalışma alanına bağlı "
+                        + "uçlar ayrıca çalışma alanı kimliği başlığını gerektirir.")
                 .version("v1"))
         .components(
             new Components()

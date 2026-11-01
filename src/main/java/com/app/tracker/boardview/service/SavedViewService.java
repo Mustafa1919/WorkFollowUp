@@ -47,7 +47,7 @@ public class SavedViewService {
     SavedView view =
         savedViewRepository
             .findById(viewId)
-            .orElseThrow(() -> new ResourceNotFoundException("Gorunum bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Görünüm bulunamadı."));
     if (!view.getUserId().equals(userId)) {
       throw new AccessDeniedException("Yalniz gorunumu kaydeden kisi silebilir.");
     }
@@ -57,6 +57,6 @@ public class SavedViewService {
   private Project requireProject(UUID projectId) {
     return projectRepository
         .findById(projectId)
-        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Proje bulunamadı."));
   }
 }

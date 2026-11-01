@@ -72,7 +72,7 @@ public class WebhookIntegrationService {
   private WebhookIntegration require(UUID integrationId) {
     return repository
         .findById(integrationId)
-        .orElseThrow(() -> new ResourceNotFoundException("Entegrasyon bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Entegrasyon bulunamadı."));
   }
 
   private IntegrationWithSecret withSecret(WebhookIntegration integration) {

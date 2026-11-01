@@ -115,7 +115,7 @@ public class StandupDigestJob {
       return;
     }
     String text =
-        "Standup özeti hazır: "
+        "Günlük toplantı özeti hazır: "
             + meeting.getTitle()
             + " ("
             + participantCount

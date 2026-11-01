@@ -78,7 +78,7 @@ public class PatAuthenticationFilter extends OncePerRequestFilter {
     response
         .getWriter()
         .write(
-            "{\"type\":\"https://api.app.com/errors/rate-limited\",\"title\":\"Cok Fazla Istek\","
-                + "\"status\":429,\"detail\":\"Bu token icin istek siniri asildi.\"}");
+            "{\"type\":\"https://api.app.com/errors/rate-limited\",\"title\":\"Çok Fazla İstek\","
+                + "\"status\":429,\"detail\":\"Bu anahtar için istek sınırı aşıldı.\"}");
   }
 }

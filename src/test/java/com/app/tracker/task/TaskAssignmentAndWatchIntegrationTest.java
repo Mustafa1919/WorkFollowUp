@@ -192,7 +192,7 @@ class TaskAssignmentAndWatchIntegrationTest extends AbstractIntegrationTest {
     assertTrue(forUser(adminId).isEmpty(), "aktor (izleyici olsa da) haric");
     List<Notification> viewerInbox = forUser(viewerId);
     assertEquals(1, viewerInbox.size(), "izlemeyi secen VIEWER bildirim alir");
-    assertEquals("Atanan kisi degisti.", viewerInbox.get(0).getBody());
+    assertEquals("Atanan kişi değişti.", viewerInbox.get(0).getBody());
   }
 
   @Test

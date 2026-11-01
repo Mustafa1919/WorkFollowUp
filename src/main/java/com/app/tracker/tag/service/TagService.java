@@ -131,7 +131,7 @@ public class TagService {
   /** TaskService'teki updateStatus/updateDueDate ile AYNI kilit kurali: onaylanmis gorev donuk. */
   private static void rejectIfApproved(Task task) {
     if (task.isApproved()) {
-      throw new BusinessRuleException("Onaylanmis gorevin etiketleri degistirilemez.");
+      throw new BusinessRuleException("Onaylanmış görevin etiketleri değiştirilemez.");
     }
   }
 
@@ -188,7 +188,7 @@ public class TagService {
   private Tag requireTag(UUID tagId) {
     return tagRepository
         .findById(tagId)
-        .orElseThrow(() -> new ResourceNotFoundException("Etiket bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Etiket bulunamadı."));
   }
 
   private Task requireTask(UUID taskId) {
@@ -197,13 +197,14 @@ public class TagService {
     return taskRepository
         .findById(taskId)
         .filter(task -> !task.isDeleted())
-        .orElseThrow(() -> new ResourceNotFoundException("Gorev bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Görev bulunamadı."));
   }
 
   private static UUID requireWorkspace() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("Once bir workspace secmelisiniz (X-Workspace-Id header).");
+      throw new BusinessRuleException(
+          "Önce bir çalışma alanı seçmelisiniz (X-Workspace-Id başlığı).");
     }
     return workspaceId;
   }

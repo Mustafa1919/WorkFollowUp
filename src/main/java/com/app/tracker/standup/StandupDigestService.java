@@ -98,7 +98,8 @@ public class StandupDigestService {
     boolean updated =
         digestRepository.updateNote(meetingId, occurrenceDate, userId, normalize(note));
     if (!updated) {
-      throw new ResourceNotFoundException("Bu occurrence icin standup ozetiniz bulunamadi.");
+      throw new ResourceNotFoundException(
+          "Bu toplantı tekrarı için günlük toplantı özetiniz bulunamadı.");
     }
   }
 
@@ -115,7 +116,7 @@ public class StandupDigestService {
             row ->
                 new StandupDigestResponse(
                     row.userId(),
-                    names.getOrDefault(row.userId(), "Bilinmeyen kullanici"),
+                    names.getOrDefault(row.userId(), "Bilinmeyen kullanıcı"),
                     objectMapper.readValue(row.factsJson(), StandupFacts.class),
                     row.note(),
                     row.createdAt()))
@@ -154,7 +155,7 @@ public class StandupDigestService {
             "STANDUP_DIGEST_READY",
             null,
             null,
-            "Standup özetin hazır: " + meeting.getTitle(),
+            "Günlük toplantı özetin hazır: " + meeting.getTitle(),
             occurrenceDate + " için günlük özetin /standups sayfasında.",
             Instant.now());
     notificationRepository.save(notification);

@@ -41,7 +41,7 @@ public class ReportController {
       @RequestParam(required = false) List<UUID> projectIds) {
     if (projectIds != null && projectIds.size() > MAX_PROJECT_FILTER) {
       throw new BusinessRuleException(
-          "En fazla " + MAX_PROJECT_FILTER + " proje suzgeci verilebilir.");
+          "En fazla " + MAX_PROJECT_FILTER + " proje süzgeci verilebilir.");
     }
     return periodReportService.report(new ReportPeriod(year, quarter), projectIds);
   }

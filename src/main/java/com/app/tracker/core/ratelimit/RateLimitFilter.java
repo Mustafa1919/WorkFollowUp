@@ -104,8 +104,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     response
         .getWriter()
         .write(
-            "{\"type\":\"https://api.app.com/errors/rate-limited\",\"title\":\"Cok Fazla Istek\","
-                + "\"status\":429,\"detail\":\"Istek siniri asildi, lutfen daha sonra tekrar"
+            "{\"type\":\"https://api.app.com/errors/rate-limited\",\"title\":\"Çok Fazla İstek\","
+                + "\"status\":429,\"detail\":\"İstek sınırı aşıldı, lütfen daha sonra tekrar"
                 + " deneyin.\"}");
   }
 }

@@ -61,15 +61,16 @@ public class RetroService {
     Sprint sprint =
         sprintRepository
             .findById(sprintId)
-            .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Sprint bulunamadı."));
     if (!SprintStatus.COMPLETED.equals(sprint.getStatus())) {
-      throw new BusinessRuleException("Retro yalniz tamamlanmis sprint'ler icin gorulebilir.");
+      throw new BusinessRuleException(
+          "Retrospektif yalnız tamamlanmış sprint'ler için görülebilir.");
     }
     SprintAnalytics analytics =
         sprintAnalyticsRepository
             .findById(sprintId)
             .orElseThrow(
-                () -> new ResourceNotFoundException("Bu sprint icin analitik henuz hesaplanmadi."));
+                () -> new ResourceNotFoundException("Bu sprint için analitik henüz hesaplanmadı."));
 
     List<UUID> endMembers =
         snapshotRepository.membersAt(sprint.getProjectId(), sprintId, sprint.getCompletedAt());

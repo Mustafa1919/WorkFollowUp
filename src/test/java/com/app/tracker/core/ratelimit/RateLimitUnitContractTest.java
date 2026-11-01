@@ -132,7 +132,7 @@ class RateLimitUnitContractTest {
     assertTrue(over.getContentType().startsWith("application/problem+json"));
     var body = new ObjectMapper().readTree(over.getContentAsString());
     assertEquals("https://api.app.com/errors/rate-limited", body.path("type").asString());
-    assertEquals("Cok Fazla Istek", body.path("title").asString());
+    assertEquals("Çok Fazla İstek", body.path("title").asString());
     assertEquals(429, body.path("status").asInt());
     assertFalse(body.path("detail").asString("").isBlank());
     assertFalse(

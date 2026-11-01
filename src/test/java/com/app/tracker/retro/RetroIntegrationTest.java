@@ -137,7 +137,7 @@ class RetroIntegrationTest extends AbstractIntegrationTest {
 
     List<RetroItemResponse> items = inWorkspace(() -> retroItemService.list(completed.getId()));
     assertEquals(2, items.size());
-    assertEquals("Bilinmeyen kullanici".equals(items.get(0).authorName()), false);
+    assertEquals("Bilinmeyen kullanıcı".equals(items.get(0).authorName()), false);
 
     UUID otherUserId = registerMember("retro-other", WorkspaceRole.DEVELOPER);
     assertThrows(

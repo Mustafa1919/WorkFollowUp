@@ -233,7 +233,7 @@ class RateLimitTest extends AbstractIntegrationTest {
       // Hiz siniri varsa 429 da kabul edilir (e-posta uretilmedi); 5xx kabul edilmez.
       assertTrue(r.statusCode() == 202 || r.statusCode() == 429, "durum " + r.statusCode());
     }
-    int mails = settledCount(victim.email(), "sifirlama", 20, 20_000);
+    int mails = settledCount(victim.email(), "sıfırlama", 20, 20_000);
     assertTrue(mails <= 5, "20 istek sonrasi aliciya dusen sifirlama e-postasi: " + mails);
   }
 
@@ -247,11 +247,11 @@ class RateLimitTest extends AbstractIntegrationTest {
             "{\"email\":\"" + user.email() + "\"}",
             randomIp());
     assertEquals(202, r.statusCode(), r.body());
-    int mails = settledCount(user.email(), "sifirlama", 1, 30_000);
+    int mails = settledCount(user.email(), "sıfırlama", 1, 30_000);
     // Birinci posta geldikten sonra 3 sn daha beklenir: ikinci posta uretilmemeli.
     Thread.sleep(3_000);
     assertEquals(1, mails);
-    assertEquals(1, inbox.count(user.email(), "sifirlama"));
+    assertEquals(1, inbox.count(user.email(), "sıfırlama"));
   }
 
   // =========================================================================================

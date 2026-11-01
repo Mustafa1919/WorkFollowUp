@@ -84,7 +84,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     problem.setType(URI.create("https://api.app.com/errors/business-rule-violation"));
-    problem.setTitle("Is Kurali Ihlali");
+    problem.setTitle("İş Kuralı İhlali");
     return problem;
   }
 
@@ -93,7 +93,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
     problem.setType(URI.create("https://api.app.com/errors/refresh-token-reuse"));
-    problem.setTitle("Oturum Sonlandirildi");
+    problem.setTitle("Oturum Sonlandırıldı");
     return problem;
   }
 
@@ -101,7 +101,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   public ProblemDetail handleResourceNotFound(ResourceNotFoundException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     problem.setType(URI.create("https://api.app.com/errors/not-found"));
-    problem.setTitle("Kaynak Bulunamadi");
+    problem.setTitle("Kaynak Bulunamadı");
     return problem;
   }
 
@@ -110,9 +110,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     auditAccessDenied(request);
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
-            HttpStatus.FORBIDDEN, "Bu islemi yapmak icin yetkiniz yok.");
+            HttpStatus.FORBIDDEN, "Bu işlemi yapmak için yetkiniz yok.");
     problem.setType(URI.create("https://api.app.com/errors/forbidden"));
-    problem.setTitle("Erisim Reddedildi");
+    problem.setTitle("Erişim Reddedildi");
     return problem;
   }
 
@@ -140,7 +140,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, ex.detail());
     problem.setType(URI.create("https://api.app.com/errors/payload-too-large"));
-    problem.setTitle("Istek Govdesi Cok Buyuk");
+    problem.setTitle("İstek Gövdesi Çok Büyük");
     return problem;
   }
 
@@ -161,9 +161,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.UNPROCESSABLE_ENTITY,
-            "Gonderilen verilerde %d adet hata bulundu.".formatted(invalidParams.size()));
+            "Gönderilen verilerde %d adet hata bulundu.".formatted(invalidParams.size()));
     problem.setType(URI.create("https://api.app.com/errors/validation-failed"));
-    problem.setTitle("Dogrulama Hatasi");
+    problem.setTitle("Doğrulama Hatası");
     problem.setProperty("invalid_params", invalidParams);
     return ResponseEntity.status(problem.getStatus()).body(problem);
   }
@@ -175,9 +175,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem =
         ProblemDetail.forStatusAndDetail(
             HttpStatus.INTERNAL_SERVER_ERROR,
-            "Sistemde beklenmeyen bir hata olustu. Lutfen daha sonra tekrar deneyin.");
+            "Sistemde beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
     problem.setType(URI.create("https://api.app.com/errors/internal-error"));
-    problem.setTitle("Sunucu Hatasi");
+    problem.setTitle("Sunucu Hatası");
     return problem;
   }
 

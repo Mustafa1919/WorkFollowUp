@@ -37,8 +37,8 @@ public final class SlackWebhookUrlPolicy {
         || raw.length() > MAX_LENGTH
         || !SLACK_INCOMING_WEBHOOK.matcher(raw).matches()) {
       throw new BusinessRuleException(
-          "Gecersiz Slack webhook adresi: https://hooks.slack.com/services/T.../B.../... "
-              + "bicimi bekleniyor.");
+          "Geçersiz Slack webhook adresi: https://hooks.slack.com/services/T.../B.../... "
+              + "biçimi bekleniyor.");
     }
     return URI.create(raw);
   }

@@ -92,9 +92,9 @@ public class WorkspaceMemberService {
     User user =
         userRepository
             .findByEmail(EmailAddresses.canonical(email))
-            .orElseThrow(() -> new ResourceNotFoundException("Kullanici bulunamadi."));
+            .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı."));
     if (workspaceUserRepository.findByWorkspaceIdAndUserId(workspaceId, user.getId()).isPresent()) {
-      throw new BusinessRuleException("Kullanici zaten bu workspace'in uyesi.");
+      throw new BusinessRuleException("Kullanıcı zaten bu çalışma alanının üyesi.");
     }
     workspaceUserRepository.save(WorkspaceUser.of(workspaceId, user.getId(), role));
     audit(SecurityAuditEvent.MEMBER_ADDED, workspaceId, user.getId(), role);
@@ -148,7 +148,7 @@ public class WorkspaceMemberService {
   private void rejectIfLastAdmin(UUID workspaceId) {
     if (workspaceUserRepository.countByWorkspaceIdAndRole(workspaceId, WorkspaceRole.ADMIN) <= 1) {
       throw new BusinessRuleException(
-          "Workspace'in son ADMIN'i cikarilamaz veya rolu degistirilemez.");
+          "Çalışma alanının son ADMIN'i çıkarılamaz veya rolü değiştirilemez.");
     }
   }
 
@@ -158,26 +158,27 @@ public class WorkspaceMemberService {
 
   private static void validateRole(String role) {
     if (!VALID_ROLES.contains(role)) {
-      throw new BusinessRuleException("Gecersiz rol: " + role);
+      throw new BusinessRuleException("Geçersiz rol: " + role);
     }
   }
 
   private WorkspaceUser requireMember(UUID workspaceId, UUID userId) {
     return workspaceUserRepository
         .findByWorkspaceIdAndUserId(workspaceId, userId)
-        .orElseThrow(() -> new ResourceNotFoundException("Uye bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Üye bulunamadı."));
   }
 
   private User requireUser(UUID userId) {
     return userRepository
         .findById(userId)
-        .orElseThrow(() -> new ResourceNotFoundException("Kullanici bulunamadi."));
+        .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı."));
   }
 
   private static UUID requireWorkspace() {
     UUID workspaceId = TenantContext.getWorkspaceId();
     if (workspaceId == null) {
-      throw new BusinessRuleException("Once bir workspace secmelisiniz (X-Workspace-Id header).");
+      throw new BusinessRuleException(
+          "Önce bir çalışma alanı seçmelisiniz (X-Workspace-Id başlığı).");
     }
     return workspaceId;
   }

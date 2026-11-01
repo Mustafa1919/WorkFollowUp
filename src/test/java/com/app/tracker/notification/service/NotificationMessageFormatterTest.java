@@ -33,7 +33,7 @@ class NotificationMessageFormatterTest {
     assertArrayEquals(
         new String[] {
           "ENG-12: Login sayfasi",
-          "PR merge edildi ama gorev Done'a tasinmadi; once bitmesi gereken: ENG-2, OPS-7"
+          "PR birleştirildi ama görev Tamamlandı durumuna taşınmadı; önce bitmesi gereken: ENG-2, OPS-7"
         },
         blocked("{\"blockerKeys\":[\"ENG-2\",\"OPS-7\"]}").orElseThrow());
   }
@@ -47,14 +47,15 @@ class NotificationMessageFormatterTest {
     String body = NotificationMessageFormatter.transitionBlockedBody(keys);
     assertTrue(body.length() <= NotificationMessageFormatter.MAX_BODY_LENGTH, body);
     assertTrue(body.contains("PROJECTKEY-1001, PROJECTKEY-1002"), body);
-    assertTrue(body.matches(".* ve \\d+ gorev daha$"), body);
+    assertTrue(body.matches(".* ve \\d+ görev daha$"), body);
     int shown = body.split(", ").length;
-    assertEquals(200 - shown + " gorev daha", body.substring(body.lastIndexOf(" ve ") + 4));
+    assertEquals(200 - shown + " görev daha", body.substring(body.lastIndexOf(" ve ") + 4));
   }
 
   @Test
   void exactlyFittingListIsNotSummarized() {
-    String prefix = "PR merge edildi ama gorev Done'a tasinmadi; once bitmesi gereken: ";
+    String prefix =
+        "PR birleştirildi ama görev Tamamlandı durumuna taşınmadı; önce bitmesi gereken: ";
     String key = "K".repeat(NotificationMessageFormatter.MAX_BODY_LENGTH - prefix.length());
     String body = NotificationMessageFormatter.transitionBlockedBody(List.of(key));
     assertEquals(prefix + key, body);
@@ -66,7 +67,7 @@ class NotificationMessageFormatterTest {
     String body =
         NotificationMessageFormatter.transitionBlockedBody(List.of("K".repeat(600), "ENG-2"));
     assertTrue(body.length() <= NotificationMessageFormatter.MAX_BODY_LENGTH, body);
-    assertTrue(body.endsWith("once bitmesi gereken: 2 gorev"), body);
+    assertTrue(body.endsWith("önce bitmesi gereken: 2 görev"), body);
   }
 
   @Test
