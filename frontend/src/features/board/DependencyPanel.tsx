@@ -54,7 +54,7 @@ export function DependencyPanel({ task, canWrite }: { task: Task; canWrite: bool
 
       {task.blockedBy.length > 0 && (
         <RefList
-          label="Bekleniyor (Blocked by)"
+          label="Engelleyen görevler"
           refs={task.blockedBy}
           canWrite={canWrite}
           onRemove={(otherId) => unlink.mutate({ taskId: task.id, blockingTaskId: otherId }, { onError })}
@@ -62,7 +62,7 @@ export function DependencyPanel({ task, canWrite }: { task: Task; canWrite: bool
       )}
       {task.blocking.length > 0 && (
         <RefList
-          label="Blokluyor (Blocking)"
+          label="Engellenen görevler"
           refs={task.blocking}
           canWrite={canWrite}
           onRemove={(otherId) => unlink.mutate({ taskId: otherId, blockingTaskId: task.id }, { onError })}

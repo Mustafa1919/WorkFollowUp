@@ -79,7 +79,7 @@ export function MeetingsPage() {
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="mr-auto">
           <h1 className="text-2xl font-semibold tracking-tight">Toplantılar</h1>
-          <p className="text-sm text-muted">Workspace genelinde tekrarlanan toplantı planı.</p>
+          <p className="text-sm text-muted">Çalışma alanı genelinde tekrarlanan toplantı planı.</p>
         </div>
         {canManage && (
           <Button size="sm" onClick={openNew}>

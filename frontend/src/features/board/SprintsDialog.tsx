@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/api'
 import { fmt, iso } from '@/lib/dates'
 import { cn } from '@/lib/cn'
 import { Dialog } from '@/components/ui/Dialog'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Field, Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 
@@ -64,7 +65,7 @@ export function SprintsDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Sprintler" description="Tamamlanan sprintler velocity grafiğine girer.">
+    <Dialog open={open} onOpenChange={onOpenChange} title="Sprintler" description="Tamamlanan sprintler hız grafiğine girer.">
       <ul className="mb-6 max-h-64 space-y-2 overflow-y-auto">
         {sprints?.length === 0 && <li className="py-4 text-center text-sm text-muted">Henüz sprint yok.</li>}
         {sprints?.map((s) => (
@@ -97,10 +98,10 @@ export function SprintsDialog({
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Başlangıç" id="s-start">
-              <Input id="s-start" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} min={iso(today)} />
+              <DatePicker id="s-start" required value={startDate} onChange={setStartDate} min={iso(today)} />
             </Field>
             <Field label="Bitiş" id="s-end">
-              <Input id="s-end" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate} />
+              <DatePicker id="s-end" required value={endDate} onChange={setEndDate} min={startDate} />
             </Field>
           </div>
           <Button type="submit" loading={actions.create.isPending} className="w-full justify-center">

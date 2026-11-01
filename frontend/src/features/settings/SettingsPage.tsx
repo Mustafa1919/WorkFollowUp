@@ -64,21 +64,21 @@ export function SettingsPage() {
         <Section title="Masaüstü bildirimleri" text="Uygulama sekmesi arka plandayken yeni bildirimler işletim sistemi bildirimi olarak da görünür. Tercihin bu tarayıcıda saklanır." icon={<Bell size={18} />}>
           <DesktopNotificationSettings />
         </Section>
-        <Section title="Üyeler" text="Workspace'e kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
+        <Section title="Üyeler" text="Çalışma alanına kayıtlı bir kullanıcıyı anında ekle veya e-posta ile davet gönder." icon={<Users size={18} />}>
           <MemberSettings isAdmin={canManageMembers} />
         </Section>
         <Section title="Bildirim tercihleri" text="Hangi olaylar için e-posta almak istediğini seç." icon={<Mail size={18} />}>
           <NotificationPreferencesSettings />
         </Section>
         <Section
-          title="Kişisel erişim token'ları"
-          text="Kendi script/otomasyonlarından API'ye giriş yapmadan erişmek için kullan. Her token dakikada sınırlı sayıda isteğe tabidir."
+          title="Kişisel erişim anahtarları"
+          text="Kendi betik/otomasyonlarından API'ye giriş yapmadan erişmek için kullan. Her anahtar dakikada sınırlı sayıda isteğe tabidir."
           icon={<KeyRound size={18} />}
         >
           <AccessTokenSettings />
         </Section>
         {canManageTags && (
-          <Section title="Etiketler" text="Görevleri sınıflandırmak için workspace genelinde etiketler." icon={<TagIcon size={18} />}>
+          <Section title="Etiketler" text="Görevleri sınıflandırmak için çalışma alanı genelinde etiketler." icon={<TagIcon size={18} />}>
             <TagSettings />
           </Section>
         )}
@@ -102,7 +102,7 @@ export function SettingsPage() {
           </>
         ) : (
           <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border p-5 text-sm text-muted">
-            <Lock size={16} /> Entegrasyon ayarları yalnızca workspace yöneticilerine (ADMIN) açıktır.
+            <Lock size={16} /> Entegrasyon ayarları yalnızca çalışma alanı yöneticilerine açıktır.
           </div>
         )}
       </div>
@@ -236,7 +236,7 @@ function MemberSettings({ isAdmin }: { isAdmin: boolean }) {
           <Input
             type="email"
             required
-            placeholder="kullanici@sirket.com"
+            placeholder="ornek@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -257,7 +257,7 @@ function MemberSettings({ isAdmin }: { isAdmin: boolean }) {
         </form>
       )}
       <p className="text-xs text-muted">
-        Yalnızca zaten <code className="rounded bg-surface-2 px-1">/register</code> ile kendi hesabını açmış kullanıcılar için — davet
+        Yalnızca kendi hesabını zaten açmış kullanıcılar için — davet
         e-postası gönderilmez, aynı anda üye olur.
       </p>
       {isAdmin && <InvitationSettings />}
@@ -308,7 +308,7 @@ function InvitationSettings() {
         <Input
           type="email"
           required
-          placeholder="kayitsiz-biri@sirket.com"
+          placeholder="davetli@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -582,8 +582,8 @@ function AccessTokenSettings() {
     <div className="space-y-3">
       {revealed && (
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-st-review/40 bg-st-review/10 p-4 text-sm">
-          <p className="mb-2 font-medium">Bu token yalnızca şimdi gösteriliyor — güvenli bir yere kaydet.</p>
-          <CopyRow label="Token" value={revealed} />
+          <p className="mb-2 font-medium">Bu anahtar yalnızca şimdi gösteriliyor — güvenli bir yere kaydet.</p>
+          <CopyRow label="Anahtar" value={revealed} />
           <Button size="sm" variant="ghost" className="mt-2" onClick={() => setRevealed(null)}>
             Kaydettim, gizle
           </Button>
@@ -608,9 +608,9 @@ function AccessTokenSettings() {
           )}
         </div>
       ))}
-      {tokens?.length === 0 && <p className="text-xs text-muted">Henüz token yok.</p>}
+      {tokens?.length === 0 && <p className="text-xs text-muted">Henüz anahtar yok.</p>}
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
-        <Input required maxLength={100} placeholder="Token adı (ör. CLI otomasyonu)" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input required maxLength={100} placeholder="Anahtar adı (ör. CLI otomasyonu)" value={name} onChange={(e) => setName(e.target.value)} />
         <Input
           type="number"
           min={1}
@@ -688,9 +688,9 @@ function WebhookSettings() {
     <div className="space-y-3">
       {secret && (
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-xl border border-st-review/40 bg-st-review/10 p-4 text-sm">
-          <p className="mb-2 font-medium">Bu secret yalnızca şimdi gösteriliyor — GitHub'a kaydet.</p>
-          <CopyRow label="Payload URL" value={`${location.origin}${secret.path}`} />
-          <CopyRow label="Secret" value={secret.secret} />
+          <p className="mb-2 font-medium">Bu gizli anahtar yalnızca şimdi gösteriliyor — GitHub'a kaydet.</p>
+          <CopyRow label="Webhook bildirim adresi" value={`${location.origin}${secret.path}`} />
+          <CopyRow label="Gizli anahtar" value={secret.secret} />
           <Button size="sm" variant="ghost" className="mt-2" onClick={() => setSecret(null)}>
             Kaydettim, gizle
           </Button>
@@ -702,10 +702,10 @@ function WebhookSettings() {
           <div className="min-w-0 flex-1">
             <div className="truncate font-mono text-xs">{w.webhookPath}</div>
             <div className="text-xs text-muted">
-              secret v{w.secretVersion} · {fmt(w.createdAt, 'd MMM yyyy')}
+              Gizli anahtar sürümü {w.secretVersion} · {fmt(w.createdAt, 'd MMM yyyy')}
             </div>
           </div>
-          <Button size="sm" variant="ghost" title="Secret'ı yenile" onClick={() => rotate.mutate(w.id, { onSuccess: reveal, onError })}>
+          <Button size="sm" variant="ghost" title="Gizli anahtarı yenile" onClick={() => rotate.mutate(w.id, { onSuccess: reveal, onError })}>
             <RefreshCw size={14} />
           </Button>
           <Button size="sm" variant="ghost" title="Sil" onClick={() => remove.mutate(w.id, { onError })}>

@@ -46,9 +46,9 @@ export function AnalyticsPage() {
         variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
         className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Metric icon={<Gauge size={18} />} label="Ort. velocity (puan)" value={velocity.data?.averageVelocity?.toFixed(1) ?? '–'} loading={velocity.isLoading} />
-        <Metric icon={<Timer size={18} />} label="Cycle time medyan (30 gün)" value={duration(cycleTime.data?.medianSeconds)} loading={cycleTime.isLoading} />
-        <Metric icon={<Timer size={18} />} label="Cycle time p85" value={duration(cycleTime.data?.p85Seconds)} loading={cycleTime.isLoading} />
+        <Metric icon={<Gauge size={18} />} label="Ort. hız (puan)" value={velocity.data?.averageVelocity?.toFixed(1) ?? '–'} loading={velocity.isLoading} />
+        <Metric icon={<Timer size={18} />} label="Döngü süresi medyanı (30 gün)" value={duration(cycleTime.data?.medianSeconds)} loading={cycleTime.isLoading} />
+        <Metric icon={<Timer size={18} />} label="Döngü süresi p85" value={duration(cycleTime.data?.p85Seconds)} loading={cycleTime.isLoading} />
         <Metric
           icon={<TrendingUp size={18} />}
           label="Örneklem (tamamlanan görev)"
@@ -58,7 +58,7 @@ export function AnalyticsPage() {
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Velocity" subtitle="Tamamlanan sprintlerde taahhüt edilen ve biten story point">
+        <ChartCard title="Hız" subtitle="Tamamlanan sprintlerde taahhüt edilen ve tamamlanan puanlar">
           {velocity.isLoading ? (
             <Skeleton className="h-64" />
           ) : velocityData.length === 0 ? (
@@ -78,7 +78,7 @@ export function AnalyticsPage() {
           )}
         </ChartCard>
 
-        <ChartCard title="Throughput" subtitle="Haftalık tamamlanan görev sayısı (son 12 hafta)">
+        <ChartCard title="Verim" subtitle="Haftalık tamamlanan görev sayısı (son 12 hafta)">
           {throughput.isLoading ? (
             <Skeleton className="h-64" />
           ) : (

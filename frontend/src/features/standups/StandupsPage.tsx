@@ -10,7 +10,8 @@ import type { StandupDigest, StandupTaskRef } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 import { EmptyState, Page } from '@/components/ui/misc'
 import { Button } from '@/components/ui/Button'
-import { Field, Input, inputClass } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { Field, inputClass } from '@/components/ui/Input'
 import { cn } from '@/lib/cn'
 
 const SECTIONS: {
@@ -23,7 +24,7 @@ const SECTIONS: {
   { key: 'progressedYesterday', label: 'Dün ilerleyen', icon: ListTodo, tone: 'text-st-progress' },
   { key: 'inProgress', label: 'Şu an üzerinde çalışılan', icon: ListTodo, tone: 'text-st-progress' },
   { key: 'blocked', label: 'Bloklanan', icon: Octagon, tone: 'text-danger' },
-  { key: 'aging', label: 'Takılan (Aging WIP)', icon: Flame, tone: 'text-st-review' },
+  { key: 'aging', label: 'Uzayan işler', icon: Flame, tone: 'text-st-review' },
   { key: 'githubActivity', label: 'GitHub aktivitesi', icon: GitBranch, tone: 'text-muted' },
 ]
 
@@ -43,8 +44,8 @@ export function StandupsPage() {
       <Page>
         <EmptyState
           icon={<CalendarClock size={22} />}
-          title="Standup özeti açık bir toplantı yok"
-          text="Toplantılar sayfasında bir toplantı için 'Toplantısız standup özeti' seçeneğini açın."
+          title="Günlük toplantı özeti etkinleştirilmiş bir toplantı yok"
+          text="Toplantılar sayfasında bir toplantı için 'Günlük görev özetini planlanan toplantıdan 30 dakika önce katılımcılara gönder' seçeneğini açın."
         />
       </Page>
     )
@@ -53,7 +54,7 @@ export function StandupsPage() {
   return (
     <Page>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-lg font-semibold">Standup</h1>
+        <h1 className="text-lg font-semibold">Günlük toplantı</h1>
         <select
           value={activeMeetingId}
           onChange={(e) => setMeetingId(e.target.value)}
@@ -65,12 +66,12 @@ export function StandupsPage() {
             </option>
           ))}
         </select>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
+        <DatePicker value={date} onChange={setDate} className="w-auto" aria-label="Günlük toplantı tarihi" />
       </div>
 
       {isLoading && <div className="text-sm text-muted">Yükleniyor…</div>}
       {!isLoading && digests?.length === 0 && (
-        <EmptyState icon={<CalendarClock size={22} />} title="Bu tarih için özet yok" text="Özet, occurrence başlamadan 30 dakika önce otomatik üretilir." />
+        <EmptyState icon={<CalendarClock size={22} />} title="Bu tarih için özet yok" text="Özet, toplantı başlamadan 30 dakika önce otomatik üretilir." />
       )}
 
       <div className="space-y-4">

@@ -4,6 +4,7 @@ import { useCan, useCreateTask, useMembers, useSprints, useTags } from '@/api/qu
 import { errorMessage } from '@/lib/api'
 import { todayIso } from '@/lib/dates'
 import { Dialog } from '@/components/ui/Dialog'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Field, Input, inputClass } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
@@ -60,7 +61,7 @@ export function NewTaskDialog({
           <Input id="nt-title" autoFocus required maxLength={255} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
         <Field label="Tarih (opsiyonel, takvimde görünür)" id="nt-due">
-          <Input id="nt-due" type="date" min={todayIso()} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <DatePicker id="nt-due" min={todayIso()} value={dueDate} onChange={setDueDate} />
         </Field>
         <Button type="button" variant="ghost" aria-expanded={expanded} aria-controls="nt-extra" onClick={() => setExpanded(!expanded)}>
           {expanded ? 'Daralt' : 'Genişlet'}
@@ -78,8 +79,8 @@ export function NewTaskDialog({
                     {members?.filter((m) => m.role !== 'VIEWER').map((m) => <option key={m.userId} value={m.userId}>{m.fullName}</option>)}
                   </select>
                 </Field>
-                <Field label="Story point" id="nt-sp">
-                  <Input id="nt-sp" type="number" min={0} max={100} step={1} value={storyPoint} onChange={(e) => setStoryPoint(e.target.value)} onInvalid={() => toast.error('Story point 0-100 arasında tam sayı olmalı')} />
+                <Field label="Puan" id="nt-sp">
+                  <Input id="nt-sp" type="number" min={0} max={100} step={1} value={storyPoint} onChange={(e) => setStoryPoint(e.target.value)} />
                 </Field>
                 <Field label="Sprint" id="nt-sprint">
                   <select id="nt-sprint" className={inputClass} value={sprintId} onChange={(e) => setSprintId(e.target.value)}>

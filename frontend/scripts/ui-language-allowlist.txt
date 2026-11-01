@@ -1,0 +1,6 @@
+# Backend WebSocket kimlik doğrulama protokolüyle birebir eşleşir; kullanıcıya gösterilmez.
+Oturum suresi doldu
+# Backend WebSocket yetki iptali protokolüyle birebir eşleşir; kullanıcıya gösterilmez.
+Yetki geri alindi
+# Backend WebSocket kimlik doğrulama protokolüyle birebir eşleşir; kullanıcıya gösterilmez.
+Kimlik dogrulama basarisiz

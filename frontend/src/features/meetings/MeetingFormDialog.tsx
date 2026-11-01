@@ -7,6 +7,8 @@ import { isHttpsUrl } from '@/lib/safeUrl'
 import { cn } from '@/lib/cn'
 import type { Meeting, MeetingFrequency, Weekday } from '@/lib/types'
 import { Dialog } from '@/components/ui/Dialog'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimeField } from '@/components/ui/TimeField'
 import { Field, Input, inputClass } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 
@@ -137,15 +139,15 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
           value={meetingUrl}
           onChange={(e) => setMeetingUrl(e.target.value)}
         />
-        {urlInvalid && <p className="mt-1 text-xs text-danger">Toplanti linki https:// ile baslamali.</p>}
+        {urlInvalid && <p className="mt-1 text-xs text-danger">Toplantı bağlantısı https:// ile başlamalı.</p>}
       </Field>
 
       <div className="grid grid-cols-3 gap-3">
         <Field label="Tarih" id="mt-date">
-          <Input id="mt-date" type="date" required min={todayIso()} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <DatePicker id="mt-date" required min={todayIso()} value={startDate} onChange={setStartDate} />
         </Field>
         <Field label="Saat" id="mt-time">
-          <Input id="mt-time" type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <TimeField id="mt-time" required value={startTime} onChange={setStartTime} />
         </Field>
         <Field label="Süre (dk)" id="mt-duration">
           <Input
@@ -228,7 +230,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
             ))}
           </div>
           {endMode === 'until' && (
-            <Input type="date" required min={startDate} value={untilDate} onChange={(e) => setUntilDate(e.target.value)} className="mt-2" />
+            <DatePicker required min={startDate} value={untilDate} onChange={setUntilDate} className="mt-2" aria-label="Bitiş tarihi" />
           )}
           {endMode === 'count' && (
             <Input
@@ -256,7 +258,7 @@ function Fields({ meeting, onOpenChange }: { meeting?: Meeting | null; onOpenCha
 
       <label className="flex cursor-pointer items-center gap-2 text-sm">
         <input type="checkbox" checked={standupEnabled} onChange={(e) => setStandupEnabled(e.target.checked)} />
-        Toplantısız standup özeti (occurrence'tan 30 dk önce katılımcılara özet gönderilsin)
+        Günlük görev özetini planlanan toplantıdan 30 dakika önce katılımcılara gönder
       </label>
 
       <div className="flex justify-end gap-2 pt-2">

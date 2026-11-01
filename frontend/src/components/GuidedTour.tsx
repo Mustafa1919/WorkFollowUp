@@ -17,17 +17,17 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: "WorkFollowUp'a hoş geldin",
-    body: 'İş takibin ve ekibinin çalışması burada yaşayacak. 5 adımda nerede ne olduğunu göstereyim — istediğin an "Atla" diyebilirsin.',
+    body: 'İş takibin ve ekibinin çalışması burada yaşayacak. Temel alanları kısaca tanıyalım — istediğin an "Atla" diyebilirsin.',
   },
   {
     target: 'tour-nav',
     title: 'Gezinme',
-    body: "Ana sayfa, sana atanan işler, toplantılar, standup'lar ve raporlar buradan bir tık uzakta.",
+    body: "Ana sayfa, sana atanan işler, toplantılar, günlük toplantılar ve raporlar buradan bir tık uzakta.",
   },
   {
     target: 'tour-projects',
     title: 'Projeler',
-    body: "Workspace'indeki tüm projeler burada listelenir. Yetkin varsa yanındaki + ile yenisini açarsın.",
+    body: "Çalışma alanındaki tüm projeler burada listelenir. Yetkin varsa yanındaki + ile yenisini açarsın.",
   },
   {
     target: 'tour-search',

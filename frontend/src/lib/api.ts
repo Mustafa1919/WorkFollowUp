@@ -61,8 +61,8 @@ export function errorMessage(error: unknown): string {
       | undefined
     if (data?.invalid_params?.length) return data.invalid_params.map((p) => p.reason).join(" ")
     if (data?.detail) return data.detail
-    if (!error.response) return 'Sunucuya ulasilamadi.'
-    return `Istek basarisiz (${error.response.status}).`
+    if (!error.response) return 'Sunucuya ulaşılamadı.'
+    return `İstek başarısız (${error.response.status}).`
   }
-  return 'Beklenmeyen bir hata olustu.'
+  return 'Beklenmeyen bir hata oluştu.'
 }

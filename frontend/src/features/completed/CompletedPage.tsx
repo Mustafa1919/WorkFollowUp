@@ -35,7 +35,7 @@ export function CompletedPage() {
   return (
     <Page>
       <Link to={`/projects/${projectId}`} className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
-        <ArrowLeft size={15} /> Board
+        <ArrowLeft size={15} /> Pano
       </Link>
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <div className="mr-auto">
@@ -60,7 +60,7 @@ export function CompletedPage() {
         <EmptyState
           icon={<CheckCircle2 size={22} />}
           title="Henüz onaylanmış görev yok"
-          text="Kanban'da 'Tamamlandı' kolonundaki görevler yönetici veya admin onayından sonra burada listelenir."
+          text="Kanban'da 'Tamamlandı' kolonundaki görevler yönetici veya sistem yöneticisi onayından sonra burada listelenir."
         />
       ) : (
         <>

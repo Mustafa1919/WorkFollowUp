@@ -185,7 +185,7 @@ function Sidebar() {
           {({ isActive }) => (
             <>
               {isActive && <ActivePill />}
-              <MessageCircleMore size={17} className="relative" /> <span className="relative">Standup</span>
+              <MessageCircleMore size={17} className="relative" /> <span className="relative">Günlük toplantı</span>
             </>
           )}
         </NavLink>
@@ -267,12 +267,12 @@ function WorkspaceSwitcher() {
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent to-fuchsia-500 text-[11px] text-white">
             {current?.name.charAt(0).toUpperCase() ?? '?'}
           </span>
-          <span className="truncate">{current?.name ?? 'Workspace seç'}</span>
+          <span className="truncate">{current?.name ?? 'Çalışma alanı seç'}</span>
           <ChevronsUpDown size={14} className="shrink-0 text-muted" />
         </DM.Trigger>
         <DM.Portal>
           <DM.Content align="start" sideOffset={6} className="z-50 min-w-60 rounded-xl border border-border bg-surface p-1.5 shadow-xl">
-            <DM.Label className="px-2 py-1.5 text-xs text-muted">Workspace'ler</DM.Label>
+            <DM.Label className="px-2 py-1.5 text-xs text-muted">Çalışma alanları</DM.Label>
             {workspaces?.map((w) => (
               <DM.Item
                 key={w.id}
@@ -292,7 +292,7 @@ function WorkspaceSwitcher() {
               onSelect={() => setCreating(true)}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted outline-none data-[highlighted]:bg-surface-2 data-[highlighted]:text-fg"
             >
-              <Plus size={14} /> Yeni workspace
+              <Plus size={14} /> Yeni çalışma alanı
             </DM.Item>
           </DM.Content>
         </DM.Portal>
@@ -357,14 +357,14 @@ function CreateWorkspaceDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       setWorkspace(ws.id)
       setName('')
       onOpenChange(false)
-      toast.success('Workspace oluşturuldu')
+      toast.success('Çalışma alanı oluşturuldu')
     } catch (err) {
       toast.error(errorMessage(err))
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Yeni workspace" description="Ekibin ve projelerin için ayrı bir alan.">
+    <Dialog open={open} onOpenChange={onOpenChange} title="Yeni çalışma alanı" description="Ekibin ve projelerin için ayrı bir alan.">
       <form onSubmit={submit} className="space-y-4">
         <Input autoFocus required maxLength={100} placeholder="ör. Acme Mühendislik" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="flex justify-end gap-2">
@@ -412,9 +412,9 @@ function Onboarding() {
         <div className="mb-6 grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent">
           <FolderKanban size={22} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">İlk workspace'ini oluştur</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">İlk çalışma alanını oluştur</h1>
         <p className="mt-1 mb-6 text-sm text-muted">Projelerin ve görevlerin burada yaşayacak. Yöneticisi sen olacaksın.</p>
-        <Input autoFocus required maxLength={100} placeholder="Workspace adı" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input autoFocus required maxLength={100} placeholder="Çalışma alanı adı" value={name} onChange={(e) => setName(e.target.value)} />
         <Button type="submit" loading={create.isPending} className="mt-4 w-full justify-center">
           Başla
         </Button>

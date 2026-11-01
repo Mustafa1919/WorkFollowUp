@@ -14,7 +14,7 @@ import { PRIVACY_NOTICE_VERSION } from '@/features/legal/privacyNotice'
 const FEATURES = [
   { icon: KanbanSquare, text: 'Sürükle-bırak Kanban panosu' },
   { icon: CalendarDays, text: 'Görevleri takvimde günlere yerleştir' },
-  { icon: LineChart, text: 'Velocity, throughput ve cycle time' },
+  { icon: LineChart, text: 'Hız, verim ve döngü süresi' },
 ]
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {

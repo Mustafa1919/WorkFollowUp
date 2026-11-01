@@ -73,7 +73,7 @@ export function RetroPage() {
       </Link>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{project?.name ?? '…'} · Retro</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{project?.name ?? '…'} · Retrospektif</h1>
         {completedSprints.length > 0 && (
           <select
             value={activeSprintId}
@@ -123,8 +123,8 @@ function RetroContent({
     <>
       {!retro.planAvailable && (
         <div className="mb-6 rounded-xl border border-dashed border-border bg-surface-2 px-4 py-3 text-sm text-muted">
-          Bu sprint, veriye dayalı retro özelliğinden ÖNCE tamamlandığı için "sprint başı" kesiti
-          hesaplanmadı — yalnız gerçekleşen sayılar ve retro panosu gösteriliyor.
+          Bu sprint, veriye dayalı retrospektif özelliğinden ÖNCE tamamlandığı için "sprint başı" kesiti
+          hesaplanmadı — yalnız gerçekleşen sayılar ve retrospektif panosu gösteriliyor.
         </div>
       )}
 
@@ -133,7 +133,7 @@ function RetroContent({
           <Metric icon={<Gauge size={18} />} label="Sprint başı taahhüt (görev)" value={String(retro.committedAtStartTasks ?? '–')} />
         )}
         <Metric icon={<CheckCircle2 size={18} />} label="Tamamlanan (görev / puan)" value={`${retro.completedTasks} / ${retro.completedPoints}`} />
-        <Metric icon={<ArrowRightLeft size={18} />} label="Spillover" value={String(retro.spilloverTasks.length)} />
+        <Metric icon={<ArrowRightLeft size={18} />} label="Taşan işler" value={String(retro.spilloverTasks.length)} />
         {retro.forecastProbabilityAtStart != null && (
           <Metric
             icon={<Timer size={18} />}
@@ -151,14 +151,14 @@ function RetroContent({
       )}
 
       {retro.spilloverTasks.length > 0 && (
-        <TaskRefCard title="Spillover (hâlâ Done değil)" tasks={retro.spilloverTasks} projectKey={projectKey} className="mb-6" />
+        <TaskRefCard title="Taşan işler (henüz tamamlanmadı)" tasks={retro.spilloverTasks} projectKey={projectKey} className="mb-6" />
       )}
 
       {(retro.cycleTimeOutliers.length > 0 || retro.longestOpenBlocker) && (
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           {retro.cycleTimeOutliers.length > 0 && (
             <div className="rounded-2xl border border-border bg-surface p-4">
-              <h2 className="mb-3 text-sm font-semibold">En uzun cycle time</h2>
+              <h2 className="mb-3 text-sm font-semibold">En uzun döngü süresi</h2>
               <ul className="space-y-1.5 text-sm">
                 {retro.cycleTimeOutliers.map((o) => (
                   <li key={o.task.taskId} className="flex items-center justify-between gap-2">
@@ -174,7 +174,7 @@ function RetroContent({
           {retro.longestOpenBlocker && (
             <div className="rounded-2xl border border-border bg-surface p-4">
               <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-danger">
-                <Octagon size={14} /> En uzun süredir bekleyen blocker
+                <Octagon size={14} /> En uzun süredir bekleyen engelleyici görev
               </h2>
               <p className="text-sm">
                 <span className="font-mono text-xs text-muted">
@@ -243,7 +243,7 @@ function RetroBoard({ sprintId, sprintName }: { sprintId: string; sprintName: st
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold">Retro panosu{sprintName ? ` · ${sprintName}` : ''}</h2>
+      <h2 className="mb-3 text-lg font-semibold">Retrospektif panosu{sprintName ? ` · ${sprintName}` : ''}</h2>
       <div className="grid gap-4 md:grid-cols-3">
         {COLUMNS.map((col) => (
           <RetroColumn

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+.rdp-root.rdp-root {
+  --rdp-accent-color: var(--color-accent);
+  --rdp-accent-background-color: var(--color-accent-soft);
+  --rdp-today-color: var(--color-accent);
+  --rdp-range_middle-color: var(--color-fg);
+  --rdp-selected-font: bold 1em var(--font-sans);
+}
+
 /* Tema: <html data-theme="dark|light">. Renkler token olarak tanimli, bilesenler yalniz token kullanir. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

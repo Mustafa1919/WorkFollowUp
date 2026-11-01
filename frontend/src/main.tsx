@@ -13,6 +13,9 @@ import { router } from './router'
 import { ThemedToaster } from './components/ThemedToaster'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { reportError } from './lib/telemetry'
+import { installTurkishValidationMessages } from './lib/formValidation'
+
+installTurkishValidationMessages()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -15,34 +15,34 @@ const TEMPLATES: {
   {
     key: 'PR_MERGE_TO_DONE',
     icon: GitMerge,
-    title: 'PR birleşince görev Done olsun',
+    title: 'PR birleştirilince görev Tamamlandı durumuna geçsin',
     description:
-      'Bağlantılı bir pull request "merge" edilince görev otomatik Done durumuna geçer. Varsayılan olarak açıktır.',
+      'Bağlantılı bir PR birleştirilince görev otomatik olarak Tamamlandı durumuna geçer. Varsayılan olarak açıktır.',
   },
   {
     key: 'SUBTASK_ALL_DONE_PARENT_TO_REVIEW',
     icon: ListTree,
-    title: 'Tüm alt görevler bitince üst görev Review olsun',
-    description: 'Bir görevin tüm alt görevleri Done olduğunda üst görev otomatik Review durumuna geçer.',
+    title: 'Tüm alt görevler bitince üst görev İncelemede durumuna geçsin',
+    description: 'Bir görevin tüm alt görevleri Tamamlandı durumuna geçtiğinde üst görev otomatik olarak İncelemede durumuna geçer.',
   },
   {
     key: 'BLOCKER_DONE_NOTIFY',
     icon: ShieldAlert,
     title: 'Bloklayan görev bitince bildir',
     description:
-      'Bir görevi bloklayan görev Done olunca, bloklanan görevin atananına ve izleyicilerine bildirim gider.',
+      'Bir görevi bloklayan görev Tamamlandı durumuna geçince, bloklanan görevin atananına ve izleyicilerine bildirim gider.',
   },
   {
     key: 'OVERDUE_NOTIFY',
     icon: Timer,
     title: 'Süresi geçen görevler için bildir',
-    description: 'Bitiş tarihi geçmiş, henüz Done olmayan görevler için günde bir kez bildirim gider.',
+    description: 'Bitiş tarihi geçmiş, henüz Tamamlandı durumuna geçmemiş görevler için günde bir kez bildirim gider.',
   },
   {
     key: 'ASSIGNED_TODO_TO_IN_PROGRESS',
     icon: UserCheck,
-    title: 'Atama yapılınca In Progress olsun',
-    description: 'To Do durumundaki bir görev birine atanınca otomatik In Progress durumuna geçer.',
+    title: 'Atama yapılınca Devam ediyor durumuna geçsin',
+    description: 'Yapılacak durumundaki bir görev birine atanınca otomatik olarak Devam ediyor durumuna geçer.',
   },
 ]
 

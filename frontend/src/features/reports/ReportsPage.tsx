@@ -113,7 +113,7 @@ export function ReportsPage() {
           </PeriodTab>
           {QUARTERS.map((q) => (
             <PeriodTab key={q} active={quarter === q} onClick={() => setParam('quarter', String(q))}>
-              Q{q}
+              {q}. çeyrek
             </PeriodTab>
           ))}
         </div>
@@ -166,7 +166,7 @@ export function ReportsPage() {
             />
             <Metric
               icon={<Timer size={18} />}
-              label="Cycle time medyan"
+              label="Döngü süresi medyanı"
               value={duration(report.totals.cycleTimeMedianSeconds)}
               note={
                 report.totals.cycleTimeSample > 0
@@ -180,7 +180,7 @@ export function ReportsPage() {
               value={String(report.totals.sprintCount)}
               note={
                 report.totals.sprintCount > 0
-                  ? `ort. velocity ${report.totals.averageVelocity?.toFixed(1) ?? '–'} puan`
+                  ? `ort. hız ${report.totals.averageVelocity?.toFixed(1) ?? '–'} puan`
                   : 'dönemde kapanan sprint yok'
               }
             />
@@ -215,7 +215,7 @@ export function ReportsPage() {
                       <th className="pb-2 font-medium">Proje</th>
                       <th className="pb-2 text-right font-medium">Görev</th>
                       <th className="pb-2 text-right font-medium">Puan</th>
-                      <th className="pb-2 text-right font-medium">Cycle time medyan</th>
+                      <th className="pb-2 text-right font-medium">Döngü süresi medyanı</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -383,7 +383,7 @@ function GoalCard({
         <div>
           <div className="font-medium">{goal.title}</div>
           <div className="mt-0.5 text-xs text-muted">
-            {goal.projectName ?? 'Tüm workspace'} ·{' '}
+            {goal.projectName ?? 'Tüm çalışma alanı'} ·{' '}
             {goal.metricType === 'COMPLETED_TASKS'
               ? 'tamamlanan görev'
               : goal.metricType === 'COMPLETED_POINTS'

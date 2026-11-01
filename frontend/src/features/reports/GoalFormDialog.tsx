@@ -9,13 +9,13 @@ import { Field, Input, inputClass } from '@/components/ui/Input'
 
 const METRIC_LABEL: Record<GoalMetricType, string> = {
   COMPLETED_TASKS: 'Tamamlanan görev sayısı',
-  COMPLETED_POINTS: 'Tamamlanan story point',
+  COMPLETED_POINTS: 'Tamamlanan puan',
   CUSTOM: 'Elle takip edilen',
 }
 
 const METRIC_HINT: Record<GoalMetricType, string> = {
   COMPLETED_TASKS: 'İlerleme, dönemin raporuyla aynı kaynaktan otomatik hesaplanır.',
-  COMPLETED_POINTS: 'Puansız görevler 0 puan sayılır (velocity ile aynı kural).',
+  COMPLETED_POINTS: 'Puansız görevler 0 puan sayılır (hız hesabıyla aynı kural).',
   CUSTOM: 'Otomatik hesaplanamaz; ilerlemeyi kart üzerinden elle güncellersiniz.',
 }
 
@@ -139,7 +139,7 @@ function GoalForm({
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
         >
-          <option value="">Tüm workspace</option>
+          <option value="">Tüm çalışma alanı</option>
           {(projects ?? []).map((p) => (
             <option key={p.id} value={p.id}>
               {p.key} · {p.name}

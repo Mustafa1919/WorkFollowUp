@@ -20,7 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
 const STATUS_MESSAGE: Record<string, string> = {
   ACCEPTED: 'Bu davet daha önce kabul edilmiş.',
   REVOKED: 'Bu davet iptal edilmiş.',
-  EXPIRED: 'Bu davetin süresi dolmuş. Workspace yöneticisinden yenisini iste.',
+  EXPIRED: 'Bu davetin süresi dolmuş. Çalışma alanı yöneticisinden yenisini iste.',
 }
 
 /**
@@ -53,7 +53,7 @@ export function InvitationAcceptPage() {
     try {
       const res = await accept.mutateAsync(token)
       useSession.getState().setWorkspace(res.workspaceId)
-      toast.success(`${res.workspaceName} workspace'ine katıldın`)
+      toast.success(`${res.workspaceName} çalışma alanına katıldın`)
       navigate('/', { replace: true })
     } catch (err) {
       toast.error(errorMessage(err))

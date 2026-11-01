@@ -7,6 +7,7 @@ import { fmt, todayIso } from '@/lib/dates'
 import { cn } from '@/lib/cn'
 import { TASK_STATUSES, type Sprint, type Task } from '@/lib/types'
 import { Dialog } from '@/components/ui/Dialog'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Field, Input, inputClass } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { StatusDot, TagChip } from '@/components/ui/misc'
@@ -24,10 +25,11 @@ interface Props {
   sprints: Sprint[]
   canWrite: boolean
   onOpenChange: (open: boolean) => void
+  onOpenTask?: (task: Task) => void
 }
 
 /** Gorev detayi: her alan degisikligi aninda kaydedilir (ayri "Kaydet" adimi yok). */
-export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }: Props) {
+export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange, onOpenTask }: Props) {
   return (
     <Dialog
       size="xl"
@@ -47,6 +49,7 @@ export function TaskDialog({ task, projectKey, sprints, canWrite, onOpenChange }
             // Yorum izni COMMENT_WRITE'tan gelir (TaskFields icinde), TASK_EDIT'ten degil.
             locked={!!task.approvedAt}
             onClosed={() => onOpenChange(false)}
+            onOpenTask={onOpenTask}
           />
         </>
       )}
@@ -60,6 +63,7 @@ function TaskFields({
   canWrite,
   locked,
   onClosed,
+  onOpenTask,
 }: {
   task: Task
   sprints: Sprint[]
@@ -68,6 +72,7 @@ function TaskFields({
   /** Onayli gorev: planlama/atama alanlari kilitli. */
   locked: boolean
   onClosed: () => void
+  onOpenTask?: (task: Task) => void
 }) {
   const canComment = useCan('COMMENT_WRITE')
   // Puan / son tarih / sprint / ust-alt gorev baglama: TASK_PLAN yoksa salt-okunur (gorunur kalir).
@@ -88,7 +93,7 @@ function TaskFields({
         <h2 className="text-lg font-semibold">{task.title}</h2>
         <DescriptionField task={task} canWrite={canWrite} />
         <div className="border-t border-border pt-4">
-          <SubtaskPanel task={task} canPlan={canPlan} />
+          <SubtaskPanel task={task} canPlan={canPlan} onOpenTask={onOpenTask} />
         </div>
         <div className="border-t border-border pt-4">
           <CommentsAndActivity task={task} sprints={sprints} canComment={canComment} />
@@ -137,14 +142,13 @@ function TaskFields({
         <div className="grid min-w-0 gap-4">
           <Field label="Tarih (takvim)" id="t-due">
             <div className="flex gap-2">
-              <Input
+              <DatePicker
                 id="t-due"
                 className="min-w-0"
-                type="date"
                 min={todayIso()}
                 disabled={!canPlan}
                 value={task.dueDate ?? ''}
-                onChange={(e) => update.mutate({ id: task.id, patch: { dueDate: e.target.value || null } }, { onError })}
+                onChange={(value) => update.mutate({ id: task.id, patch: { dueDate: value || null } }, { onError })}
               />
               {task.dueDate && canPlan && (
                 <Button variant="ghost" size="sm" className="h-10" onClick={() => update.mutate({ id: task.id, patch: { dueDate: null } }, { onError })}>
@@ -179,12 +183,12 @@ function TaskFields({
               e.preventDefault()
               storyPoint.mutate(
                 { id: task.id, storyPoint: sp === '' ? null : Number(sp) },
-                { onError, onSuccess: () => toast.success('Story point kaydedildi') },
+                { onError, onSuccess: () => toast.success('Puan kaydedildi') },
               )
             }}
           >
             <div className="min-w-0 flex-1">
-              <Field label="Story point (boş = kaldır)" id="t-sp">
+              <Field label="Puan (boş = kaldır)" id="t-sp">
                 <Input id="t-sp" type="number" min={0} max={100} value={sp} onChange={(e) => setSp(e.target.value)} placeholder="ör. 3" disabled={!canPlan} />
               </Field>
             </div>

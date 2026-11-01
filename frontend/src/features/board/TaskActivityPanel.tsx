@@ -57,7 +57,7 @@ function activityLine(
       if (oldV && !newV) return `${actorName} tarihi kaldırdı.`
       return `${actorName} tarihi ${fmt(oldV!, 'd MMM yyyy')} → ${fmt(newV!, 'd MMM yyyy')} olarak değiştirdi.`
     case 'story_point_changed':
-      return `${actorName} story point'i ${oldV ?? '—'} → ${newV ?? '—'} yaptı.`
+      return `${actorName} puanı ${oldV ?? '—'} → ${newV ?? '—'} yaptı.`
     case 'sprint_changed':
       if (!oldV && newV) return `${actorName} görevi ${sprintName(sprints, newV)} sprintine ekledi.`
       if (oldV && !newV) return `${actorName} görevi backlog'a aldı.`

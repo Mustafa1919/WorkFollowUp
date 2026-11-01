@@ -79,7 +79,7 @@ export const TaskCard = forwardRef<HTMLDivElement, TaskCardProps>(function TaskC
         {task.storyPoint != null && (
           <span
             className="grid h-4 min-w-4 place-items-center rounded-full bg-surface-2 px-1 text-[10px] font-semibold tabular-nums"
-            title="Story point"
+            title="Puan"
           >
             {task.storyPoint}
           </span>

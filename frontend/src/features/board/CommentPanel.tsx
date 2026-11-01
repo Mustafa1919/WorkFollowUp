@@ -195,7 +195,7 @@ export function CommentPanel({ task, canWrite }: { task: Task; canWrite: boolean
                   className="z-50 max-h-72 w-56 overflow-y-auto rounded-xl border border-border bg-surface p-1.5 shadow-xl"
                 >
                   {memberList.length === 0 ? (
-                    <div className="px-2 py-2 text-xs text-muted">Uye yok.</div>
+                    <div className="px-2 py-2 text-xs text-muted">Üye yok.</div>
                   ) : (
                     memberList.map((m) => (
                       <DM.Item

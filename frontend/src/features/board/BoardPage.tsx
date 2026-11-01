@@ -19,6 +19,7 @@ import { SprintsDialog } from './SprintsDialog'
 import { SaveViewDialog } from './SaveViewDialog'
 import { taskKey } from '@/lib/status'
 import { findLinkedTask } from './taskForm'
+import { kanbanTasks } from './boardTasks'
 
 type View = 'kanban' | 'calendar'
 
@@ -202,7 +203,7 @@ export function BoardPage() {
         </Link>
         <Link to={`/projects/${projectId}/retro`}>
           <Button variant="outline" size="sm" className="h-9">
-            <MessageSquareQuote size={15} /> Retro
+            <MessageSquareQuote size={15} /> Retrospektif
           </Button>
         </Link>
         <Link to={`/projects/${projectId}/automation`}>
@@ -238,7 +239,7 @@ export function BoardPage() {
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
             {view === 'kanban' ? (
-              <KanbanView projectId={projectId} projectKey={project?.key} tasks={filtered} canWrite={canWrite} onOpen={setSelected} />
+              <KanbanView projectId={projectId} projectKey={project?.key} tasks={kanbanTasks(tasks ?? [], filtered, assigneeTarget !== undefined)} canWrite={canWrite} onOpen={setSelected} />
             ) : (
               <CalendarView
                 projectId={projectId}
@@ -261,6 +262,11 @@ export function BoardPage() {
         sprints={sprints ?? []}
         canWrite={canWrite}
         onOpenChange={(o) => !o && setSelected(null)}
+        onOpenTask={(task) => {
+          const current = tasks?.find((t) => t.id === task.id)
+          if (current) setSelected(current)
+          else toast.info('Bu görev panoda değil; onaylanmış olabilir.')
+        }}
       />
       <NewTaskDialog projectId={projectId} open={newTaskOpen} onOpenChange={setNewTaskOpen} />
       <SprintsDialog projectId={projectId} open={sprintsOpen} onOpenChange={setSprintsOpen} canManage={canManageSprints} />

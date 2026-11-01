@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import { Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCan, useCreateSubtask, useSubtasks, useTaskParentAssignment, useTasks } from '@/api/queries'
+import { useCan, useCreateSubtask, useProjects, useSubtasks, useTaskParentAssignment, useTasks } from '@/api/queries'
 import { errorMessage } from '@/lib/api'
-import { STATUS_META } from '@/lib/status'
+import { STATUS_META, taskKey } from '@/lib/status'
 import { StatusDot } from '@/components/ui/misc'
 import { inputClass } from '@/components/ui/Input'
 import { useCurrentUserId } from '@/stores/session'
@@ -17,9 +17,10 @@ import type { Task } from '@/lib/types'
  * `canPlan`: mevcut gorevi baglama/ayirma (TASK_PLAN). Sifirdan olusturma ayri izinle (TASK_CREATE ya da
  * SUBTASK_CREATE_OWN + ust gorev bana atanmis).
  */
-export function SubtaskPanel({ task, canPlan }: { task: Task; canPlan: boolean }) {
+export function SubtaskPanel({ task, canPlan, onOpenTask }: { task: Task; canPlan: boolean; onOpenTask?: (task: Task) => void }) {
   const { data: children } = useSubtasks(task.id)
   const { data: siblings } = useTasks(task.projectId)
+  const { data: projects } = useProjects()
   const { setParent, removeParent } = useTaskParentAssignment(task.projectId)
   const createSubtask = useCreateSubtask(task.id, task.projectId)
   const canCreateAny = useCan('TASK_CREATE')
@@ -32,11 +33,23 @@ export function SubtaskPanel({ task, canPlan }: { task: Task; canPlan: boolean }
   const onError = (err: unknown) => toast.error(errorMessage(err))
 
   if (task.parentTaskId) {
-    // Kendisi bir subtask ise (tek seviye) baska bir gorevin alt gorevi olamaz — sadece kendi
-    // ust gorevinden ayrilma secenegi gosterilir.
+    const parent = siblings?.find((t) => t.id === task.parentTaskId)
+    const projectKey = projects?.find((p) => p.id === task.projectId)?.key
+    const parentLabel = parent ? `${taskKey(projectKey, parent.taskNumber)} · ${parent.title}` : ''
     return (
       <div>
         <div className="mb-2 text-xs font-medium text-muted">Üst Görev</div>
+        {parent ? (
+          onOpenTask ? (
+            <button type="button" onClick={() => onOpenTask(parent)} className="mb-2 block max-w-full cursor-pointer truncate text-left text-sm text-accent hover:underline">
+              {parentLabel}
+            </button>
+          ) : (
+            <div className="mb-2 truncate text-sm">{parentLabel}</div>
+          )
+        ) : (
+          <div className="mb-2 text-sm text-muted">Üst görev panoda değil</div>
+        )}
         {canPlan && (
           <button
             onClick={() => removeParent.mutate(task.id, { onError })}
@@ -137,22 +150,38 @@ export function SubtaskPanel({ task, canPlan }: { task: Task; canPlan: boolean }
       </div>
       {children && children.length > 0 && (
         <ul className="space-y-1">
-          {children.map((c) => (
-            <li key={c.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm">
-              <StatusDot status={c.status} />
-              <span className="flex-1 truncate">{c.title}</span>
-              <span className={STATUS_META[c.status].text}>#{c.taskNumber}</span>
-              {canPlan && (
-                <button
-                  onClick={() => removeParent.mutate(c.id, { onError })}
-                  className="cursor-pointer rounded-full p-0.5 text-muted hover:bg-surface-2 hover:text-danger"
-                  aria-label="Üst görevden ayır"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </li>
-          ))}
+          {children.map((c) => {
+            const content = (
+              <>
+                <StatusDot status={c.status} />
+                <span className="flex-1 truncate">{c.title}</span>
+                <span className={STATUS_META[c.status].text}>#{c.taskNumber}</span>
+              </>
+            )
+            return (
+              <li key={c.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm">
+                {onOpenTask ? (
+                  <button type="button" onClick={() => onOpenTask(c)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded text-left hover:text-accent">
+                    {content}
+                  </button>
+                ) : (
+                  <div className="flex min-w-0 flex-1 items-center gap-2">{content}</div>
+                )}
+                {canPlan && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeParent.mutate(c.id, { onError })
+                    }}
+                    className="cursor-pointer rounded-full p-0.5 text-muted hover:bg-surface-2 hover:text-danger"
+                    aria-label="Üst görevden ayır"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
       {adding && canCreate && (

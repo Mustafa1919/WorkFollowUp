@@ -6,7 +6,9 @@ import { errorMessage } from '@/lib/api'
 import { taskKey, STATUS_META } from '@/lib/status'
 import type { TaskSnapshotResponse, TaskStatus } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
-import { inputClass } from '@/components/ui/Input'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimeField } from '@/components/ui/TimeField'
+import { todayIso } from '@/lib/dates'
 import { EmptyState, Page, Skeleton, StatusDot } from '@/components/ui/misc'
 import { cn } from '@/lib/cn'
 
@@ -35,8 +37,12 @@ export function TimeMachinePage() {
     return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString()
   }, [cutoffInput])
 
-  // Gelecek bir an secilirse backend BusinessRuleException doner, asagida `error` olarak gosterilir
-  // (input'un `max` alani zaten cogu tarayicida gelecegi engeller).
+  function changeCutoff(date: string, time: string) {
+    const next = date ? `${date}T${time || '00:00'}` : ''
+    const now = new Date()
+    setCutoffInput(next && new Date(next) > now ? toLocalInputValue(now) : next)
+  }
+
   const { data: snapshot, isLoading, error } = useBoardSnapshot(projectId, cutoffIso, !!cutoffIso)
 
   const sprintName = (sprintId: string | null) =>
@@ -58,17 +64,16 @@ export function TimeMachinePage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{project?.name ?? '…'} · Zaman Makinesi</h1>
-        <input
-          type="datetime-local"
-          value={cutoffInput}
-          max={toLocalInputValue(new Date())}
-          onChange={(e) => setCutoffInput(e.target.value)}
-          className={cn(inputClass, 'ml-auto w-auto')}
-        />
+        <div className="ml-auto flex items-center gap-2">
+          <DatePicker value={cutoffInput.split('T')[0]} max={todayIso()} aria-label="Kesit tarihi"
+            onChange={(date) => changeCutoff(date, cutoffInput.split('T')[1] ?? '')} className="w-auto" />
+          <TimeField value={cutoffInput.split('T')[1] ?? ''} aria-label="Kesit saati" className="w-24"
+            onChange={(time) => changeCutoff(cutoffInput.split('T')[0], time)} />
+        </div>
       </div>
 
       <div className="mb-6 rounded-xl border border-dashed border-border bg-surface-2 px-4 py-3 text-sm text-muted">
-        Seçilen andaki durum, sprint, story point, atanan kişi ve bitiş tarihi görev tarihçesinden yeniden
+        Seçilen andaki durum, sprint, puan, atanan kişi ve bitiş tarihi görev tarihçesinden yeniden
         kurulur. Etiketler, bağımlılıklar ve görev başlığı bu görünümde <b>güncel</b> değerleriyle gösterilir
         (geçmiş tarihçeleri henüz tutulmuyor).
       </div>
@@ -104,7 +109,7 @@ export function TimeMachinePage() {
                         <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted">
                           <span className="truncate">
                             {sprintName(row.sprintId) ?? 'Backlog'}
-                            {row.storyPoint != null && ` · ${row.storyPoint} sp`}
+                            {row.storyPoint != null && ` · ${row.storyPoint} puan`}
                           </span>
                           {assignee && <Avatar name={assignee.fullName} seed={assignee.userId} size={16} className="shrink-0" />}
                         </div>
